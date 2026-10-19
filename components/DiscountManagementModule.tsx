@@ -32,6 +32,7 @@ import {
   FileText,
   ExternalLink,
   FileCheck,
+  Hash,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -121,7 +122,10 @@ export interface DiscountRecord {
   selectedCustomerGroups: string[];
   targetCustomers: CustomerTargetItem[];
 
-  // Khu vực 3: Hình thức Chiết khấu
+  // Khu vực 3: Thiết lập chiết khấu
+  maxUsageTotal?: number | string;
+  maxUsagePerCustomer?: number | string;
+  maxUsagePerPlate?: number | string;
   discountMethod: 'order' | 'product';
   orderDiscountType: 'percentage' | 'fixed_amount';
   orderPercent?: number | string;
@@ -329,6 +333,46 @@ export const SALES_CONTRACT_CATALOG: SalesContractRecord[] = [
   },
 ];
 
+export const getUsageLimitExplanation = (
+  totalVal?: string | number,
+  perCustomerVal?: string | number,
+  perPlateVal?: string | number
+): string => {
+  const hasTotal = totalVal !== undefined && totalVal !== '' && !isNaN(Number(totalVal)) && Number(totalVal) > 0;
+  const hasCustomer = perCustomerVal !== undefined && perCustomerVal !== '' && !isNaN(Number(perCustomerVal)) && Number(perCustomerVal) > 0;
+  const hasPlate = perPlateVal !== undefined && perPlateVal !== '' && !isNaN(Number(perPlateVal)) && Number(perPlateVal) > 0;
+
+  const totalNum = hasTotal ? Number(totalVal) : 0;
+  const custNum = hasCustomer ? Number(perCustomerVal) : 0;
+  const plateNum = hasPlate ? Number(perPlateVal) : 0;
+
+  if (!hasTotal && !hasCustomer && !hasPlate) {
+    return 'Chương trình không giới hạn số lượng (không giới hạn tổng lượt chiết khấu, mỗi khách hàng và mỗi biển số xe có thể sử dụng không giới hạn số lần).';
+  }
+
+  const parts: string[] = [];
+
+  // Vế 1: Tổng lượt
+  if (hasTotal) {
+    parts.push(`Toàn chương trình áp dụng tối đa ${totalNum.toLocaleString('vi-VN')} lượt chiết khấu`);
+  } else {
+    parts.push('Chương trình không giới hạn tổng lượt chiết khấu');
+  }
+
+  // Vế 2: Khách hàng và Biển số
+  if (hasCustomer && hasPlate) {
+    parts.push(`mỗi khách hàng được áp dụng tối đa ${custNum.toLocaleString('vi-VN')} lượt và mỗi biển số xe được áp dụng tối đa ${plateNum.toLocaleString('vi-VN')} lượt`);
+  } else if (hasCustomer) {
+    parts.push(`mỗi khách hàng được áp dụng tối đa ${custNum.toLocaleString('vi-VN')} lượt (không giới hạn theo biển số xe)`);
+  } else if (hasPlate) {
+    parts.push(`mỗi biển số xe được áp dụng tối đa ${plateNum.toLocaleString('vi-VN')} lượt (không giới hạn theo từng khách hàng)`);
+  } else {
+    parts.push('không giới hạn số lượt sử dụng đối với từng khách hàng và từng biển số xe');
+  }
+
+  return `${parts.join('; trong đó ')}.`;
+};
+
 export const DiscountManagementModule: React.FC = () => {
   // Không tạo dữ liệu mẫu, bắt đầu hoàn toàn bằng danh sách trống
   const [discounts, setDiscounts] = useState<DiscountRecord[]>([]);
@@ -402,6 +446,9 @@ export const DiscountManagementModule: React.FC = () => {
   const [formTargetCustomers, setFormTargetCustomers] = useState<CustomerTargetItem[]>([]);
 
   // Khu vực 3 State
+  const [formMaxUsageTotal, setFormMaxUsageTotal] = useState<string>('');
+  const [formMaxUsagePerCustomer, setFormMaxUsagePerCustomer] = useState<string>('');
+  const [formMaxUsagePerPlate, setFormMaxUsagePerPlate] = useState<string>('');
   const [formDiscountMethod, setFormDiscountMethod] = useState<'order' | 'product'>('order');
   // Sub for Order
   const [formOrderDiscountType, setFormOrderDiscountType] = useState<'percentage' | 'fixed_amount'>('percentage');
@@ -608,6 +655,9 @@ export const DiscountManagementModule: React.FC = () => {
     setFormTargetCustomers([]);
 
     // Khu vực 3 defaults
+    setFormMaxUsageTotal('');
+    setFormMaxUsagePerCustomer('');
+    setFormMaxUsagePerPlate('');
     setFormDiscountMethod('order');
     setFormOrderDiscountType('percentage');
     setFormOrderPercent('10');
@@ -661,6 +711,9 @@ export const DiscountManagementModule: React.FC = () => {
     setFormTargetCustomers(discount.targetCustomers || []);
 
     // Khu vực 3
+    setFormMaxUsageTotal(discount.maxUsageTotal !== undefined && discount.maxUsageTotal !== null ? String(discount.maxUsageTotal) : '');
+    setFormMaxUsagePerCustomer(discount.maxUsagePerCustomer !== undefined && discount.maxUsagePerCustomer !== null ? String(discount.maxUsagePerCustomer) : '');
+    setFormMaxUsagePerPlate(discount.maxUsagePerPlate !== undefined && discount.maxUsagePerPlate !== null ? String(discount.maxUsagePerPlate) : '');
     setFormDiscountMethod(discount.discountMethod || 'order');
     setFormOrderDiscountType(discount.orderDiscountType || 'percentage');
     setFormOrderPercent(discount.orderPercent !== undefined ? String(discount.orderPercent) : '10');
@@ -752,6 +805,9 @@ export const DiscountManagementModule: React.FC = () => {
       targetCustomers: formTargetCustomers,
 
       // Khu vực 3
+      maxUsageTotal: formMaxUsageTotal !== '' ? parseInt(formMaxUsageTotal, 10) : undefined,
+      maxUsagePerCustomer: formMaxUsagePerCustomer !== '' ? parseInt(formMaxUsagePerCustomer, 10) : undefined,
+      maxUsagePerPlate: formMaxUsagePerPlate !== '' ? parseInt(formMaxUsagePerPlate, 10) : undefined,
       discountMethod: formDiscountMethod,
       orderDiscountType: formOrderDiscountType,
       orderPercent: formOrderPercent,
@@ -1604,7 +1660,7 @@ export const DiscountManagementModule: React.FC = () => {
                     : 'Thêm mới chương trình chiết khấu'}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Cấu hình: Thông tin chung, Phạm vi áp dụng, Hình thức chiết khấu, Tài liệu
+                  Cấu hình: Thông tin chung, Phạm vi áp dụng, Thiết lập chiết khấu, Tài liệu
                 </p>
               </div>
             </div>
@@ -2470,7 +2526,7 @@ export const DiscountManagementModule: React.FC = () => {
               </div>
 
               {/* ================================================================= */}
-              {/* KHU VỰC 3: HÌNH THỨC CHIẾT KHẤU */}
+              {/* KHU VỰC 3: THIẾT LẬP CHIẾT KHẤU */}
               {/* ================================================================= */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-xs space-y-6">
                 <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
@@ -2478,8 +2534,79 @@ export const DiscountManagementModule: React.FC = () => {
                     3
                   </div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                    Hình thức Chiết khấu
+                    Thiết lập chiết khấu
                   </h3>
+                </div>
+
+                {/* Giới hạn số lượng (trên Hình thức áp dụng) */}
+                <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3.5">
+                  <div className="flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-indigo-600" />
+                    <label className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                      Giới hạn số lượng
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 1. Tổng lượt chiết khấu tối đa (lượt) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        Tổng lượt chiết khấu tối đa (lượt)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formMaxUsageTotal}
+                        onChange={(e) => setFormMaxUsageTotal(e.target.value)}
+                        placeholder="Để trống nếu không giới hạn..."
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8] bg-white font-medium"
+                      />
+                    </div>
+
+                    {/* 2. Lượt dùng tối đa trên mỗi khách hàng */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        Lượt dùng tối đa trên mỗi khách hàng
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formMaxUsagePerCustomer}
+                        onChange={(e) => setFormMaxUsagePerCustomer(e.target.value)}
+                        placeholder="Để trống nếu không giới hạn..."
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8] bg-white font-medium"
+                      />
+                    </div>
+
+                    {/* 3. Lượt dùng tối đa trên mỗi Biển số xe */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        Lượt dùng tối đa trên mỗi Biển số xe
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formMaxUsagePerPlate}
+                        onChange={(e) => setFormMaxUsagePerPlate(e.target.value)}
+                        placeholder="Để trống nếu không giới hạn..."
+                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8] bg-white font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Diễn giải */}
+                  <div className="pt-1">
+                    <div className="text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-[#1A73E8]" />
+                      <span>Diễn giải:</span>
+                    </div>
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-lg text-xs text-blue-950 leading-relaxed font-medium">
+                      {getUsageLimitExplanation(formMaxUsageTotal, formMaxUsagePerCustomer, formMaxUsagePerPlate)}
+                    </div>
+                  </div>
                 </div>
 
                 {/* 1. Chọn 1 trong 2: Chiết khấu theo đơn vs Chiết khấu theo sản phẩm */}
@@ -3595,9 +3722,20 @@ export const DiscountManagementModule: React.FC = () => {
               </div>
 
               {/* Khu vực 3 Info */}
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2">
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2.5">
                 <div className="font-bold text-gray-800 uppercase tracking-wide text-[11px] text-indigo-700">
-                  Hình thức Chiết khấu
+                  Thiết lập chiết khấu
+                </div>
+
+                <div className="p-2.5 bg-white rounded-lg border border-gray-200 space-y-1">
+                  <div className="text-gray-500 font-semibold text-[11px]">Giới hạn số lượng:</div>
+                  <div className="text-gray-800 leading-relaxed font-medium">
+                    {getUsageLimitExplanation(
+                      viewingDiscount.maxUsageTotal,
+                      viewingDiscount.maxUsagePerCustomer,
+                      viewingDiscount.maxUsagePerPlate
+                    )}
+                  </div>
                 </div>
                 {viewingDiscount.discountMethod === 'order' ? (
                   <div className="space-y-1.5">
