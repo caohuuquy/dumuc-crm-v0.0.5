@@ -33,6 +33,8 @@ import {
   ExternalLink,
   FileCheck,
   Hash,
+  Ticket,
+  Copy,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -63,6 +65,22 @@ export interface ProductDiscountItem {
   newPriceBeforeVat: number;
   newPriceAfterVat: number;
   minBuyQuantity: number | string;
+}
+
+export interface VoucherItem {
+  id: string;
+  code: string;
+  targetType: 'new_customer' | 'existing_customer';
+  status: 'available' | 'used' | 'expired';
+  createdAt: string;
+  customerCode?: string;
+  customerName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  taxCode?: string;
+  debt?: number | string;
+  hasCarInGarage?: 'Đang có' | 'Không có';
 }
 
 export interface ContractFileItem {
@@ -137,6 +155,9 @@ export interface DiscountRecord {
 
   // Khu vực: Tài liệu
   documents?: DocumentItem[];
+
+  // Quản lý Voucher
+  vouchersList?: VoucherItem[];
 }
 
 const BRANCH_OPTIONS = [
@@ -492,6 +513,131 @@ export const DiscountManagementModule: React.FC = () => {
   const [formProductDiscountType, setFormProductDiscountType] = useState<'percentage' | 'fixed_amount'>('percentage');
   const [formProductItems, setFormProductItems] = useState<ProductDiscountItem[]>([]);
 
+  // Quản lý Voucher State
+  const [formVouchersList, setFormVouchersList] = useState<VoucherItem[]>([]);
+  const [isViewVoucherListModalOpen, setIsViewVoucherListModalOpen] = useState(false);
+  const [isGenerateVoucherModalOpen, setIsGenerateVoucherModalOpen] = useState(false);
+  const [genVoucherQty, setGenVoucherQty] = useState<string>('10');
+  const [genVoucherTarget, setGenVoucherTarget] = useState<'both' | 'new_customer' | 'existing_customer'>('both');
+  const [voucherSearchTerm, setVoucherSearchTerm] = useState('');
+  const [voucherCopiedId, setVoucherCopiedId] = useState<string | null>(null);
+
+  const [voucherTargetFilter, setVoucherTargetFilter] = useState<'all' | 'new_customer' | 'existing_customer'>('all');
+  const [voucherGarageFilter, setVoucherGarageFilter] = useState<'all' | 'Đang có' | 'Không có'>('all');
+  const [voucherDebtFilter, setVoucherDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
+
+  // Derived counts for read-only fields
+  const formVoucherTotalCount = formVouchersList.length;
+  const formVoucherNewCustomerCount = formVouchersList.filter((v) => v.targetType === 'new_customer').length;
+  const formVoucherExistingCustomerCount = formVouchersList.filter((v) => v.targetType === 'existing_customer').length;
+
+  const handleGenerateVouchers = () => {
+    const qty = Math.max(1, Math.min(500, parseInt(genVoucherQty, 10) || 1));
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const newItems: VoucherItem[] = [];
+
+    for (let i = 0; i < qty; i++) {
+      let target: 'new_customer' | 'existing_customer' = 'new_customer';
+      if (genVoucherTarget === 'both') {
+        target = i % 2 === 0 ? 'new_customer' : 'existing_customer';
+      } else {
+        target = genVoucherTarget;
+      }
+      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+
+      const sampleCust = target === 'existing_customer'
+        ? EXISTING_CUSTOMERS_IN_MODULE[i % EXISTING_CUSTOMERS_IN_MODULE.length]
+        : undefined;
+
+      newItems.push({
+        id: `vchr-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+        code: `VC-${randomCode}-${randomNum}`,
+        targetType: target,
+        status: 'available',
+        createdAt: dateStr,
+        customerCode: sampleCust ? sampleCust.customerCode : `KH-NEW-${Math.floor(100 + Math.random() * 900)}`,
+        customerName: sampleCust ? sampleCust.customerName : `Khách mới #${i + 1}`,
+        address: sampleCust ? sampleCust.address : 'Hồ Chí Minh',
+        phone: sampleCust ? sampleCust.phone : `09${Math.floor(10000000 + Math.random() * 90000000)}`,
+        email: sampleCust ? sampleCust.email : `khachmoi${randomNum}@gmail.com`,
+        taxCode: sampleCust ? sampleCust.taxCode : `03${Math.floor(10000000 + Math.random() * 90000000)}`,
+        debt: target === 'existing_customer' ? (i % 3 === 0 ? 15000000 : (i % 2 === 0 ? 4200000 : 0)) : 0,
+        hasCarInGarage: target === 'existing_customer' ? (i % 2 === 0 ? 'Đang có' : 'Không có') : 'Không có',
+      });
+    }
+
+    setFormVouchersList((prev) => [...newItems, ...prev]);
+    setIsGenerateVoucherModalOpen(false);
+  };
+
+  const handleAddVoucherRow = () => {
+    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const newRow: VoucherItem = {
+      id: `vchr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      code: `VC-${randomCode}-${randomNum}`,
+      targetType: 'new_customer',
+      status: 'available',
+      createdAt: dateStr,
+      customerCode: '',
+      customerName: '',
+      address: '',
+      phone: '',
+      email: '',
+      taxCode: '',
+      debt: 0,
+      hasCarInGarage: 'Không có',
+    };
+    setFormVouchersList((prev) => [newRow, ...prev]);
+  };
+
+  const handleDeleteVoucher = (voucherId: string) => {
+    setFormVouchersList((prev) => prev.filter((v) => v.id !== voucherId));
+  };
+
+  const handleUpdateVoucherRow = (voucherId: string, field: keyof VoucherItem, value: any) => {
+    setFormVouchersList((prev) =>
+      prev.map((v) => (v.id === voucherId ? { ...v, [field]: value } : v))
+    );
+  };
+
+  const filteredVouchers = formVouchersList.filter((v) => {
+    // 1. Text search
+    if (voucherSearchTerm.trim()) {
+      const q = voucherSearchTerm.toLowerCase();
+      const match =
+        v.code.toLowerCase().includes(q) ||
+        (v.customerCode && v.customerCode.toLowerCase().includes(q)) ||
+        (v.customerName && v.customerName.toLowerCase().includes(q)) ||
+        (v.address && v.address.toLowerCase().includes(q)) ||
+        (v.phone && v.phone.toLowerCase().includes(q)) ||
+        (v.email && v.email.toLowerCase().includes(q)) ||
+        (v.taxCode && v.taxCode.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    // 2. Target filter
+    if (voucherTargetFilter !== 'all' && v.targetType !== voucherTargetFilter) {
+      return false;
+    }
+    // 3. Garage filter
+    if (voucherGarageFilter !== 'all' && (v.hasCarInGarage || 'Không có') !== voucherGarageFilter) {
+      return false;
+    }
+    // 4. Debt filter
+    if (voucherDebtFilter === 'with_debt') {
+      const debtNum = typeof v.debt === 'number' ? v.debt : parseFloat(String(v.debt || '0')) || 0;
+      if (debtNum <= 0) return false;
+    } else if (voucherDebtFilter === 'no_debt') {
+      const debtNum = typeof v.debt === 'number' ? v.debt : parseFloat(String(v.debt || '0')) || 0;
+      if (debtNum > 0) return false;
+    }
+    return true;
+  });
+
   // Khu vực: Tài liệu
   const createBlankDocumentItem = (): DocumentItem => ({
     id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -711,6 +857,7 @@ export const DiscountManagementModule: React.FC = () => {
 
     // Khu vực: Tài liệu (mặc định 1 dòng trống khi thêm mới)
     setFormDocuments([createBlankDocumentItem()]);
+    setFormVouchersList([]);
 
     setFormError('');
     setShowStartDateInfo(false);
@@ -757,6 +904,7 @@ export const DiscountManagementModule: React.FC = () => {
 
     // Khu vực: Tài liệu
     setFormDocuments(discount.documents && discount.documents.length > 0 ? discount.documents : [createBlankDocumentItem()]);
+    setFormVouchersList(discount.vouchersList || []);
 
     setFormError('');
     setShowStartDateInfo(false);
@@ -850,6 +998,9 @@ export const DiscountManagementModule: React.FC = () => {
 
       // Khu vực: Tài liệu
       documents: formDocuments,
+
+      // Quản lý Voucher
+      vouchersList: formVouchersList,
     };
 
     if (editingDiscount) {
@@ -1691,7 +1842,9 @@ export const DiscountManagementModule: React.FC = () => {
                     : 'Thêm mới chương trình chiết khấu'}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Cấu hình: Thông tin chung, Phạm vi áp dụng, Thiết lập chiết khấu, Tài liệu
+                  {formCategory === 'Voucher'
+                    ? 'Cấu hình: Thông tin chung, Quản lý Voucher, Thiết lập Voucher, Tài liệu'
+                    : 'Cấu hình: Thông tin chung, Phạm vi áp dụng, Thiết lập chiết khấu, Tài liệu'}
                 </p>
               </div>
             </div>
@@ -2020,7 +2173,7 @@ export const DiscountManagementModule: React.FC = () => {
                     2
                   </div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                    Phạm vi áp dụng
+                    {formCategory === 'Voucher' ? 'Quản lý Voucher' : 'Phạm vi áp dụng'}
                   </h3>
                 </div>
 
@@ -2106,97 +2259,168 @@ export const DiscountManagementModule: React.FC = () => {
                   )}
                 </div>
 
-                {/* 2. Màu sắc biển số xe */}
-                <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Car className="w-4 h-4 text-amber-600" />
-                      Màu sắc biển số xe
-                    </label>
+                {/* Khi field "Loại" = Voucher: bổ sung dưới Chi nhánh áp dụng */}
+                {formCategory === 'Voucher' && (
+                  <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-4">
+                    {/* Dòng 1: 3 field read-only */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* 1. Tổng số Voucher hiện có */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Tổng số Voucher hiện có
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formVoucherTotalCount.toLocaleString('vi-VN')}
+                          className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-800 font-bold outline-none cursor-not-allowed select-none"
+                        />
+                      </div>
 
-                    {/* Button tick chọn 1 trong 2 */}
-                    <div className="inline-flex items-center p-1 bg-white rounded-lg border border-gray-200 gap-1 shadow-2xs">
+                      {/* 2. Tổng số Voucher dành cho Khách hàng mới */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Tổng số Voucher dành cho Khách hàng mới
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formVoucherNewCustomerCount.toLocaleString('vi-VN')}
+                          className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-800 font-bold outline-none cursor-not-allowed select-none"
+                        />
+                      </div>
+
+                      {/* 3. Tổng số Voucher dành cho Khách hàng hiện hữu */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Tổng số Voucher dành cho Khách hàng hiện hữu
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formVoucherExistingCustomerCount.toLocaleString('vi-VN')}
+                          className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-800 font-bold outline-none cursor-not-allowed select-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dòng 2: có 2 nút "Xem danh sách Voucher" và nút "Tạo Voucher" */}
+                    <div className="flex items-center gap-3 pt-1">
                       <button
                         type="button"
-                        onClick={() => setFormPlateColorScope('all')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                          formPlateColorScope === 'all'
-                            ? 'bg-[#1A73E8] text-white shadow-xs'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        onClick={() => setIsViewVoucherListModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
                       >
-                        Áp dụng tất cả màu sắc biển số xe
+                        <FileText className="w-4 h-4 text-[#1A73E8]" />
+                        <span>Xem danh sách Voucher</span>
                       </button>
+
                       <button
                         type="button"
-                        onClick={() => setFormPlateColorScope('specific')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                          formPlateColorScope === 'specific'
-                            ? 'bg-[#1A73E8] text-white shadow-xs'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        onClick={() => setIsGenerateVoucherModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       >
-                        Chọn từng màu biển số xe
+                        <Plus className="w-4 h-4" />
+                        <span>Tạo Voucher</span>
                       </button>
                     </div>
                   </div>
+                )}
 
-                  {/* Khi tick vào "chọn từng màu biển số xe", hiển thị field: Trắng, Vàng và Xanh. Cho phép tick hết */}
-                  {formPlateColorScope === 'specific' && (
-                    <div className="pt-2 animate-fadeIn">
-                      <div className="text-xs font-semibold text-gray-700 mb-2">
-                        Màu biển số xe áp dụng: <span className="text-gray-400 font-normal">(cho phép chọn nhiều hoặc tất cả)</span>
+                {/* 2. Màu sắc biển số xe (ẩn khi Loại là Voucher) */}
+                {formCategory !== 'Voucher' && (
+                  <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
+                        <Car className="w-4 h-4 text-amber-600" />
+                        Màu sắc biển số xe
+                      </label>
+
+                      {/* Button tick chọn 1 trong 2 */}
+                      <div className="inline-flex items-center p-1 bg-white rounded-lg border border-gray-200 gap-1 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setFormPlateColorScope('all')}
+                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                            formPlateColorScope === 'all'
+                              ? 'bg-[#1A73E8] text-white shadow-xs'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Áp dụng tất cả màu sắc biển số xe
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormPlateColorScope('specific')}
+                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                            formPlateColorScope === 'specific'
+                              ? 'bg-[#1A73E8] text-white shadow-xs'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Chọn từng màu biển số xe
+                        </button>
                       </div>
-                      <div className="flex flex-wrap gap-2.5">
-                        {PLATE_COLOR_OPTIONS.map((color) => {
-                          const isChecked = formSelectedPlateColors.includes(color);
-                          const colorVisual =
-                            color === 'Trắng'
-                              ? 'border-gray-300 bg-white text-gray-800 ring-gray-200'
-                              : color === 'Vàng'
-                              ? 'border-amber-300 bg-amber-50 text-amber-800 ring-amber-200'
-                              : 'border-blue-300 bg-blue-50 text-blue-800 ring-blue-200';
+                    </div>
 
-                          return (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => {
-                                setFormSelectedPlateColors((prev) =>
-                                  isChecked ? prev.filter((c) => c !== color) : [...prev, color]
-                                );
-                              }}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${colorVisual} ${
-                                isChecked
-                                  ? 'ring-2 ring-offset-1 border-[#1A73E8] shadow-2xs font-bold'
-                                  : 'opacity-70 hover:opacity-100'
-                              }`}
-                            >
-                              <div
-                                className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[10px] ${
+                    {/* Khi tick vào "chọn từng màu biển số xe", hiển thị field: Trắng, Vàng và Xanh. Cho phép tick hết */}
+                    {formPlateColorScope === 'specific' && (
+                      <div className="pt-2 animate-fadeIn">
+                        <div className="text-xs font-semibold text-gray-700 mb-2">
+                          Màu biển số xe áp dụng: <span className="text-gray-400 font-normal">(cho phép chọn nhiều hoặc tất cả)</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2.5">
+                          {PLATE_COLOR_OPTIONS.map((color) => {
+                            const isChecked = formSelectedPlateColors.includes(color);
+                            const colorVisual =
+                              color === 'Trắng'
+                                ? 'border-gray-300 bg-white text-gray-800 ring-gray-200'
+                                : color === 'Vàng'
+                                ? 'border-amber-300 bg-amber-50 text-amber-800 ring-amber-200'
+                                : 'border-blue-300 bg-blue-50 text-blue-800 ring-blue-200';
+
+                            return (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => {
+                                  setFormSelectedPlateColors((prev) =>
+                                    isChecked ? prev.filter((c) => c !== color) : [...prev, color]
+                                  );
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${colorVisual} ${
                                   isChecked
-                                    ? 'bg-[#1A73E8] border-[#1A73E8] text-white'
-                                    : 'border-gray-400 bg-white'
+                                    ? 'ring-2 ring-offset-1 border-[#1A73E8] shadow-2xs font-bold'
+                                    : 'opacity-70 hover:opacity-100'
                                 }`}
                               >
-                                {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                              <span>Biển số {color}</span>
-                            </button>
-                          );
-                        })}
+                                <div
+                                  className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[10px] ${
+                                    isChecked
+                                      ? 'bg-[#1A73E8] border-[#1A73E8] text-white'
+                                      : 'border-gray-400 bg-white'
+                                  }`}
+                                >
+                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span>Biển số {color}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {formSelectedPlateColors.length === 0 && (
+                          <p className="text-[11px] text-amber-600 mt-1.5">
+                            * Vui lòng chọn ít nhất một màu biển số xe.
+                          </p>
+                        )}
                       </div>
-                      {formSelectedPlateColors.length === 0 && (
-                        <p className="text-[11px] text-amber-600 mt-1.5">
-                          * Vui lòng chọn ít nhất một màu biển số xe.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
-                {/* 3. Khách hàng */}
-                <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3.5">
+                {/* 3. Khách hàng (Đối tượng áp dụng & Giới hạn số lượng - ẩn khi Loại là Voucher) */}
+                {formCategory !== 'Voucher' && (
+                  <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
                       <Users className="w-4 h-4 text-purple-600" />
@@ -2632,6 +2856,7 @@ export const DiscountManagementModule: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              )}
               </div>
 
               {/* ================================================================= */}
@@ -2643,7 +2868,7 @@ export const DiscountManagementModule: React.FC = () => {
                     3
                   </div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                    Thiết lập chiết khấu
+                    {formCategory === 'Voucher' ? 'Thiết lập Voucher' : 'Thiết lập chiết khấu'}
                   </h3>
                 </div>
 
@@ -3725,7 +3950,7 @@ export const DiscountManagementModule: React.FC = () => {
               {/* Khu vực 2 Info */}
               <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2">
                 <div className="font-bold text-gray-800 uppercase tracking-wide text-[11px] text-emerald-700">
-                  Phạm vi áp dụng
+                  {viewingDiscount.category === 'Voucher' ? 'Quản lý Voucher' : 'Phạm vi áp dụng'}
                 </div>
                 <div className="space-y-1.5">
                   <div>
@@ -3775,7 +4000,7 @@ export const DiscountManagementModule: React.FC = () => {
               {/* Khu vực 3 Info */}
               <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2">
                 <div className="font-bold text-gray-800 uppercase tracking-wide text-[11px] text-indigo-700">
-                  Thiết lập chiết khấu
+                  {viewingDiscount.category === 'Voucher' ? 'Thiết lập Voucher' : 'Thiết lập chiết khấu'}
                 </div>
                 {viewingDiscount.discountMethod === 'order' ? (
                   <div className="space-y-1.5">
@@ -4049,6 +4274,545 @@ export const DiscountManagementModule: React.FC = () => {
                   <HelpCircle className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Xem danh sách Voucher (FULL MÀN HÌNH) */}
+      {isViewVoucherListModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-[#F4F6F9] flex flex-col overflow-hidden animate-fadeIn">
+          {/* Top Sticky Header */}
+          <div className="h-16 px-6 bg-white border-b border-gray-200 flex items-center justify-between shrink-0 shadow-xs z-20">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsViewVoucherListModalOpen(false)}
+                className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                title="Quay lại"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">
+                    Danh sách Voucher
+                  </h2>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200">
+                    Quản lý Voucher
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Xem và quản lý toàn bộ các mã Voucher phát hành trong chương trình
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsGenerateVoucherModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tạo Voucher</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsViewVoucherListModalOpen(false)}
+                className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            {/* 1. THÔNG TIN CHƯƠNG TRÌNH / CHIẾN DỊCH & THỐNG KÊ SỐ LƯỢNG VOUCHER */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Thông tin: Tên chương trình / chiến dịch, Cộng dồn ưu đãi, Ngày bắt đầu, Ngày kết thúc */}
+              <div className="lg:col-span-7 bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-3.5">
+                <div className="flex items-center gap-2 pb-2.5 border-b border-gray-100">
+                  <Tag className="w-4 h-4 text-[#1A73E8]" />
+                  <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                    Thông tin chương trình / chiến dịch
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  {/* Tên chương trình / chiến dịch */}
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-500 block mb-1">Tên chương trình / chiến dịch:</span>
+                    <span className="font-bold text-gray-900 text-sm">
+                      {formName.trim() ? formName : '(Chưa đặt tên chương trình)'}
+                    </span>
+                    {formCode && (
+                      <span className="ml-2 font-mono text-[11px] bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-gray-600">
+                        {formCode}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Cộng dồn ưu đãi */}
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-500 block mb-1">Cộng dồn ưu đãi:</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold text-xs border ${
+                      formStackable === 'allow'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                    }`}>
+                      {formStackable === 'allow' ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Cho phép Cộng dồn với Chương trình Chiết khấu
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="w-3.5 h-3.5 text-gray-500" />
+                          Không cho phép Cộng dồn với Chương trình Chiết khấu
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Ngày bắt đầu */}
+                  <div>
+                    <span className="text-gray-500 block mb-1">Ngày bắt đầu:</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-gray-800">
+                      <Calendar className="w-3.5 h-3.5 text-[#1A73E8]" />
+                      <span>{formStartDate ? formStartDate.split('-').reverse().join('/') : '--/--/----'}</span>
+                    </div>
+                  </div>
+
+                  {/* Ngày kết thúc */}
+                  <div>
+                    <span className="text-gray-500 block mb-1">Ngày kết thúc:</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-gray-800">
+                      <Calendar className="w-3.5 h-3.5 text-red-500" />
+                      <span>{formEndDate ? formEndDate.split('-').reverse().join('/') : '--/--/----'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thống kê: Tổng số Voucher hiện có, Tổng số voucher dành cho Khách hàng mới, Tổng số Voucher dành cho khách hàng hiện hữu */}
+              <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
+                {/* Tổng số Voucher hiện có */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 block">
+                      Tổng số Voucher hiện có
+                    </span>
+                    <span className="text-2xl font-black text-gray-900 mt-1 block">
+                      {formVoucherTotalCount.toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1A73E8] flex items-center justify-center font-bold">
+                    <Ticket className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Tổng số voucher dành cho Khách hàng mới */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 block">
+                      Tổng số voucher dành cho Khách hàng mới
+                    </span>
+                    <span className="text-2xl font-black text-blue-600 mt-1 block">
+                      {formVoucherNewCustomerCount.toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Tổng số Voucher dành cho khách hàng hiện hữu */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 block">
+                      Tổng số Voucher dành cho khách hàng hiện hữu
+                    </span>
+                    <span className="text-2xl font-black text-emerald-600 mt-1 block">
+                      {formVoucherExistingCustomerCount.toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <Building className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. DÒNG CHUYÊN SEARCH / FILTER CÁC GIÁ TRỊ BẢNG */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-1 min-w-[280px] flex-wrap">
+                {/* Search input */}
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={voucherSearchTerm}
+                    onChange={(e) => setVoucherSearchTerm(e.target.value)}
+                    placeholder="Tìm theo Mã voucher, Mã KH, Tên KH, SĐT, Email, MST, Địa chỉ..."
+                    className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:border-[#1A73E8] bg-white font-medium"
+                  />
+                  {voucherSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setVoucherSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Đối tượng */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">Đối tượng:</span>
+                  <select
+                    value={voucherTargetFilter}
+                    onChange={(e) => setVoucherTargetFilter(e.target.value as any)}
+                    className="px-2.5 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 outline-none focus:border-[#1A73E8] bg-white cursor-pointer"
+                  >
+                    <option value="all">Tất cả đối tượng</option>
+                    <option value="new_customer">Khách hàng mới</option>
+                    <option value="existing_customer">Khách hàng hiện hữu</option>
+                  </select>
+                </div>
+
+                {/* Filter Xe trong Garage */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">Xe trong Garage:</span>
+                  <select
+                    value={voucherGarageFilter}
+                    onChange={(e) => setVoucherGarageFilter(e.target.value as any)}
+                    className="px-2.5 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 outline-none focus:border-[#1A73E8] bg-white cursor-pointer"
+                  >
+                    <option value="all">Tất cả</option>
+                    <option value="Đang có">Đang có</option>
+                    <option value="Không có">Không có</option>
+                  </select>
+                </div>
+
+                {/* Filter Công nợ */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">Công nợ:</span>
+                  <select
+                    value={voucherDebtFilter}
+                    onChange={(e) => setVoucherDebtFilter(e.target.value as any)}
+                    className="px-2.5 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 outline-none focus:border-[#1A73E8] bg-white cursor-pointer"
+                  >
+                    <option value="all">Tất cả</option>
+                    <option value="with_debt">Có công nợ</option>
+                    <option value="no_debt">Không nợ (0 đ)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action Buttons: Thêm dòng, Tạo Voucher */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddVoucherRow}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm dòng</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsGenerateVoucherModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Tạo Voucher</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. BẢNG CHI TIẾT */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+              <div className="overflow-x-auto max-h-[calc(100vh-380px)]">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#F8FAFC] text-gray-700 font-bold border-b border-gray-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="py-3 px-3 text-center w-12 border-r border-gray-200/80">STT</th>
+                      <th className="py-3 px-3 min-w-[130px] border-r border-gray-200/80">Mã Voucher</th>
+                      <th className="py-3 px-3 min-w-[130px] border-r border-gray-200/80">Mã khách hàng</th>
+                      <th className="py-3 px-3 min-w-[170px] border-r border-gray-200/80">Tên Khách hàng</th>
+                      <th className="py-3 px-3 min-w-[200px] border-r border-gray-200/80">Địa chỉ</th>
+                      <th className="py-3 px-3 min-w-[120px] border-r border-gray-200/80">SĐT</th>
+                      <th className="py-3 px-3 min-w-[160px] border-r border-gray-200/80">Email</th>
+                      <th className="py-3 px-3 min-w-[120px] border-r border-gray-200/80">MST</th>
+                      <th className="py-3 px-3 min-w-[130px] text-right border-r border-gray-200/80">Công nợ</th>
+                      <th className="py-3 px-3 min-w-[140px] text-center border-r border-gray-200/80">Xe trong Garage</th>
+                      <th className="py-3 px-2 text-center w-14">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredVouchers.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="py-12 text-center text-gray-400">
+                          Không tìm thấy mã Voucher nào phù hợp. Nhấn <strong>"+ Thêm dòng"</strong> hoặc <strong>"Tạo Voucher"</strong> để bổ sung.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredVouchers.map((v, idx) => (
+                        <tr key={v.id} className="hover:bg-blue-50/20 transition-colors">
+                          {/* STT */}
+                          <td className="py-2 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
+                            {idx + 1}
+                          </td>
+
+                          {/* Mã Voucher */}
+                          <td className="py-1.5 px-2.5 border-r border-gray-100">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-mono font-bold text-[#1A73E8]">
+                                {v.code}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(v.code);
+                                  setVoucherCopiedId(v.id);
+                                  setTimeout(() => setVoucherCopiedId(null), 1500);
+                                }}
+                                className="p-1 text-gray-400 hover:text-[#1A73E8] rounded transition-colors cursor-pointer"
+                                title="Sao chép mã"
+                              >
+                                {voucherCopiedId === v.id ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Mã khách hàng */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="text"
+                              value={v.customerCode || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'customerCode', e.target.value)}
+                              placeholder="Mã KH..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono font-medium text-gray-800"
+                            />
+                          </td>
+
+                          {/* Tên Khách hàng */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="text"
+                              value={v.customerName || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'customerName', e.target.value)}
+                              placeholder="Tên khách hàng..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
+                            />
+                          </td>
+
+                          {/* Địa chỉ */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="text"
+                              value={v.address || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'address', e.target.value)}
+                              placeholder="Địa chỉ..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
+                            />
+                          </td>
+
+                          {/* SĐT */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="text"
+                              value={v.phone || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'phone', e.target.value)}
+                              placeholder="SĐT..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
+                            />
+                          </td>
+
+                          {/* Email */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="email"
+                              value={v.email || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'email', e.target.value)}
+                              placeholder="Email..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
+                            />
+                          </td>
+
+                          {/* MST */}
+                          <td className="py-1.5 px-2 border-r border-gray-100">
+                            <input
+                              type="text"
+                              value={v.taxCode || ''}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'taxCode', e.target.value)}
+                              placeholder="Mã số thuế..."
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono text-gray-700"
+                            />
+                          </td>
+
+                          {/* Công nợ */}
+                          <td className="py-1.5 px-2 border-r border-gray-100 text-right">
+                            <input
+                              type="text"
+                              value={typeof v.debt === 'number' ? v.debt.toLocaleString('vi-VN') : (v.debt || '0')}
+                              onChange={(e) => {
+                                const clean = e.target.value.replace(/\D/g, '');
+                                handleUpdateVoucherRow(v.id, 'debt', clean ? parseInt(clean, 10) : 0);
+                              }}
+                              placeholder="0"
+                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-semibold text-right text-gray-800"
+                            />
+                          </td>
+
+                          {/* Xe trong Garage (Đang có, Không có) */}
+                          <td className="py-1.5 px-2 border-r border-gray-100 text-center">
+                            <select
+                              value={v.hasCarInGarage || 'Không có'}
+                              onChange={(e) => handleUpdateVoucherRow(v.id, 'hasCarInGarage', e.target.value as any)}
+                              className={`px-2 py-1 text-xs rounded-md font-bold border transition-colors outline-none cursor-pointer ${
+                                v.hasCarInGarage === 'Đang có'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                  : 'bg-gray-100 text-gray-600 border-gray-300'
+                              }`}
+                            >
+                              <option value="Đang có">Đang có</option>
+                              <option value="Không có">Không có</option>
+                            </select>
+                          </td>
+
+                          {/* Xóa */}
+                          <td className="py-1.5 px-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVoucher(v.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                              title="Xóa voucher"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer */}
+              <div className="bg-gray-50 border-t border-gray-200 px-4 py-2.5 flex items-center justify-between text-xs text-gray-600">
+                <span>
+                  Hiển thị <strong>{filteredVouchers.length}</strong> / <strong>{formVouchersList.length}</strong> voucher
+                </span>
+                <span className="text-[11px] text-gray-400 italic">
+                  * Nhấp chuột trực tiếp vào các ô để chỉnh sửa nhanh thông tin khách hàng và công nợ
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Tạo Voucher */}
+      {isGenerateVoucherModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Ticket className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Tạo Voucher</h3>
+                  <p className="text-xs text-gray-500">Phát hành mã Voucher tự động</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGenerateVoucherModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Số lượng Voucher cần tạo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={genVoucherQty}
+                  onChange={(e) => setGenVoucherQty(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8]"
+                  placeholder="Nhập số lượng (vd: 10, 50, 100)..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Đối tượng áp dụng Voucher
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
+                    <input
+                      type="radio"
+                      name="genVoucherTarget"
+                      checked={genVoucherTarget === 'both'}
+                      onChange={() => setGenVoucherTarget('both')}
+                      className="text-[#1A73E8]"
+                    />
+                    <span className="font-medium text-gray-800">Cả Khách hàng mới và Hiện hữu (chia đều)</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
+                    <input
+                      type="radio"
+                      name="genVoucherTarget"
+                      checked={genVoucherTarget === 'new_customer'}
+                      onChange={() => setGenVoucherTarget('new_customer')}
+                      className="text-[#1A73E8]"
+                    />
+                    <span className="font-medium text-gray-800">Chỉ dành cho Khách hàng mới</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
+                    <input
+                      type="radio"
+                      name="genVoucherTarget"
+                      checked={genVoucherTarget === 'existing_customer'}
+                      onChange={() => setGenVoucherTarget('existing_customer')}
+                      className="text-[#1A73E8]"
+                    />
+                    <span className="font-medium text-gray-800">Chỉ dành cho Khách hàng hiện hữu</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/80 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsGenerateVoucherModalOpen(false)}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateVouchers}
+                className="px-5 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                Xác nhận tạo
+              </button>
             </div>
           </div>
         </div>
