@@ -35,6 +35,15 @@ import {
   Hash,
   Ticket,
   Copy,
+  ClipboardList,
+  Pin,
+  Phone,
+  Share2,
+  MoreVertical,
+  DollarSign,
+  CheckSquare,
+  ChevronDown,
+  Wrench,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -363,6 +372,662 @@ export const SALES_CONTRACT_CATALOG: SalesContractRecord[] = [
     signerName: 'Bridgestone VN - Chu Văn Kiên',
     signingDate: '2025-01-05',
     scopeNotes: 'Chiết khấu bán buôn 7% và thưởng quý 3% khi vượt chỉ tiêu doanh số.',
+  },
+];
+
+export interface RepairOrderRecord {
+  id: string;
+  plateNumber: string;
+  roNumber: string;
+  carInfo: string;
+  carSubInfo?: string;
+  customerName: string;
+  hasInsurance?: boolean;
+  customerPhone?: string;
+  advisor: string;
+  receivedDate: string;
+  receivedKm?: string;
+  estDeliveryDate: string;
+  actualDeliveryDate: string;
+  stage: 'Tiếp nhận' | 'Lệnh sửa c...' | 'Quyết toán' | 'Nghiệm thu';
+  status: 'Mới' | 'Đang sửa' | 'Đã bàn giao' | 'Huỷ';
+}
+
+export const SAMPLE_REPAIR_ORDERS: RepairOrderRecord[] = [
+  {
+    id: 'ro-1',
+    plateNumber: '51A57567',
+    roNumber: '2610-000040',
+    carInfo: 'Volvo S90',
+    carSubInfo: 'đỏ • 2015',
+    customerName: '29H 12719 - Anh Phong - Mitsubishi Triton',
+    hasInsurance: true,
+    customerPhone: '0973088989',
+    advisor: 'Minh Thắng',
+    receivedDate: '16/10/2026 09:57',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-2',
+    plateNumber: '12I026102',
+    roNumber: '2610-000039',
+    carInfo: 'Ford',
+    customerName: 'Truong Test2',
+    customerPhone: '0901234567',
+    advisor: '—',
+    receivedDate: '14/10/2026 16:11',
+    estDeliveryDate: '14/10/2026 16:11',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-3',
+    plateNumber: '12I026102',
+    roNumber: '2610-000037',
+    carInfo: 'Ford',
+    customerName: 'Truong Test2',
+    customerPhone: '0901234567',
+    advisor: '—',
+    receivedDate: '14/10/2026 14:04',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Quyết toán',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-4',
+    plateNumber: 'CHƯA BIẾN SỐ',
+    roNumber: '2610-000036',
+    carInfo: 'Thông tin xe chưa cập nhật',
+    customerName: 'Khách Hàng',
+    advisor: '—',
+    receivedDate: '14/10/2026 13:40',
+    estDeliveryDate: '',
+    actualDeliveryDate: '14/10/2026 14:04',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-5',
+    plateNumber: '033685',
+    roNumber: '2610-000038',
+    carInfo: 'Lexus Lx570',
+    customerName: 'Truong T',
+    hasInsurance: true,
+    advisor: '—',
+    receivedDate: '14/10/2026 13:21',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-6',
+    plateNumber: '033685',
+    roNumber: '2610-000035',
+    carInfo: 'Lexus Lx570',
+    customerName: 'Truong T',
+    advisor: '—',
+    receivedDate: '13/10/2026 15:52',
+    estDeliveryDate: '13/10/2026 15:52',
+    actualDeliveryDate: '',
+    stage: 'Quyết toán',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-7',
+    plateNumber: '033685',
+    roNumber: '2610-000034',
+    carInfo: 'Lexus Lx570',
+    customerName: 'Truong T',
+    advisor: '—',
+    receivedDate: '13/10/2026 10:09',
+    estDeliveryDate: '13/10/2026 10:09',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-8',
+    plateNumber: '11111',
+    roNumber: '2610-000033',
+    carInfo: 'Toyota',
+    customerName: '29A 13919 - Anh Tam - Audi Q7',
+    customerPhone: '0776703978',
+    advisor: '—',
+    receivedDate: '13/10/2026 09:23',
+    estDeliveryDate: '13/10/2026 09:23',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-9',
+    plateNumber: '12I026113',
+    roNumber: '2610-000032',
+    carInfo: 'Vinfast',
+    customerName: 'Truong',
+    advisor: '—',
+    receivedDate: '12/10/2026 11:58',
+    estDeliveryDate: '12/10/2026 11:58',
+    actualDeliveryDate: '',
+    stage: 'Quyết toán',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-10',
+    plateNumber: '66A99999',
+    roNumber: '2610-000031',
+    carInfo: 'Mercedes Maybach',
+    carSubInfo: 'Đen • 2020',
+    customerName: 'anh Thắng',
+    customerPhone: '0358500775',
+    advisor: 'Minh Thắng',
+    receivedDate: '12/10/2026 11:31',
+    receivedKm: '157,486 km',
+    estDeliveryDate: '',
+    actualDeliveryDate: '12/10/2026 11:59',
+    stage: 'Nghiệm thu',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-11',
+    plateNumber: '51F56686',
+    roNumber: '2610-000030',
+    carInfo: 'Mercedes S500L',
+    customerName: 'Trương Văn Cường',
+    advisor: 'Minh Thắng',
+    receivedDate: '10/10/2026 15:07',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-12',
+    plateNumber: '66A99999',
+    roNumber: '2610-000029',
+    carInfo: 'Mercedes Maybach',
+    carSubInfo: 'Đen • 2020',
+    customerName: 'anh Thắng',
+    customerPhone: '0358500775',
+    advisor: 'Minh Thắng',
+    receivedDate: '10/10/2026 15:07',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-13',
+    plateNumber: '12A1234',
+    roNumber: '2610-000020',
+    carInfo: 'BMW 520',
+    carSubInfo: 'đỏ • 2020',
+    customerName: 'a tuan',
+    customerPhone: '0936631213',
+    advisor: '—',
+    receivedDate: '08/10/2026 20:37',
+    estDeliveryDate: '08/10/2026 20:37',
+    actualDeliveryDate: '12/10/2026 11:35',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-14',
+    plateNumber: '11SU1405',
+    roNumber: '2610-000019',
+    carInfo: 'Lexus',
+    customerName: 'Tuấn',
+    advisor: '—',
+    receivedDate: '08/10/2026 11:23',
+    estDeliveryDate: '08/10/2026 11:23',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-15',
+    plateNumber: '190B26094',
+    roNumber: '2610-000015',
+    carInfo: 'Volkswagen Tigion',
+    carSubInfo: 'red • 2022',
+    customerName: 'Trường',
+    customerPhone: '097737938',
+    advisor: 'Minh Thắng',
+    receivedDate: '07/10/2026 16:18',
+    estDeliveryDate: '09/10/2026 07:35',
+    actualDeliveryDate: '12/10/2026 11:35',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-16',
+    plateNumber: '51A 71068',
+    roNumber: '2610-000014',
+    carInfo: 'Ford Focus',
+    carSubInfo: 'đen • 2019',
+    customerName: 'Trung Tín auto',
+    customerPhone: '0914449225',
+    advisor: '—',
+    receivedDate: '07/10/2026 15:14',
+    receivedKm: '33,545 km',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-17',
+    plateNumber: '51G 88921',
+    roNumber: '2610-000012',
+    carInfo: 'Toyota Camry',
+    carSubInfo: 'trắng • 2021',
+    customerName: 'Nguyễn Văn An',
+    customerPhone: '0903112233',
+    advisor: 'Minh Thắng',
+    receivedDate: '06/10/2026 14:20',
+    estDeliveryDate: '06/10/2026 17:00',
+    actualDeliveryDate: '06/10/2026 17:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-18',
+    plateNumber: '60A 54321',
+    roNumber: '2610-000010',
+    carInfo: 'Mazda CX-5',
+    carSubInfo: 'đỏ • 2023',
+    customerName: 'Lê Thị Bích',
+    hasInsurance: true,
+    customerPhone: '0918776655',
+    advisor: '—',
+    receivedDate: '05/10/2026 10:15',
+    estDeliveryDate: '05/10/2026 16:30',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-19',
+    plateNumber: '72A 99887',
+    roNumber: '2610-000008',
+    carInfo: 'Hyundai SantaFe',
+    carSubInfo: 'đen • 2022',
+    customerName: 'Phạm Quốc Bảo',
+    customerPhone: '0982334455',
+    advisor: 'Minh Thắng',
+    receivedDate: '04/10/2026 08:45',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-20',
+    plateNumber: '51H 12345',
+    roNumber: '2610-000005',
+    carInfo: 'Kia Carnival',
+    carSubInfo: 'trắng • 2024',
+    customerName: 'Công ty CP Vận tải Nam Việt',
+    customerPhone: '0909887766',
+    advisor: 'Minh Thắng',
+    receivedDate: '03/10/2026 09:30',
+    estDeliveryDate: '04/10/2026 12:00',
+    actualDeliveryDate: '04/10/2026 11:45',
+    stage: 'Nghiệm thu',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-21',
+    plateNumber: '51F 98765',
+    roNumber: '2610-000004',
+    carInfo: 'Honda CR-V',
+    carSubInfo: 'bạc • 2022',
+    customerName: 'Trần Văn Hoàng',
+    customerPhone: '0912554433',
+    advisor: 'Minh Thắng',
+    receivedDate: '02/10/2026 14:10',
+    estDeliveryDate: '02/10/2026 17:30',
+    actualDeliveryDate: '02/10/2026 17:10',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-22',
+    plateNumber: '30E 45678',
+    roNumber: '2610-000003',
+    carInfo: 'Ford Ranger',
+    carSubInfo: 'cam • 2021',
+    customerName: 'Nguyễn Tiến Dũng',
+    hasInsurance: true,
+    customerPhone: '0983112244',
+    advisor: '—',
+    receivedDate: '02/10/2026 10:00',
+    estDeliveryDate: '03/10/2026 15:00',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-23',
+    plateNumber: '51K 33455',
+    roNumber: '2610-000002',
+    carInfo: 'Mitsubishi Xpander',
+    carSubInfo: 'nâu • 2023',
+    customerName: 'Lý Quốc Cường',
+    customerPhone: '0978998877',
+    advisor: 'Minh Thắng',
+    receivedDate: '01/10/2026 08:30',
+    estDeliveryDate: '01/10/2026 11:30',
+    actualDeliveryDate: '01/10/2026 11:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-24',
+    plateNumber: '61A 77890',
+    roNumber: '2610-000001',
+    carInfo: 'Toyota Vios',
+    carSubInfo: 'trắng • 2020',
+    customerName: 'Võ Minh Tâm',
+    customerPhone: '0934112233',
+    advisor: '—',
+    receivedDate: '01/10/2026 08:15',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-25',
+    plateNumber: '51D 66554',
+    roNumber: '2609-000050',
+    carInfo: 'Kia Seltos',
+    carSubInfo: 'vàng • 2023',
+    customerName: 'Đặng Thanh Hà',
+    customerPhone: '0908332211',
+    advisor: 'Minh Thắng',
+    receivedDate: '30/09/2026 15:45',
+    estDeliveryDate: '30/09/2026 18:00',
+    actualDeliveryDate: '30/09/2026 18:10',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-26',
+    plateNumber: '51G 11223',
+    roNumber: '2609-000049',
+    carInfo: 'Mazda 3',
+    customerName: 'Bùi Anh Tuấn',
+    advisor: '—',
+    receivedDate: '30/09/2026 11:00',
+    estDeliveryDate: '30/09/2026 16:00',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-27',
+    plateNumber: '50H 99881',
+    roNumber: '2609-000048',
+    carInfo: 'Hyundai Tucson',
+    customerName: 'Hoàng Long',
+    hasInsurance: true,
+    advisor: 'Minh Thắng',
+    receivedDate: '29/09/2026 14:00',
+    estDeliveryDate: '30/09/2026 10:00',
+    actualDeliveryDate: '30/09/2026 10:20',
+    stage: 'Nghiệm thu',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-28',
+    plateNumber: '60C 44556',
+    roNumber: '2609-000047',
+    carInfo: 'Isuzu D-Max',
+    customerName: 'Nguyễn Hữu Trí',
+    customerPhone: '0913445566',
+    advisor: '—',
+    receivedDate: '29/09/2026 09:30',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-29',
+    plateNumber: '51A 12398',
+    roNumber: '2609-000046',
+    carInfo: 'Mercedes C200',
+    customerName: 'Lê Quốc Hưng',
+    advisor: 'Minh Thắng',
+    receivedDate: '28/09/2026 16:20',
+    estDeliveryDate: '29/09/2026 11:00',
+    actualDeliveryDate: '29/09/2026 11:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-30',
+    plateNumber: '51F 33211',
+    roNumber: '2609-000045',
+    carInfo: 'Toyota Fortuner',
+    customerName: 'Công ty Du lịch Á Châu',
+    customerPhone: '0903778899',
+    advisor: 'Minh Thắng',
+    receivedDate: '28/09/2026 10:15',
+    estDeliveryDate: '28/09/2026 16:30',
+    actualDeliveryDate: '28/09/2026 16:40',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-31',
+    plateNumber: '70A 11559',
+    roNumber: '2609-000044',
+    carInfo: 'Honda City',
+    customerName: 'Phan Văn Đức',
+    advisor: '—',
+    receivedDate: '27/09/2026 13:40',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-32',
+    plateNumber: '51B 88765',
+    roNumber: '2609-000043',
+    carInfo: 'Ford Transit',
+    customerName: 'Vận tải Sài Gòn Mới',
+    customerPhone: '0918223344',
+    advisor: 'Minh Thắng',
+    receivedDate: '27/09/2026 08:50',
+    estDeliveryDate: '27/09/2026 17:00',
+    actualDeliveryDate: '27/09/2026 17:30',
+    stage: 'Nghiệm thu',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-33',
+    plateNumber: '51G 55432',
+    roNumber: '2609-000042',
+    carInfo: 'Kia Morning',
+    customerName: 'Trịnh Thị Mai',
+    advisor: '—',
+    receivedDate: '26/09/2026 14:10',
+    estDeliveryDate: '26/09/2026 16:00',
+    actualDeliveryDate: '26/09/2026 16:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-34',
+    plateNumber: '61C 99812',
+    roNumber: '2609-000041',
+    carInfo: 'Hyundai Accent',
+    customerName: 'Dương Đình Nghệ',
+    advisor: 'Minh Thắng',
+    receivedDate: '26/09/2026 10:30',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-35',
+    plateNumber: '51H 44112',
+    roNumber: '2609-000040',
+    carInfo: 'BMW X5',
+    customerName: 'Trần Đại Nghĩa',
+    hasInsurance: true,
+    customerPhone: '0909556677',
+    advisor: 'Minh Thắng',
+    receivedDate: '25/09/2026 15:00',
+    estDeliveryDate: '26/09/2026 12:00',
+    actualDeliveryDate: '26/09/2026 12:30',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-36',
+    plateNumber: '51A 90909',
+    roNumber: '2609-000039',
+    carInfo: 'Audi A6',
+    customerName: 'Vũ Trọng Phụng',
+    advisor: '—',
+    receivedDate: '25/09/2026 09:15',
+    estDeliveryDate: '25/09/2026 15:30',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-37',
+    plateNumber: '60A 12389',
+    roNumber: '2609-000038',
+    carInfo: 'Mazda 6',
+    customerName: 'Chu Văn An',
+    advisor: 'Minh Thắng',
+    receivedDate: '24/09/2026 16:00',
+    estDeliveryDate: '25/09/2026 10:00',
+    actualDeliveryDate: '25/09/2026 10:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-38',
+    plateNumber: '72E 66789',
+    roNumber: '2609-000037',
+    carInfo: 'Toyota Corolla Cross',
+    customerName: 'Hồ Xuân Hương',
+    customerPhone: '0977221100',
+    advisor: '—',
+    receivedDate: '24/09/2026 11:20',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-39',
+    plateNumber: '51K 88123',
+    roNumber: '2609-000036',
+    carInfo: 'Vinfast VF8',
+    customerName: 'Đoàn Thị Điểm',
+    advisor: 'Minh Thắng',
+    receivedDate: '23/09/2026 14:40',
+    estDeliveryDate: '23/09/2026 17:30',
+    actualDeliveryDate: '23/09/2026 17:25',
+    stage: 'Nghiệm thu',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-40',
+    plateNumber: '51F 77654',
+    roNumber: '2609-000035',
+    carInfo: 'Ford Everest',
+    customerName: 'Cao Bá Quát',
+    customerPhone: '0918334455',
+    advisor: 'Minh Thắng',
+    receivedDate: '23/09/2026 09:00',
+    estDeliveryDate: '24/09/2026 11:00',
+    actualDeliveryDate: '24/09/2026 11:30',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-41',
+    plateNumber: '50A 55678',
+    roNumber: '2609-000034',
+    carInfo: 'Lexus RX350',
+    customerName: 'Nguyễn Trãi',
+    advisor: '—',
+    receivedDate: '22/09/2026 15:10',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Mới',
+  },
+  {
+    id: 'ro-42',
+    plateNumber: '51G 44332',
+    roNumber: '2609-000033',
+    carInfo: 'Mercedes GLC300',
+    customerName: 'Trần Hưng Đạo',
+    hasInsurance: true,
+    customerPhone: '0903889911',
+    advisor: 'Minh Thắng',
+    receivedDate: '22/09/2026 10:20',
+    estDeliveryDate: '23/09/2026 15:00',
+    actualDeliveryDate: '',
+    stage: 'Lệnh sửa c...',
+    status: 'Đang sửa',
+  },
+  {
+    id: 'ro-43',
+    plateNumber: '61A 33221',
+    roNumber: '2609-000032',
+    carInfo: 'Kia K5',
+    customerName: 'Lê Lợi',
+    advisor: '—',
+    receivedDate: '21/09/2026 13:50',
+    estDeliveryDate: '21/09/2026 17:00',
+    actualDeliveryDate: '21/09/2026 17:15',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
+  },
+  {
+    id: 'ro-44',
+    plateNumber: '51H 66778',
+    roNumber: '2609-000031',
+    carInfo: 'Hyundai Creta',
+    customerName: 'Quang Trung',
+    advisor: 'Minh Thắng',
+    receivedDate: '21/09/2026 08:40',
+    estDeliveryDate: '',
+    actualDeliveryDate: '',
+    stage: 'Tiếp nhận',
+    status: 'Huỷ',
+  },
+  {
+    id: 'ro-45',
+    plateNumber: '51K 99001',
+    roNumber: '2609-000030',
+    carInfo: 'Toyota Raize',
+    customerName: 'Đinh Bộ Lĩnh',
+    customerPhone: '0977112233',
+    advisor: 'Minh Thắng',
+    receivedDate: '20/09/2026 14:00',
+    estDeliveryDate: '20/09/2026 16:30',
+    actualDeliveryDate: '20/09/2026 16:45',
+    stage: 'Quyết toán',
+    status: 'Đã bàn giao',
   },
 ];
 
@@ -1366,6 +2031,22 @@ export const DiscountManagementModule: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
+  // Full-screen RO Modal State
+  const [viewingRODiscount, setViewingRODiscount] = useState<DiscountRecord | null>(null);
+  const [roSearchPlate, setRoSearchPlate] = useState('');
+  const [roSearchCustomer, setRoSearchCustomer] = useState('');
+  const [roSearchAdvisor, setRoSearchAdvisor] = useState('');
+  const [roPageSize, setRoPageSize] = useState<number>(20);
+  const [roCurrentPage, setRoCurrentPage] = useState<number>(1);
+
+  const handleOpenROModal = (discount: DiscountRecord) => {
+    setViewingRODiscount(discount);
+    setRoCurrentPage(1);
+    setRoSearchPlate('');
+    setRoSearchCustomer('');
+    setRoSearchAdvisor('');
+  };
+
   // Popover info states for tooltips
   const [showStartDateInfo, setShowStartDateInfo] = useState(false);
   const [showMinBuyQtyInfo, setShowMinBuyQtyInfo] = useState(false);
@@ -1755,6 +2436,18 @@ export const DiscountManagementModule: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [viewingContractProfileDoc]);
+
+  // Keyboard shortcut Escape for closing full-screen RO modal
+  useEffect(() => {
+    if (!viewingRODiscount) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setViewingRODiscount(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewingRODiscount]);
 
   const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -2286,8 +2979,8 @@ export const DiscountManagementModule: React.FC = () => {
       'Thời gian bắt đầu',
       'Thời gian kết thúc',
       'Trạng thái',
-      'Số lượng RO',
       'Ngày tạo',
+      'Số lượng RO',
     ];
     const rows = filteredDiscounts.map((d, idx) => [
       idx + 1,
@@ -2297,8 +2990,8 @@ export const DiscountManagementModule: React.FC = () => {
       `"${d.startDate}"`,
       `"${d.endDate}"`,
       d.status === 'active' ? '"Hiệu lực"' : '"Dừng hiệu lực"',
-      d.roCount ?? 0,
       `"${d.createdAt}"`,
+      d.roCount ?? 0,
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
@@ -2613,8 +3306,8 @@ export const DiscountManagementModule: React.FC = () => {
                 <th className="py-3.5 px-4 whitespace-nowrap">LOẠI</th>
                 <th className="py-3.5 px-4 min-w-[180px]">THỜI GIAN HIỆU LỰC</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center">TRẠNG THÁI</th>
-                <th className="py-3.5 px-4 whitespace-nowrap text-center">SỐ LƯỢNG RO</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">NGÀY TẠO</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center">SỐ LƯỢNG RO</th>
                 <th className="py-3.5 px-4 text-center whitespace-nowrap">THAO TÁC</th>
               </tr>
             </thead>
@@ -2705,16 +3398,31 @@ export const DiscountManagementModule: React.FC = () => {
                         {getStatusBadge(discount.status)}
                       </td>
 
-                      <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center font-semibold text-gray-800">
-                        {discount.roCount ?? 0}
-                      </td>
-
                       <td className="py-3.5 px-4 align-middle whitespace-nowrap text-gray-600 text-xs">
                         {discount.createdAt}
                       </td>
 
+                      <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center font-semibold text-gray-800">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenROModal(discount)}
+                          className="hover:text-[#1A73E8] hover:underline cursor-pointer font-bold transition-colors"
+                          title="Xem danh sách RO"
+                        >
+                          {discount.roCount ?? 0}
+                        </button>
+                      </td>
+
                       <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center">
                         <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenROModal(discount)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                            title="Xem RO"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => setViewingDiscount(discount)}
@@ -6076,6 +6784,502 @@ export const DiscountManagementModule: React.FC = () => {
                 <span>Xác nhận Tạo</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: FULL-SCREEN XEM DANH SÁCH LỆNH SỬA CHỮA (RO) - KHỚP ẢNH ĐÍNH KÈM */}
+      {/* ========================================================================= */}
+      {viewingRODiscount && (
+        <div className="fixed inset-0 z-[70] bg-[#F5F7FA] flex flex-col font-sans overflow-hidden animate-fadeIn">
+          {/* Top Header with Back / Title and Dismiss */}
+          <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setViewingRODiscount(null)}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+                title="Quay lại Quản lý chiết khấu"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-base font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                  <span>Danh sách Lệnh sửa chữa (RO)</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                    Chính sách: {viewingRODiscount.code} - {viewingRODiscount.name}
+                  </span>
+                </h1>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewingRODiscount(null)}
+              className="w-7 h-7 rounded-full border border-gray-300 hover:border-gray-400 hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+              title="Đóng (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Filter Bar exactly like image_aeaea30f.png */}
+          <div className="bg-white px-6 py-3.5 border-b border-gray-200 shadow-2xs flex flex-wrap items-end justify-between gap-4 shrink-0">
+            <div className="flex flex-wrap items-center gap-4 flex-1">
+              {/* Filter 1: Biển số và số RO */}
+              <div className="w-64">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Biển số và số RO
+                </label>
+                <input
+                  type="text"
+                  placeholder="Tìm biển số, số RO"
+                  value={roSearchPlate}
+                  onChange={(e) => {
+                    setRoSearchPlate(e.target.value);
+                    setRoCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs outline-none focus:border-blue-500 bg-white text-gray-800 placeholder-gray-400"
+                />
+              </div>
+
+              {/* Filter 2: Khách hàng */}
+              <div className="w-64">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Khách hàng
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm mã, tên, điện thoại"
+                    value={roSearchCustomer}
+                    onChange={(e) => {
+                      setRoSearchCustomer(e.target.value);
+                      setRoCurrentPage(1);
+                    }}
+                    className="w-full pl-3 pr-8 py-1.5 border border-gray-300 rounded text-xs outline-none focus:border-blue-500 bg-white text-gray-800 placeholder-gray-400"
+                  />
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2.5 top-2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Filter 3: Cố vấn */}
+              <div className="w-64">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Cố vấn
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm mã, tên"
+                    value={roSearchAdvisor}
+                    onChange={(e) => {
+                      setRoSearchAdvisor(e.target.value);
+                      setRoCurrentPage(1);
+                    }}
+                    className="w-full pl-3 pr-8 py-1.5 border border-gray-300 rounded text-xs outline-none focus:border-blue-500 bg-white text-gray-800 placeholder-gray-400"
+                  />
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2.5 top-2 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* Button Lọc */}
+            <div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#E2E8F0] hover:bg-slate-300 text-gray-700 rounded text-xs font-medium transition-colors cursor-pointer shadow-2xs"
+              >
+                <Filter className="w-3.5 h-3.5 text-gray-600" />
+                <span>Lọc</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="flex-1 overflow-auto bg-white">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-[#F8FAFC] text-gray-700 border-b border-gray-200 sticky top-0 z-10 select-none">
+                <tr className="divide-x divide-gray-200">
+                  <th className="py-2.5 px-4 font-semibold whitespace-nowrap min-w-[130px]">
+                    <div className="flex items-center gap-1">
+                      <span>Biển số xe</span>
+                      <Pin className="w-3.5 h-3.5 text-amber-700 rotate-45 shrink-0" />
+                    </div>
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[110px]">
+                    Số RO
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold min-w-[170px]">
+                    Thông tin xe
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold min-w-[260px]">
+                    Khách hàng
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold min-w-[110px]">
+                    Cố vấn
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[140px]">
+                    Ngày nhận xe
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[140px]">
+                    Ngày hẹn giao
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[140px]">
+                    Ngày giao thực tế
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[120px]">
+                    Giai đoạn
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[110px] text-center">
+                    Trạng thái
+                  </th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[110px] text-center">
+                    Thao tác
+                  </th>
+                  <th className="py-2.5 px-3 min-w-[20px]"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {(() => {
+                  const filteredROList = SAMPLE_REPAIR_ORDERS.filter((ro) => {
+                    if (roSearchPlate.trim()) {
+                      const q = roSearchPlate.toLowerCase().trim();
+                      const match =
+                        ro.plateNumber.toLowerCase().includes(q) ||
+                        ro.roNumber.toLowerCase().includes(q);
+                      if (!match) return false;
+                    }
+                    if (roSearchCustomer.trim()) {
+                      const q = roSearchCustomer.toLowerCase().trim();
+                      const match =
+                        ro.customerName.toLowerCase().includes(q) ||
+                        (ro.customerPhone && ro.customerPhone.includes(q));
+                      if (!match) return false;
+                    }
+                    if (roSearchAdvisor.trim()) {
+                      const q = roSearchAdvisor.toLowerCase().trim();
+                      const match = ro.advisor.toLowerCase().includes(q);
+                      if (!match) return false;
+                    }
+                    return true;
+                  });
+
+                  const paginatedROList = filteredROList.slice(
+                    (roCurrentPage - 1) * roPageSize,
+                    roCurrentPage * roPageSize
+                  );
+
+                  if (paginatedROList.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={12} className="py-12 text-center text-gray-400">
+                          Không tìm thấy Lệnh sửa chữa (RO) nào phù hợp.
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return paginatedROList.map((row) => (
+                    <tr key={row.id} className="hover:bg-blue-50/20 divide-x divide-gray-200 transition-colors">
+                      {/* Biển số xe */}
+                      <td className="py-2.5 px-4 align-middle whitespace-nowrap">
+                        <span className="px-2.5 py-1 bg-[#0284C7] text-white font-bold text-xs rounded tracking-wider shadow-2xs inline-block">
+                          {row.plateNumber}
+                        </span>
+                      </td>
+
+                      {/* Số RO */}
+                      <td className="py-2.5 px-3 align-middle text-gray-800 font-medium whitespace-nowrap">
+                        {row.roNumber}
+                      </td>
+
+                      {/* Thông tin xe */}
+                      <td className="py-2.5 px-3 align-middle">
+                        <div className="font-medium text-gray-900 leading-tight">
+                          {row.carInfo}
+                        </div>
+                        {row.carSubInfo && (
+                          <div className="text-[11px] text-gray-500 mt-0.5">
+                            {row.carSubInfo}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Khách hàng */}
+                      <td className="py-2.5 px-3 align-middle">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-gray-900 font-medium leading-tight">
+                            {row.customerName}
+                          </span>
+                          {row.hasInsurance && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#DCFCE7] text-[#15803D] border border-green-200 shrink-0">
+                              Bảo hiểm
+                            </span>
+                          )}
+                        </div>
+                        {row.customerPhone && (
+                          <div className="text-[#0284C7] font-medium text-xs mt-0.5 flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-[#0284C7] shrink-0" />
+                            <span>{row.customerPhone}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Cố vấn */}
+                      <td className="py-2.5 px-3 align-middle text-gray-700 whitespace-nowrap">
+                        {row.advisor}
+                      </td>
+
+                      {/* Ngày nhận xe */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-gray-800">
+                        <div>{row.receivedDate}</div>
+                        {row.receivedKm && (
+                          <div className="text-[11px] text-gray-400 mt-0.5">
+                            {row.receivedKm}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Ngày hẹn giao */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-gray-800">
+                        {row.estDeliveryDate || ''}
+                      </td>
+
+                      {/* Ngày giao thực tế */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-gray-800">
+                        {row.actualDeliveryDate || ''}
+                      </td>
+
+                      {/* Giai đoạn */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                        {row.stage === 'Tiếp nhận' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]">
+                            <ClipboardList className="w-3.5 h-3.5 text-[#EA580C]" />
+                            Tiếp nhận
+                          </span>
+                        )}
+                        {row.stage === 'Lệnh sửa c...' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE]">
+                            <Wrench className="w-3.5 h-3.5 text-[#2563EB]" />
+                            Lệnh sửa c...
+                          </span>
+                        )}
+                        {row.stage === 'Quyết toán' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]">
+                            <DollarSign className="w-3.5 h-3.5 text-[#DC2626]" />
+                            Quyết toán
+                          </span>
+                        )}
+                        {row.stage === 'Nghiệm thu' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC]">
+                            <CheckSquare className="w-3.5 h-3.5 text-[#0891B2]" />
+                            Nghiệm thu
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Trạng thái */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-center">
+                        {row.status === 'Mới' && (
+                          <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-white text-gray-600 border border-gray-300 text-center min-w-[68px]">
+                            Mới
+                          </span>
+                        )}
+                        {row.status === 'Đang sửa' && (
+                          <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-white text-[#2563EB] border border-[#93C5FD] text-center min-w-[68px]">
+                            Đang sửa
+                          </span>
+                        )}
+                        {row.status === 'Đã bàn giao' && (
+                          <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-white text-[#16A34A] border border-[#86EFAC] text-center min-w-[68px]">
+                            Đã bàn giao
+                          </span>
+                        )}
+                        {row.status === 'Huỷ' && (
+                          <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-white text-[#DC2626] border border-[#FCA5A5] text-center min-w-[68px]">
+                            Huỷ
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Thao tác */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-center">
+                        <div className="inline-flex items-center gap-1.5 text-gray-500">
+                          <button
+                            type="button"
+                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                            title="Mở tab mới"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-[#0284C7]" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                            title="Chỉnh sửa"
+                          >
+                            <SquarePen className="w-3.5 h-3.5 text-gray-600" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                            title="Chia sẻ"
+                          >
+                            <Share2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                            title="Thao tác khác"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
+                          </button>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5 px-3"></td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Bottom Pagination matching image_aeaea30f.png */}
+          <div className="h-12 px-6 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-600 shrink-0 select-none">
+            {/* Left: Số dòng */}
+            <div className="flex items-center gap-2">
+              <span>Số dòng:</span>
+              <select
+                value={roPageSize}
+                onChange={(e) => {
+                  setRoPageSize(Number(e.target.value));
+                  setRoCurrentPage(1);
+                }}
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
+              >
+                <option value={20}>20 Dòng</option>
+                <option value={50}>50 Dòng</option>
+                <option value={100}>100 Dòng</option>
+              </select>
+            </div>
+
+            {/* Center: Pagination controls */}
+            {(() => {
+              const filteredROList = SAMPLE_REPAIR_ORDERS.filter((ro) => {
+                if (roSearchPlate.trim()) {
+                  const q = roSearchPlate.toLowerCase().trim();
+                  const match =
+                    ro.plateNumber.toLowerCase().includes(q) ||
+                    ro.roNumber.toLowerCase().includes(q);
+                  if (!match) return false;
+                }
+                if (roSearchCustomer.trim()) {
+                  const q = roSearchCustomer.toLowerCase().trim();
+                  const match =
+                    ro.customerName.toLowerCase().includes(q) ||
+                    (ro.customerPhone && ro.customerPhone.includes(q));
+                  if (!match) return false;
+                }
+                if (roSearchAdvisor.trim()) {
+                  const q = roSearchAdvisor.toLowerCase().trim();
+                  const match = ro.advisor.toLowerCase().includes(q);
+                  if (!match) return false;
+                }
+                return true;
+              });
+
+              const totalPages = Math.ceil(filteredROList.length / roPageSize) || 1;
+              const startIdx = (roCurrentPage - 1) * roPageSize + 1;
+              const endIdx = Math.min(roCurrentPage * roPageSize, filteredROList.length);
+
+              return (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    {/* First Page |< */}
+                    <button
+                      type="button"
+                      disabled={roCurrentPage === 1}
+                      onClick={() => setRoCurrentPage(1)}
+                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                        roCurrentPage === 1
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-600 hover:bg-gray-100 cursor-pointer font-bold'
+                      }`}
+                      title="Trang đầu"
+                    >
+                      |&lt;
+                    </button>
+
+                    {/* Prev Page < */}
+                    <button
+                      type="button"
+                      disabled={roCurrentPage === 1}
+                      onClick={() => setRoCurrentPage((prev) => Math.max(1, prev - 1))}
+                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                        roCurrentPage === 1
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-600 hover:bg-gray-100 cursor-pointer font-bold'
+                      }`}
+                      title="Trang trước"
+                    >
+                      &lt;
+                    </button>
+
+                    {/* Page numbers: 1, 2, 3 */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setRoCurrentPage(pageNum)}
+                        className={`w-7 h-7 flex items-center justify-center rounded text-xs font-semibold transition-colors cursor-pointer ${
+                          roCurrentPage === pageNum
+                            ? 'border border-[#1A73E8] text-[#1A73E8] bg-blue-50/50'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+
+                    {/* Next Page > */}
+                    <button
+                      type="button"
+                      disabled={roCurrentPage === totalPages}
+                      onClick={() => setRoCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                        roCurrentPage === totalPages
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-600 hover:bg-gray-100 cursor-pointer font-bold'
+                      }`}
+                      title="Trang tiếp"
+                    >
+                      &gt;
+                    </button>
+
+                    {/* Last Page >| */}
+                    <button
+                      type="button"
+                      disabled={roCurrentPage === totalPages}
+                      onClick={() => setRoCurrentPage(totalPages)}
+                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                        roCurrentPage === totalPages
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-600 hover:bg-gray-100 cursor-pointer font-bold'
+                      }`}
+                      title="Trang cuối"
+                    >
+                      &gt;|
+                    </button>
+                  </div>
+
+                  {/* Right: Hiển thị 1–20 / 45 kết quả */}
+                  <div className="text-gray-600">
+                    Hiển thị <span className="font-semibold">{startIdx}–{endIdx}</span> / <span className="font-semibold">{filteredROList.length}</span> kết quả
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
