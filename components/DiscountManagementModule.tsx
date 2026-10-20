@@ -135,6 +135,7 @@ export interface DocumentItem {
 export interface DiscountRecord {
   id: string;
   code: string;
+  discountCode?: string; // Mã Chiết khấu khi Loại = 'Chiết khấu'
   name: string;
   category: 'Chiết khấu' | 'Voucher';
   type: 'percentage' | 'fixed_amount';
@@ -2073,6 +2074,7 @@ export const DiscountManagementModule: React.FC = () => {
   const [formName, setFormName] = useState('');
   const [formCode, setFormCode] = useState('');
   const [formCategory, setFormCategory] = useState<'Chiết khấu' | 'Voucher'>('Chiết khấu');
+  const [formDiscountCode, setFormDiscountCode] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
@@ -2533,6 +2535,7 @@ export const DiscountManagementModule: React.FC = () => {
     setFormName('');
     setFormDescription('');
     setFormCategory('Chiết khấu');
+    setFormDiscountCode('');
     setFormStartDate(startDate);
     setFormEndDate(endDate);
     setFormStatus('active');
@@ -2590,6 +2593,7 @@ export const DiscountManagementModule: React.FC = () => {
     setFormName(discount.name);
     setFormDescription(discount.description || '');
     setFormCategory(discount.category || 'Chiết khấu');
+    setFormDiscountCode(discount.discountCode || '');
     setFormStartDate(discount.startDate);
     setFormEndDate(discount.endDate);
     setFormStatus(discount.status === 'paused' ? 'paused' : 'active');
@@ -2633,7 +2637,7 @@ export const DiscountManagementModule: React.FC = () => {
   const handleSaveDiscount = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formName.trim() || !formCode.trim()) {
-      setFormError('Vui lòng nhập đầy đủ Tên chương trình / chiến dịch và Mã.');
+      setFormError('Vui lòng nhập đầy đủ Tên chương trình / chiến dịch và Mã chương trình / chiến dịch.');
       return;
     }
     if (!formStartDate || !formEndDate) {
@@ -2664,6 +2668,7 @@ export const DiscountManagementModule: React.FC = () => {
 
     const recordData: Omit<DiscountRecord, 'id'> = {
       code: formCode.trim(),
+      discountCode: formCategory === 'Chiết khấu' ? formDiscountCode.trim() : undefined,
       name: formName.trim(),
       description: formDescription.trim(),
       category: formCategory,
@@ -2973,7 +2978,7 @@ export const DiscountManagementModule: React.FC = () => {
   const handleExportExcel = () => {
     const headers = [
       'STT',
-      'Mã',
+      'Mã chương trình / chiến dịch',
       'Tên chương trình / chiến dịch',
       'Loại',
       'Thời gian bắt đầu',
@@ -3305,7 +3310,7 @@ export const DiscountManagementModule: React.FC = () => {
                   />
                 </th>
                 <th className="py-3.5 px-3 w-12 text-center">STT</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">MÃ</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">MÃ CHƯƠNG TRÌNH / CHIẾN DỊCH</th>
                 <th className="py-3.5 px-4 min-w-[240px]">TÊN CHƯƠNG TRÌNH / CHIẾN DỊCH</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">LOẠI</th>
                 <th className="py-3.5 px-4 min-w-[180px]">THỜI GIAN HIỆU LỰC</th>
@@ -3664,11 +3669,11 @@ export const DiscountManagementModule: React.FC = () => {
                     />
                   </div>
 
-                  {/* Mã: nhập text hoặc tự tạo */}
+                  {/* Mã chương trình / chiến dịch: nhập text hoặc tự tạo */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="block text-xs font-semibold text-gray-700">
-                        Mã <span className="text-red-500">*</span>
+                        Mã chương trình / chiến dịch <span className="text-red-500">*</span>
                       </label>
                       <button
                         type="button"
@@ -3684,7 +3689,7 @@ export const DiscountManagementModule: React.FC = () => {
                         type="text"
                         value={formCode}
                         onChange={(e) => setFormCode(e.target.value)}
-                        placeholder="Nhập mã hoặc nhấn Tự tạo..."
+                        placeholder="Nhập mã chương trình / chiến dịch hoặc nhấn Tự tạo..."
                         className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8] focus:ring-1 focus:ring-blue-100 font-mono font-medium"
                       />
                     </div>
@@ -3760,9 +3765,9 @@ export const DiscountManagementModule: React.FC = () => {
                     />
                   </div>
 
-                  {/* Cùng 1 dòng: Loại -> Cộng dồn ưu đãi -> Trạng thái (không ngắt dòng, không thanh ngang kéo qua) */}
+                  {/* Cùng 1 dòng: Loại -> Mã Chiết khấu (khi Loại = Chiết khấu) -> Cộng dồn ưu đãi -> Trạng thái */}
                   <div className="lg:col-span-3 flex items-end gap-3 xl:gap-5 pt-1 w-full flex-nowrap">
-                    {/* 1. Loại: di chuyển xuống trước field Cộng dồn ưu đãi cùng dòng */}
+                    {/* 1. Loại */}
                     <div className="shrink-0">
                       <label className="block text-xs font-semibold text-gray-700 mb-2">
                         Loại <span className="text-red-500">*</span>
@@ -3782,6 +3787,22 @@ export const DiscountManagementModule: React.FC = () => {
                         <option value="Voucher">Voucher</option>
                       </select>
                     </div>
+
+                    {/* Bổ sung field "Mã Chiết khấu" ở sau field "Loại" khi Loại = "Chiết khấu", ẩn đi khi Loại = "Voucher" */}
+                    {formCategory === 'Chiết khấu' && (
+                      <div className="shrink-0 min-w-[170px] animate-fadeIn">
+                        <label className="block text-xs font-semibold text-gray-700 mb-2">
+                          Mã Chiết khấu
+                        </label>
+                        <input
+                          type="text"
+                          value={formDiscountCode}
+                          onChange={(e) => setFormDiscountCode(e.target.value)}
+                          placeholder="Nhập mã chiết khấu..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-800 outline-none focus:border-[#1A73E8] bg-white shadow-2xs h-[38px] font-mono"
+                        />
+                      </div>
+                    )}
 
                     {/* 2. Cộng dồn ưu đãi */}
                     <div className="shrink-0">
