@@ -44,6 +44,7 @@ import {
   CheckSquare,
   ChevronDown,
   Wrench,
+  Rocket,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -150,6 +151,7 @@ export interface DiscountRecord {
   stackable?: 'allow' | 'disallow';
   allowStacking?: boolean;
   roCount?: number;
+  campaignRunCount?: number;
   description?: string;
   createdAt: string;
 
@@ -1121,6 +1123,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     stackable: 'disallow',
     allowStacking: false,
     roCount: 28,
+    campaignRunCount: 5,
     description: 'Chương trình khuyến mãi giảm 10% chi phí tiền công bảo dưỡng định kỳ dành cho khách hàng lần đầu tiên mang xe đến garage.',
     createdAt: '01/01/2025',
     branchScope: 'all',
@@ -1177,6 +1180,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     stackable: 'allow',
     allowStacking: true,
     roCount: 14,
+    campaignRunCount: 2,
     description: 'Voucher tặng khách hàng VIP / Đại lý khi làm dịch vụ đại tu, bảo dưỡng định kỳ cấp lớn từ 2.500.000đ.',
     createdAt: '10/01/2025',
     branchScope: 'specific',
@@ -1309,6 +1313,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     stackable: 'allow',
     allowStacking: true,
     roCount: 45,
+    campaignRunCount: 8,
     description: 'Chương trình hợp tác cùng Castrol Việt Nam, giảm 15% cho tất cả dòng sản phẩm nhớt động cơ và nước làm mát cao cấp.',
     createdAt: '25/01/2025',
     branchScope: 'all',
@@ -2693,6 +2698,7 @@ export const DiscountManagementModule: React.FC = () => {
       stackable: formStackable,
       allowStacking: formStackable === 'allow',
       roCount: editingDiscount ? editingDiscount.roCount ?? 0 : 0,
+      campaignRunCount: editingDiscount ? editingDiscount.campaignRunCount ?? 0 : 0,
       createdAt: editingDiscount ? editingDiscount.createdAt : `${dd}/${mm}/${yyyy}`,
 
       // Khu vực 2
@@ -2753,6 +2759,16 @@ export const DiscountManagementModule: React.FC = () => {
         }
         return d;
       })
+    );
+  };
+
+  // Chạy chiến dịch - Tăng số lượt gửi mỗi lần nhấn nút
+  const handleRunCampaign = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDiscounts((prev) =>
+      prev.map((d) =>
+        d.id === id ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
+      )
     );
   };
 
@@ -3436,6 +3452,19 @@ export const DiscountManagementModule: React.FC = () => {
 
                       <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center">
                         <div className="inline-flex items-center gap-1">
+                          {/* Biểu tượng Chạy chiến dịch kèm số lần nhấn nút */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleRunCampaign(discount.id, e)}
+                            className="inline-flex items-center gap-1 px-1.5 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-all cursor-pointer group"
+                            title={`Chạy chiến dịch (Đã gửi ${discount.campaignRunCount ?? 0} lần - Nhấn để chạy chiến dịch)`}
+                          >
+                            <Rocket className="w-4 h-4 transition-transform group-hover:scale-110" />
+                            <span className="text-[11px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full min-w-[18px] text-center border border-emerald-200 leading-none">
+                              {discount.campaignRunCount ?? 0}
+                            </span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleOpenROModal(discount)}
