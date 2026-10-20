@@ -83,6 +83,18 @@ export interface VoucherItem {
   hasCarInGarage?: 'Đang có' | 'Không có';
 }
 
+export interface ExistingCustomerVoucherRow {
+  id: string;
+  customerCode: string;
+  customerName: string;
+  address: string;
+  phone: string;
+  email: string;
+  taxCode: string;
+  debt: number | string;
+  hasCarInGarage: 'Đang có' | 'Không có';
+}
+
 export interface ContractFileItem {
   id: string;
   docType: string; // Loại giấy tờ
@@ -425,9 +437,909 @@ export const getUsageLimitExplanation = (
   return `${audienceText}. Quy định số lượng: ${limitParts.join('; trong đó ')}.`;
 };
 
+export const INITIAL_DISCOUNTS: DiscountRecord[] = [
+  {
+    id: 'disc-01',
+    code: 'CK-KHM-10',
+    name: 'Ưu đãi 10% công bảo dưỡng cho Khách hàng mới',
+    category: 'Chiết khấu',
+    type: 'percentage',
+    value: 10,
+    targetAudience: 'Khách hàng mới',
+    minOrderValue: 500000,
+    maxDiscountAmount: 300000,
+    startDate: '2025-01-01',
+    endDate: '2025-12-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'disallow',
+    allowStacking: false,
+    roCount: 28,
+    description: 'Chương trình khuyến mãi giảm 10% chi phí tiền công bảo dưỡng định kỳ dành cho khách hàng lần đầu tiên mang xe đến garage.',
+    createdAt: '01/01/2025',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'new_customer',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: 500,
+    maxUsagePerCustomer: 1,
+    maxUsagePerPlate: 1,
+    discountMethod: 'order',
+    orderDiscountType: 'percentage',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '300000',
+    orderFixedAmount: '',
+    orderMinOrderValue: '500000',
+    productDiscountType: 'percentage',
+    productItems: [],
+    documents: [
+      {
+        id: 'doc-01-1',
+        hasContract: false,
+        documentName: 'Quy chế tiếp nhận xe & ưu đãi khách hàng mới 2025',
+        documentDescription: 'Văn bản hướng dẫn áp dụng ưu đãi công thợ bảo dưỡng cho xe mới',
+        supplier: '',
+        contractNumber: '',
+        contractDescription: '',
+        effectiveDate: '2025-01-01',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/docs/qc-khach-hang-moi-2025.pdf',
+        uploadedFile: 'QC_KhachHangMoi_2025.pdf',
+        details: 'Giảm 10% tiền công, áp dụng đối với xe chưa từng có hồ sơ tiếp nhận tại chuỗi garage.',
+      },
+    ],
+    vouchersList: [],
+  },
+  {
+    id: 'disc-02',
+    code: 'VC-VIP-500K',
+    name: 'Voucher tri ân 500.000đ dành riêng cho Khách hàng VIP',
+    category: 'Voucher',
+    type: 'fixed_amount',
+    value: 500000,
+    targetAudience: 'Khách hàng VIP / Đại lý',
+    minOrderValue: 2500000,
+    maxDiscountAmount: 0,
+    startDate: '2025-01-15',
+    endDate: '2025-06-30',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 14,
+    description: 'Voucher tặng khách hàng VIP / Đại lý khi làm dịch vụ đại tu, bảo dưỡng định kỳ cấp lớn từ 2.500.000đ.',
+    createdAt: '10/01/2025',
+    branchScope: 'specific',
+    selectedBranches: ['Chi nhánh Quận 7 (TP.HCM)', 'Chi nhánh TP. Thủ Đức (TP.HCM)'],
+    plateColorScope: 'specific',
+    selectedPlateColors: ['Trắng'],
+    customerScope: 'specific',
+    selectedCustomerGroups: ['Khách hàng VIP / Đại lý'],
+    targetCustomers: [],
+    maxUsageTotal: 50,
+    maxUsagePerCustomer: 1,
+    maxUsagePerPlate: 1,
+    discountMethod: 'order',
+    orderDiscountType: 'fixed_amount',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '500000',
+    orderMinOrderValue: '2500000',
+    productDiscountType: 'fixed_amount',
+    productItems: [],
+    documents: [
+      {
+        id: 'doc-02-1',
+        hasContract: true,
+        documentName: 'Hợp đồng nguyên tắc cung ứng phụ tùng A',
+        documentDescription: 'Hợp đồng nguyên tắc cung ứng phụ tùng ô tô & dầu mỡ nhờn năm 2025',
+        supplier: 'Công ty Phụ tùng A',
+        contractNumber: 'HĐ-2025/PTA-01',
+        contractDescription: 'Hợp đồng nguyên tắc cung ứng phụ tùng ô tô & dầu mỡ nhờn năm 2025',
+        effectiveDate: '2025-01-01',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-PTA-01',
+        uploadedFile: 'HD_2025_PTA_01_NguyenTac.pdf',
+        details: 'Chiết khấu quý 8% theo đơn hàng thực tế, thanh toán gối đầu 30 ngày.',
+      },
+    ],
+    vouchersList: [
+      {
+        id: 'vc-vip-001',
+        code: 'VC-VIP-7781',
+        targetType: 'existing_customer',
+        status: 'used',
+        createdAt: '15/01/2025',
+        customerCode: 'KH-2023-089',
+        customerName: 'Phạm Hoàng Nam',
+        address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+        phone: '0901 234 567',
+        email: 'nam.pham@namsaigonauto.vn',
+        taxCode: '0314567890',
+        debt: 12500000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-vip-002',
+        code: 'VC-VIP-8824',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '15/01/2025',
+        customerCode: 'KH-2023-142',
+        customerName: 'Lê Hoàng Việt',
+        address: '88 Bạch Đằng, P. 2, Tân Bình, TP. Hồ Chí Minh',
+        phone: '0938 112 233',
+        email: 'contact@vietthanhgarage.com',
+        taxCode: '0319988776',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-vip-003',
+        code: 'VC-VIP-9102',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '15/01/2025',
+        customerCode: 'KH-2024-005',
+        customerName: 'Trần Minh Tuấn',
+        address: '56 Đường số 9, Linh Tây, TP. Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0912 345 678',
+        email: 'tuan.tran@tuantranlogistics.com',
+        taxCode: '0318765432',
+        debt: 4200000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-vip-004',
+        code: 'VC-VIP-3349',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '16/01/2025',
+        customerCode: 'KH-2024-018',
+        customerName: 'Nguyễn Thị Bích Ngọc',
+        address: '102 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh',
+        phone: '0987 654 321',
+        email: 'bichngoc.law@gmail.com',
+        taxCode: '0311223344',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-vip-005',
+        code: 'VC-VIP-4512',
+        targetType: 'existing_customer',
+        status: 'used',
+        createdAt: '16/01/2025',
+        customerCode: 'KH-2024-032',
+        customerName: 'Đỗ Gia Khang',
+        address: '74 Mai Chí Thọ, An Phú, TP. Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0903 889 900',
+        email: 'giakhang.do@khangland.vn',
+        taxCode: '0315678901',
+        debt: 8500000,
+        hasCarInGarage: 'Đang có',
+      },
+    ],
+  },
+  {
+    id: 'disc-03',
+    code: 'CK-CASTROL-15',
+    name: 'Chiết khấu 15% Dầu nhớt & Phụ gia Castrol Magnatec',
+    category: 'Chiết khấu',
+    type: 'percentage',
+    value: 15,
+    targetAudience: 'Khách hàng mới và Khách hàng Hiện hữu',
+    minOrderValue: 0,
+    maxDiscountAmount: 0,
+    startDate: '2025-02-01',
+    endDate: '2025-08-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 45,
+    description: 'Chương trình hợp tác cùng Castrol Việt Nam, giảm 15% cho tất cả dòng sản phẩm nhớt động cơ và nước làm mát cao cấp.',
+    createdAt: '25/01/2025',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'all_with_new',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: undefined,
+    maxUsagePerCustomer: undefined,
+    maxUsagePerPlate: undefined,
+    discountMethod: 'product',
+    orderDiscountType: 'percentage',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '',
+    orderMinOrderValue: '',
+    productDiscountType: 'percentage',
+    productItems: [
+      {
+        id: 'p-03-1',
+        itemCode: 'NHOT003',
+        itemName: 'Nhớt Mobil 20W-50',
+        unit: 'Lít',
+        vat: 10,
+        priceBeforeVat: 170000,
+        priceAfterVat: 187000,
+        discountPercent: 15,
+        fixedDiscountAmount: 25500,
+        newPriceBeforeVat: 144500,
+        newPriceAfterVat: 158950,
+        minBuyQuantity: 4,
+      },
+      {
+        id: 'p-03-2',
+        itemCode: 'NUOCLM004',
+        itemName: 'Nước làm mát LLC 20% 4L Red JCAP',
+        unit: 'Bình',
+        vat: 10,
+        priceBeforeVat: 110000,
+        priceAfterVat: 121000,
+        discountPercent: 15,
+        fixedDiscountAmount: 16500,
+        newPriceBeforeVat: 93500,
+        newPriceAfterVat: 102850,
+        minBuyQuantity: 1,
+      },
+      {
+        id: 'p-03-3',
+        itemCode: 'LOCNHOT',
+        itemName: 'Lọc nhớt chính hãng',
+        unit: 'Cái',
+        vat: 8,
+        priceBeforeVat: 150000,
+        priceAfterVat: 162000,
+        discountPercent: 15,
+        fixedDiscountAmount: 22500,
+        newPriceBeforeVat: 127500,
+        newPriceAfterVat: 137700,
+        minBuyQuantity: 1,
+      },
+    ],
+    documents: [
+      {
+        id: 'doc-03-1',
+        hasContract: true,
+        documentName: 'Hợp đồng dầu nhớt Castrol & Shell 2025',
+        documentDescription: 'Hợp đồng cung ứng dầu động cơ Castrol Magnatec & Shell Helix 2025',
+        supplier: 'Tổng kho Dầu nhớt Castrol & Shell',
+        contractNumber: 'HĐ-2025/CS-11',
+        contractDescription: 'Hợp đồng cung ứng dầu động cơ Castrol Magnatec & Shell Helix 2025',
+        effectiveDate: '2025-03-01',
+        expirationDate: '2026-02-28',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-CS-11',
+        uploadedFile: 'HD_2025_Castrol_Shell_HopDong.pdf',
+        details: 'Tài trợ máy hút nhớt thải và chiết khấu bậc thang theo sản lượng phuy/tháng.',
+      },
+    ],
+    vouchersList: [],
+  },
+  {
+    id: 'disc-04',
+    code: 'VC-NEW-200K',
+    name: 'Voucher 200.000đ kích cầu khách hàng mới trải nghiệm dịch vụ',
+    category: 'Voucher',
+    type: 'fixed_amount',
+    value: 200000,
+    targetAudience: 'Khách hàng mới',
+    minOrderValue: 800000,
+    maxDiscountAmount: 0,
+    startDate: '2025-03-01',
+    endDate: '2025-05-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'disallow',
+    allowStacking: false,
+    roCount: 32,
+    description: 'Mã voucher phát hành trực tuyến cho khách hàng mới đăng ký qua Fanpage/Website, giảm 200k cho đơn từ 800k.',
+    createdAt: '28/02/2025',
+    branchScope: 'specific',
+    selectedBranches: ['Chi nhánh Tân Bình (TP.HCM)'],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'new_customer',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: 100,
+    maxUsagePerCustomer: 1,
+    maxUsagePerPlate: 1,
+    discountMethod: 'order',
+    orderDiscountType: 'fixed_amount',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '200000',
+    orderMinOrderValue: '800000',
+    productDiscountType: 'fixed_amount',
+    productItems: [],
+    documents: [],
+    vouchersList: [
+      { id: 'vc-n-1', code: 'VC-NEW-5501', targetType: 'new_customer', status: 'available', createdAt: '01/03/2025' },
+      { id: 'vc-n-2', code: 'VC-NEW-5502', targetType: 'new_customer', status: 'available', createdAt: '01/03/2025' },
+      { id: 'vc-n-3', code: 'VC-NEW-5503', targetType: 'new_customer', status: 'used', createdAt: '01/03/2025' },
+      { id: 'vc-n-4', code: 'VC-NEW-5504', targetType: 'new_customer', status: 'used', createdAt: '01/03/2025' },
+      { id: 'vc-n-5', code: 'VC-NEW-5505', targetType: 'new_customer', status: 'available', createdAt: '01/03/2025' },
+      { id: 'vc-n-6', code: 'VC-NEW-5506', targetType: 'new_customer', status: 'available', createdAt: '01/03/2025' },
+      { id: 'vc-n-7', code: 'VC-NEW-5507', targetType: 'new_customer', status: 'available', createdAt: '01/03/2025' },
+      { id: 'vc-n-8', code: 'VC-NEW-5508', targetType: 'new_customer', status: 'used', createdAt: '01/03/2025' },
+    ],
+  },
+  {
+    id: 'disc-05',
+    code: 'CK-DN-FLEET',
+    name: 'Chính sách chiết khấu 8% tổng hóa đơn cho Đội xe Doanh nghiệp',
+    category: 'Chiết khấu',
+    type: 'percentage',
+    value: 8,
+    targetAudience: 'Khách hàng Doanh nghiệp',
+    minOrderValue: 3000000,
+    maxDiscountAmount: 2000000,
+    startDate: '2025-01-01',
+    endDate: '2025-12-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 63,
+    description: 'Áp dụng cho doanh nghiệp có hợp đồng bảo dưỡng đội xe từ 5 xe trở lên, thanh toán công nợ tháng.',
+    createdAt: '01/01/2025',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'specific',
+    selectedPlateColors: ['Trắng', 'Vàng'],
+    customerScope: 'specific',
+    selectedCustomerGroups: ['Khách hàng Doanh nghiệp'],
+    targetCustomers: [],
+    maxUsageTotal: undefined,
+    maxUsagePerCustomer: undefined,
+    maxUsagePerPlate: undefined,
+    discountMethod: 'order',
+    orderDiscountType: 'percentage',
+    orderPercent: '8',
+    orderMaxDiscountAmount: '2000000',
+    orderFixedAmount: '',
+    orderMinOrderValue: '3000000',
+    productDiscountType: 'percentage',
+    productItems: [],
+    documents: [
+      {
+        id: 'doc-05-1',
+        hasContract: true,
+        documentName: 'Hợp đồng phân phối phụ tùng ô tô & dầu nhờn',
+        documentDescription: 'Hợp đồng nguyên tắc cung ứng phụ tùng ô tô & dầu mỡ nhờn năm 2025',
+        supplier: 'Công ty Phụ tùng A',
+        contractNumber: 'HĐ-2025/PTA-01',
+        contractDescription: 'Hợp đồng nguyên tắc cung ứng phụ tùng ô tô & dầu mỡ nhờn năm 2025',
+        effectiveDate: '2025-01-01',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-PTA-01',
+        uploadedFile: 'HD_2025_PTA_01_NguyenTac.pdf',
+        details: 'Chiết khấu quý 8% theo đơn hàng thực tế, thanh toán gối đầu 30 ngày.',
+      },
+    ],
+    vouchersList: [],
+  },
+  {
+    id: 'disc-06',
+    code: 'VC-MICHELIN-1TR',
+    name: 'Voucher tặng 1.000.000đ khi thay 4 lốp Michelin & cân chỉnh thước lái',
+    category: 'Voucher',
+    type: 'fixed_amount',
+    value: 1000000,
+    targetAudience: 'Khách hàng Thân thiết, Khách hàng VIP / Đại lý',
+    minOrderValue: 6000000,
+    maxDiscountAmount: 0,
+    startDate: '2025-02-15',
+    endDate: '2025-05-15',
+    status: 'paused',
+    statusDisplay: 'Dừng hiệu lực',
+    stackable: 'disallow',
+    allowStacking: false,
+    roCount: 9,
+    description: 'Chương trình kích cầu thay lốp du lịch mùa mưa, giảm ngay 1 triệu đồng cho khách hàng thân thiết và VIP.',
+    createdAt: '12/02/2025',
+    branchScope: 'specific',
+    selectedBranches: ['Chi nhánh Quận 7 (TP.HCM)', 'Chi nhánh Bình Thạnh (TP.HCM)'],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'specific',
+    selectedCustomerGroups: ['Khách hàng Thân thiết', 'Khách hàng VIP / Đại lý'],
+    targetCustomers: [],
+    maxUsageTotal: 30,
+    maxUsagePerCustomer: 1,
+    maxUsagePerPlate: 1,
+    discountMethod: 'order',
+    orderDiscountType: 'fixed_amount',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '1000000',
+    orderMinOrderValue: '6000000',
+    productDiscountType: 'fixed_amount',
+    productItems: [],
+    documents: [
+      {
+        id: 'doc-06-1',
+        hasContract: true,
+        documentName: 'Hợp đồng phân phối lốp xe Michelin 2025',
+        documentDescription: 'Hợp đồng phân phối độc quyền lốp Michelin & dịch vụ cân mâm bấm chì 2025',
+        supplier: 'Đại lý Michelin Việt Nam',
+        contractNumber: 'HĐ-2025/MCH-02',
+        contractDescription: 'Hợp đồng phân phối độc quyền lốp Michelin & dịch vụ cân mâm bấm chì 2025',
+        effectiveDate: '2025-01-15',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-MCH-02',
+        uploadedFile: 'HD_2025_Michelin_PhanPhoi.pdf',
+        details: 'Ưu đãi đại lý ủy quyền Michelin cấp 1, hỗ trợ công nghệ cân mâm Hunter.',
+      },
+    ],
+    vouchersList: [
+      {
+        id: 'vc-mch-01',
+        code: 'VC-MCH-201',
+        targetType: 'existing_customer',
+        status: 'used',
+        createdAt: '15/02/2025',
+        customerCode: 'KH-2023-089',
+        customerName: 'Phạm Hoàng Nam',
+        address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+        phone: '0901 234 567',
+        email: 'nam.pham@namsaigonauto.vn',
+        taxCode: '0314567890',
+        debt: 12500000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-mch-02',
+        code: 'VC-MCH-202',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '15/02/2025',
+        customerCode: 'KH-2024-018',
+        customerName: 'Nguyễn Thị Bích Ngọc',
+        address: '102 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh',
+        phone: '0987 654 321',
+        email: 'bichngoc.law@gmail.com',
+        taxCode: '0311223344',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-mch-03',
+        code: 'VC-MCH-203',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '15/02/2025',
+        customerCode: 'KH-2024-055',
+        customerName: 'Võ Hoàng Yến',
+        address: '15 Lê Lợi, Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+        phone: '0908 776 655',
+        email: 'hoangyen.vo@vietstarcorp.vn',
+        taxCode: '0313456789',
+        debt: 3500000,
+        hasCarInGarage: 'Không có',
+      },
+    ],
+  },
+  {
+    id: 'disc-07',
+    code: 'CK-ACQUY-GS-100K',
+    name: 'Giảm 100.000đ trực tiếp khi thay bình Ắc quy GS chính hãng',
+    category: 'Chiết khấu',
+    type: 'fixed_amount',
+    value: 100000,
+    targetAudience: 'Khách hàng hiện hữu',
+    minOrderValue: 0,
+    maxDiscountAmount: 0,
+    startDate: '2025-03-01',
+    endDate: '2025-10-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 21,
+    description: 'Giảm giá trực tiếp 100k trên giá bán mỗi bình ắc quy GS ô tô, tặng kèm kiểm tra hệ thống sạc máy phát điện.',
+    createdAt: '26/02/2025',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'all_existing',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: 200,
+    maxUsagePerCustomer: 2,
+    maxUsagePerPlate: 1,
+    discountMethod: 'product',
+    orderDiscountType: 'fixed_amount',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '',
+    orderMinOrderValue: '',
+    productDiscountType: 'fixed_amount',
+    productItems: [
+      {
+        id: 'p-07-1',
+        itemCode: 'BAT_GS',
+        itemName: 'Bình ắc quy GS 12V - 60Ah',
+        unit: 'Bình',
+        vat: 10,
+        priceBeforeVat: 1450000,
+        priceAfterVat: 1595000,
+        discountPercent: '',
+        fixedDiscountAmount: 100000,
+        newPriceBeforeVat: 1350000,
+        newPriceAfterVat: 1485000,
+        minBuyQuantity: 1,
+      },
+    ],
+    documents: [
+      {
+        id: 'doc-07-1',
+        hasContract: true,
+        documentName: 'Hợp đồng đại lý ắc quy GS 2025',
+        documentDescription: 'Hợp đồng mua bán ắc quy GS miễn bảo dưỡng (MF) dành cho xe con',
+        supplier: 'Công ty Ắc quy GS Việt Nam',
+        contractNumber: 'HĐ-2025/GS-05',
+        contractDescription: 'Hợp đồng mua bán ắc quy GS miễn bảo dưỡng (MF) dành cho xe con',
+        effectiveDate: '2025-01-01',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-GS-05',
+        uploadedFile: 'HD_2025_AcQuyGS_BanHang.pdf',
+        details: 'Chính sách chiết khấu 12% theo doanh số tháng, cam kết đổi trả 1-1 cho bình lỗi.',
+      },
+    ],
+    vouchersList: [],
+  },
+  {
+    id: 'disc-08',
+    code: 'VC-BIENVANG-300K',
+    name: 'Voucher hỗ trợ bảo dưỡng xe chạy dịch vụ & xe tải nhẹ 300.000đ',
+    category: 'Voucher',
+    type: 'fixed_amount',
+    value: 300000,
+    targetAudience: 'Khách hàng hiện hữu',
+    minOrderValue: 1500000,
+    maxDiscountAmount: 0,
+    startDate: '2025-01-01',
+    endDate: '2025-04-30',
+    status: 'paused',
+    statusDisplay: 'Dừng hiệu lực',
+    stackable: 'disallow',
+    allowStacking: false,
+    roCount: 17,
+    description: 'Gói voucher chuyên biệt hỗ trợ tài xế xe dịch vụ công nghệ, xe vận tải biển vàng cho hóa đơn từ 1.500.000đ.',
+    createdAt: '20/12/2024',
+    branchScope: 'specific',
+    selectedBranches: ['Chi nhánh Bình Thạnh (TP.HCM)', 'Chi nhánh Thuận An (Bình Dương)'],
+    plateColorScope: 'specific',
+    selectedPlateColors: ['Vàng'],
+    customerScope: 'all',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: 80,
+    maxUsagePerCustomer: 2,
+    maxUsagePerPlate: 2,
+    discountMethod: 'order',
+    orderDiscountType: 'fixed_amount',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '300000',
+    orderMinOrderValue: '1500000',
+    productDiscountType: 'fixed_amount',
+    productItems: [],
+    documents: [],
+    vouchersList: [
+      {
+        id: 'vc-bv-1',
+        code: 'VC-BV-3101',
+        targetType: 'existing_customer',
+        status: 'used',
+        createdAt: '01/01/2025',
+        customerCode: 'KH-2024-071',
+        customerName: 'Vũ Minh Đạt',
+        address: '189 Kha Vạn Cân, Hiệp Bình Chánh, Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0977 443 322',
+        email: 'dat.vu@transportexpress.vn',
+        taxCode: '0316655443',
+        debt: 1800000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-bv-2',
+        code: 'VC-BV-3102',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '01/01/2025',
+        customerCode: 'KH-2024-099',
+        customerName: 'Hoàng Văn Thái',
+        address: '45 Đại lộ Bình Dương, Thuận An, Bình Dương',
+        phone: '0966 554 433',
+        email: 'thai.hoang@binhduonglog.com',
+        taxCode: '3702112233',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-bv-3',
+        code: 'VC-BV-3103',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '01/01/2025',
+        customerCode: 'KH-2024-005',
+        customerName: 'Trần Minh Tuấn',
+        address: '56 Đường số 9, Linh Tây, TP. Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0912 345 678',
+        email: 'tuan.tran@tuantranlogistics.com',
+        taxCode: '0318765432',
+        debt: 4200000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-bv-4',
+        code: 'VC-BV-3104',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '01/01/2025',
+        customerCode: 'KH-2023-142',
+        customerName: 'Lê Hoàng Việt',
+        address: '88 Bạch Đằng, P. 2, Tân Bình, TP. Hồ Chí Minh',
+        phone: '0938 112 233',
+        email: 'contact@vietthanhgarage.com',
+        taxCode: '0319988776',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+    ],
+  },
+  {
+    id: 'disc-09',
+    code: 'CK-BOSCH-12',
+    name: 'Chiết khấu 12% Bugi & Má phanh cao cấp thương hiệu Bosch',
+    category: 'Chiết khấu',
+    type: 'percentage',
+    value: 12,
+    targetAudience: 'Khách hàng mới và Khách hàng Hiện hữu',
+    minOrderValue: 0,
+    maxDiscountAmount: 0,
+    startDate: '2025-02-10',
+    endDate: '2025-12-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 38,
+    description: 'Ưu đãi định kỳ khi thay má phanh hoặc bugi Bosch, tăng cường hiệu năng phanh và tiết kiệm nhiên liệu.',
+    createdAt: '05/02/2025',
+    branchScope: 'specific',
+    selectedBranches: ['Chi nhánh Quận 7 (TP.HCM)', 'Chi nhánh Tân Bình (TP.HCM)', 'Chi nhánh Thuận An (Bình Dương)'],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'all_with_new',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    maxUsageTotal: undefined,
+    maxUsagePerCustomer: undefined,
+    maxUsagePerPlate: undefined,
+    discountMethod: 'product',
+    orderDiscountType: 'percentage',
+    orderPercent: '10',
+    orderMaxDiscountAmount: '',
+    orderFixedAmount: '',
+    orderMinOrderValue: '',
+    productDiscountType: 'percentage',
+    productItems: [
+      {
+        id: 'p-09-1',
+        itemCode: 'BUGI_NGK',
+        itemName: 'Bugi Iridium NGK Laser',
+        unit: 'Bộ',
+        vat: 8,
+        priceBeforeVat: 480000,
+        priceAfterVat: 518400,
+        discountPercent: 12,
+        fixedDiscountAmount: 57600,
+        newPriceBeforeVat: 422400,
+        newPriceAfterVat: 456192,
+        minBuyQuantity: 1,
+      },
+      {
+        id: 'p-09-2',
+        itemCode: 'MAPHANH_TRUOC',
+        itemName: 'Bộ má phanh trước Brembo',
+        unit: 'Bộ',
+        vat: 8,
+        priceBeforeVat: 850000,
+        priceAfterVat: 918000,
+        discountPercent: 12,
+        fixedDiscountAmount: 102000,
+        newPriceBeforeVat: 748000,
+        newPriceAfterVat: 807840,
+        minBuyQuantity: 1,
+      },
+      {
+        id: 'p-09-3',
+        itemCode: 'LOCGIO',
+        itemName: 'Lọc gió động cơ Denso',
+        unit: 'Cái',
+        vat: 8,
+        priceBeforeVat: 220000,
+        priceAfterVat: 237600,
+        discountPercent: 12,
+        fixedDiscountAmount: 26400,
+        newPriceBeforeVat: 193600,
+        newPriceAfterVat: 209088,
+        minBuyQuantity: 1,
+      },
+    ],
+    documents: [
+      {
+        id: 'doc-09-1',
+        hasContract: true,
+        documentName: 'Hợp đồng phân phối thiết bị Bosch 2025',
+        documentDescription: 'Hợp đồng cung cấp gạt mưa, còi xe, ắc quy và linh kiện điện tử Bosch 2025',
+        supplier: 'Phụ tùng Bosch Việt Nam',
+        contractNumber: 'HĐ-2025/BSH-08',
+        contractDescription: 'Hợp đồng cung cấp gạt mưa, còi xe, ắc quy và linh kiện điện tử Bosch 2025',
+        effectiveDate: '2025-02-01',
+        expirationDate: '2026-01-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/sales/contracts/HD-2025-BSH-08',
+        uploadedFile: 'HD_2025_Bosch_LinhKienDienTu.pdf',
+        details: 'Áp dụng chiết khấu thương mại 10% cho các gói bảo dưỡng sử dụng linh kiện Bosch.',
+      },
+    ],
+    vouchersList: [],
+  },
+  {
+    id: 'disc-10',
+    code: 'VC-SINHNHAT-15',
+    name: 'Voucher sinh nhật tri ân Khách hàng Thân thiết giảm 15%',
+    category: 'Voucher',
+    type: 'percentage',
+    value: 15,
+    targetAudience: 'Khách hàng Thân thiết',
+    minOrderValue: 1000000,
+    maxDiscountAmount: 600000,
+    startDate: '2025-01-01',
+    endDate: '2025-12-31',
+    status: 'active',
+    statusDisplay: 'Hiệu lực',
+    stackable: 'disallow',
+    allowStacking: false,
+    roCount: 52,
+    description: 'Gửi tặng khách hàng thân thiết trong tháng sinh nhật, giảm 15% tổng giá trị lệnh sửa chữa RO (tối đa 600.000đ).',
+    createdAt: '01/01/2025',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'specific',
+    selectedCustomerGroups: ['Khách hàng Thân thiết'],
+    targetCustomers: [],
+    maxUsageTotal: 200,
+    maxUsagePerCustomer: 1,
+    maxUsagePerPlate: 1,
+    discountMethod: 'order',
+    orderDiscountType: 'percentage',
+    orderPercent: '15',
+    orderMaxDiscountAmount: '600000',
+    orderFixedAmount: '',
+    orderMinOrderValue: '1000000',
+    productDiscountType: 'percentage',
+    productItems: [],
+    documents: [
+      {
+        id: 'doc-10-1',
+        hasContract: false,
+        documentName: 'Chính sách chăm sóc khách hàng & quà tặng sinh nhật 2025',
+        documentDescription: 'Quy định phát hành voucher ưu đãi sinh nhật cho thành viên thân thiết',
+        supplier: '',
+        contractNumber: '',
+        contractDescription: '',
+        effectiveDate: '2025-01-01',
+        expirationDate: '2025-12-31',
+        isValid: true,
+        link: 'https://erp.dumuc.com.vn/docs/cs-sinh-nhat-2025.pdf',
+        uploadedFile: 'CS_SinhNhat_KHTT_2025.pdf',
+        details: 'Tự động gửi tin nhắn SMS / Zalo OA chúc mừng sinh nhật kèm mã Voucher ưu đãi 15%.',
+      },
+    ],
+    vouchersList: [
+      {
+        id: 'vc-bd-01',
+        code: 'VC-BD-8801',
+        targetType: 'existing_customer',
+        status: 'used',
+        createdAt: '10/01/2025',
+        customerCode: 'KH-2024-018',
+        customerName: 'Nguyễn Thị Bích Ngọc',
+        address: '102 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh',
+        phone: '0987 654 321',
+        email: 'bichngoc.law@gmail.com',
+        taxCode: '0311223344',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-bd-02',
+        code: 'VC-BD-8802',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '15/01/2025',
+        customerCode: 'KH-2024-032',
+        customerName: 'Đỗ Gia Khang',
+        address: '74 Mai Chí Thọ, An Phú, TP. Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0903 889 900',
+        email: 'giakhang.do@khangland.vn',
+        taxCode: '0315678901',
+        debt: 8500000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-bd-03',
+        code: 'VC-BD-8803',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '20/01/2025',
+        customerCode: 'KH-2024-055',
+        customerName: 'Võ Hoàng Yến',
+        address: '15 Lê Lợi, Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+        phone: '0908 776 655',
+        email: 'hoangyen.vo@vietstarcorp.vn',
+        taxCode: '0313456789',
+        debt: 3500000,
+        hasCarInGarage: 'Không có',
+      },
+      {
+        id: 'vc-bd-04',
+        code: 'VC-BD-8804',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '25/01/2025',
+        customerCode: 'KH-2024-071',
+        customerName: 'Vũ Minh Đạt',
+        address: '189 Kha Vạn Cân, Hiệp Bình Chánh, Thủ Đức, TP. Hồ Chí Minh',
+        phone: '0977 443 322',
+        email: 'dat.vu@transportexpress.vn',
+        taxCode: '0316655443',
+        debt: 1800000,
+        hasCarInGarage: 'Đang có',
+      },
+      {
+        id: 'vc-bd-05',
+        code: 'VC-BD-8805',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '28/01/2025',
+        customerCode: 'KH-2024-099',
+        customerName: 'Hoàng Văn Thái',
+        address: '45 Đại lộ Bình Dương, Thuận An, Bình Dương',
+        phone: '0966 554 433',
+        email: 'thai.hoang@binhduonglog.com',
+        taxCode: '3702112233',
+        debt: 0,
+        hasCarInGarage: 'Không có',
+      },
+    ],
+  },
+];
+
 export const DiscountManagementModule: React.FC = () => {
-  // Không tạo dữ liệu mẫu, bắt đầu hoàn toàn bằng danh sách trống
-  const [discounts, setDiscounts] = useState<DiscountRecord[]>([]);
+  // Khởi tạo 10 records mẫu đa dạng đầy đủ các trường hợp theo chuẩn form Thêm mới
+  const [discounts, setDiscounts] = useState<DiscountRecord[]>(INITIAL_DISCOUNTS);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   // Filter inputs
@@ -517,8 +1429,10 @@ export const DiscountManagementModule: React.FC = () => {
   const [formVouchersList, setFormVouchersList] = useState<VoucherItem[]>([]);
   const [isViewVoucherListModalOpen, setIsViewVoucherListModalOpen] = useState(false);
   const [isGenerateVoucherModalOpen, setIsGenerateVoucherModalOpen] = useState(false);
+  const [genVoucherTargetType, setGenVoucherTargetType] = useState<'new_customer' | 'existing_customer'>('new_customer');
   const [genVoucherQty, setGenVoucherQty] = useState<string>('10');
-  const [genVoucherTarget, setGenVoucherTarget] = useState<'both' | 'new_customer' | 'existing_customer'>('both');
+  const [genSelectedCustomerGroups, setGenSelectedCustomerGroups] = useState<string[]>([]);
+  const [genExistingCustRows, setGenExistingCustRows] = useState<ExistingCustomerVoucherRow[]>([]);
   const [voucherSearchTerm, setVoucherSearchTerm] = useState('');
   const [voucherCopiedId, setVoucherCopiedId] = useState<string | null>(null);
 
@@ -531,46 +1445,155 @@ export const DiscountManagementModule: React.FC = () => {
   const formVoucherNewCustomerCount = formVouchersList.filter((v) => v.targetType === 'new_customer').length;
   const formVoucherExistingCustomerCount = formVouchersList.filter((v) => v.targetType === 'existing_customer').length;
 
-  const handleGenerateVouchers = () => {
-    const qty = Math.max(1, Math.min(500, parseInt(genVoucherQty, 10) || 1));
+  const handleOpenGenerateVoucher = () => {
+    setGenVoucherTargetType('new_customer');
+    setGenVoucherQty('10');
+    setGenSelectedCustomerGroups([]);
+    setGenExistingCustRows([]);
+    setIsGenerateVoucherModalOpen(true);
+  };
+
+  const handleAddGroupsToExistingCustList = () => {
+    if (genSelectedCustomerGroups.length === 0) {
+      alert('Vui lòng chọn ít nhất một Nhóm khách hàng.');
+      return;
+    }
+    const matchingCustomers = EXISTING_CUSTOMERS_IN_MODULE.filter((c) =>
+      genSelectedCustomerGroups.includes(c.customerGroup)
+    );
+
+    setGenExistingCustRows((prev) => {
+      const existingCodes = new Set(prev.map((r) => r.customerCode));
+      const newRows: ExistingCustomerVoucherRow[] = [];
+
+      matchingCustomers.forEach((cust, idx) => {
+        if (!existingCodes.has(cust.customerCode)) {
+          existingCodes.add(cust.customerCode);
+          newRows.push({
+            id: `gen-cust-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+            customerCode: cust.customerCode,
+            customerName: cust.customerName,
+            address: cust.address,
+            phone: cust.phone,
+            email: cust.email,
+            taxCode: cust.taxCode,
+            debt: idx % 3 === 0 ? 15000000 : idx % 2 === 0 ? 4200000 : 0,
+            hasCarInGarage: idx % 2 === 0 ? 'Đang có' : 'Không có',
+          });
+        }
+      });
+
+      return [...prev, ...newRows];
+    });
+  };
+
+  const handleAddRowToExistingCustList = () => {
+    const existingCodes = new Set(genExistingCustRows.map((r) => r.customerCode));
+    const available = EXISTING_CUSTOMERS_IN_MODULE.find((c) => !existingCodes.has(c.customerCode));
+
+    const newRow: ExistingCustomerVoucherRow = available
+      ? {
+          id: `gen-cust-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          customerCode: available.customerCode,
+          customerName: available.customerName,
+          address: available.address,
+          phone: available.phone,
+          email: available.email,
+          taxCode: available.taxCode,
+          debt: 0,
+          hasCarInGarage: 'Không có',
+        }
+      : {
+          id: `gen-cust-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          customerCode: `KH-${new Date().getFullYear()}-${String(genExistingCustRows.length + 1).padStart(3, '0')}`,
+          customerName: '',
+          address: '',
+          phone: '',
+          email: '',
+          taxCode: '',
+          debt: 0,
+          hasCarInGarage: 'Không có',
+        };
+
+    setGenExistingCustRows((prev) => [...prev, newRow]);
+  };
+
+  const handleDeleteRowFromExistingCustList = (id: string) => {
+    setGenExistingCustRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleUpdateGenExistingRow = (
+    id: string,
+    field: keyof ExistingCustomerVoucherRow,
+    value: any
+  ) => {
+    setGenExistingCustRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleConfirmGenerateVouchers = () => {
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-    const newItems: VoucherItem[] = [];
 
-    for (let i = 0; i < qty; i++) {
-      let target: 'new_customer' | 'existing_customer' = 'new_customer';
-      if (genVoucherTarget === 'both') {
-        target = i % 2 === 0 ? 'new_customer' : 'existing_customer';
-      } else {
-        target = genVoucherTarget;
+    if (genVoucherTargetType === 'new_customer') {
+      const qty = Math.max(1, Math.min(1000, parseInt(genVoucherQty, 10) || 1));
+      const newItems: VoucherItem[] = [];
+
+      for (let i = 0; i < qty; i++) {
+        const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        newItems.push({
+          id: `vchr-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+          code: `VC-${randomCode}-${randomNum}`,
+          targetType: 'new_customer',
+          status: 'available',
+          createdAt: dateStr,
+          customerCode: `KH-NEW-${Math.floor(100 + Math.random() * 900)}`,
+          customerName: `Khách mới #${formVouchersList.length + i + 1}`,
+          address: 'Hồ Chí Minh',
+          phone: `09${Math.floor(10000000 + Math.random() * 90000000)}`,
+          email: `khachmoi${randomNum}@gmail.com`,
+          taxCode: `03${Math.floor(10000000 + Math.random() * 90000000)}`,
+          debt: 0,
+          hasCarInGarage: 'Không có',
+        });
       }
-      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
 
-      const sampleCust = target === 'existing_customer'
-        ? EXISTING_CUSTOMERS_IN_MODULE[i % EXISTING_CUSTOMERS_IN_MODULE.length]
-        : undefined;
+      setFormVouchersList((prev) => [...newItems, ...prev]);
+      setIsGenerateVoucherModalOpen(false);
+    } else {
+      if (genExistingCustRows.length === 0) {
+        alert('Vui lòng thêm ít nhất 1 khách hàng hiện hữu vào danh sách trước khi xác nhận tạo.');
+        return;
+      }
 
-      newItems.push({
-        id: `vchr-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
-        code: `VC-${randomCode}-${randomNum}`,
-        targetType: target,
-        status: 'available',
-        createdAt: dateStr,
-        customerCode: sampleCust ? sampleCust.customerCode : `KH-NEW-${Math.floor(100 + Math.random() * 900)}`,
-        customerName: sampleCust ? sampleCust.customerName : `Khách mới #${i + 1}`,
-        address: sampleCust ? sampleCust.address : 'Hồ Chí Minh',
-        phone: sampleCust ? sampleCust.phone : `09${Math.floor(10000000 + Math.random() * 90000000)}`,
-        email: sampleCust ? sampleCust.email : `khachmoi${randomNum}@gmail.com`,
-        taxCode: sampleCust ? sampleCust.taxCode : `03${Math.floor(10000000 + Math.random() * 90000000)}`,
-        debt: target === 'existing_customer' ? (i % 3 === 0 ? 15000000 : (i % 2 === 0 ? 4200000 : 0)) : 0,
-        hasCarInGarage: target === 'existing_customer' ? (i % 2 === 0 ? 'Đang có' : 'Không có') : 'Không có',
+      const newItems: VoucherItem[] = genExistingCustRows.map((row, i) => {
+        const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        return {
+          id: `vchr-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+          code: `VC-${randomCode}-${randomNum}`,
+          targetType: 'existing_customer',
+          status: 'available',
+          createdAt: dateStr,
+          customerCode: row.customerCode || `KH-EXT-${i + 1}`,
+          customerName: row.customerName || `Khách hàng #${i + 1}`,
+          address: row.address || '',
+          phone: row.phone || '',
+          email: row.email || '',
+          taxCode: row.taxCode || '',
+          debt: typeof row.debt === 'number' ? row.debt : parseInt(String(row.debt).replace(/\D/g, ''), 10) || 0,
+          hasCarInGarage: row.hasCarInGarage || 'Không có',
+        };
       });
-    }
 
-    setFormVouchersList((prev) => [...newItems, ...prev]);
-    setIsGenerateVoucherModalOpen(false);
+      setFormVouchersList((prev) => [...newItems, ...prev]);
+      setIsGenerateVoucherModalOpen(false);
+    }
   };
+
+  const handleGenerateVouchers = handleConfirmGenerateVouchers;
 
   const handleAddVoucherRow = () => {
     const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -2317,7 +3340,7 @@ export const DiscountManagementModule: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => setIsGenerateVoucherModalOpen(true)}
+                        onClick={handleOpenGenerateVoucher}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
@@ -4311,14 +5334,6 @@ export const DiscountManagementModule: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsGenerateVoucherModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tạo Voucher</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => setIsViewVoucherListModalOpen(false)}
                 className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
               >
@@ -4396,50 +5411,74 @@ export const DiscountManagementModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Thống kê: Tổng số Voucher hiện có, Tổng số voucher dành cho Khách hàng mới, Tổng số Voucher dành cho khách hàng hiện hữu */}
-              <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
-                {/* Tổng số Voucher hiện có */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
+              {/* Thống kê: Tổng số Voucher hiện có = Tổng số voucher dành cho Khách hàng mới + Tổng số Voucher dành cho khách hàng hiện hữu */}
+              <div className="lg:col-span-5 flex flex-col gap-2 bg-slate-50/80 p-3.5 rounded-xl border border-gray-200 shadow-2xs">
+                {/* 1. Tổng số Voucher hiện có */}
+                <div className="bg-white rounded-xl border-2 border-blue-400 p-3.5 shadow-xs flex items-center justify-between bg-gradient-to-r from-blue-50/40 to-white">
                   <div>
-                    <span className="text-xs font-medium text-gray-500 block">
-                      Tổng số Voucher hiện có
-                    </span>
-                    <span className="text-2xl font-black text-gray-900 mt-1 block">
-                      {formVoucherTotalCount.toLocaleString('vi-VN')}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                        Tổng số Voucher hiện có
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#1A73E8] rounded border border-blue-200">
+                        = (1) + (2)
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-black text-[#1A73E8]">
+                        {formVoucherTotalCount.toLocaleString('vi-VN')}
+                      </span>
+                      <span className="text-xs text-gray-500 font-medium">
+                        (= {formVoucherNewCustomerCount.toLocaleString('vi-VN')} + {formVoucherExistingCustomerCount.toLocaleString('vi-VN')})
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1A73E8] flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold shadow-2xs">
                     <Ticket className="w-5 h-5" />
                   </div>
                 </div>
 
-                {/* Tổng số voucher dành cho Khách hàng mới */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-gray-500 block">
-                      Tổng số voucher dành cho Khách hàng mới
-                    </span>
-                    <span className="text-2xl font-black text-blue-600 mt-1 block">
-                      {formVoucherNewCustomerCount.toLocaleString('vi-VN')}
-                    </span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <Users className="w-5 h-5" />
+                {/* Dấu = trực quan */}
+                <div className="relative flex items-center justify-center -my-1 z-10">
+                  <div className="bg-white border-2 border-blue-400 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
+                    =
                   </div>
                 </div>
 
-                {/* Tổng số Voucher dành cho khách hàng hiện hữu */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
+                {/* 2. Tổng số voucher dành cho Khách hàng mới */}
+                <div className="bg-white rounded-xl border border-blue-200 p-3 shadow-xs flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-medium text-gray-500 block">
-                      Tổng số Voucher dành cho khách hàng hiện hữu
+                    <span className="text-xs font-semibold text-gray-600 block">
+                      (1) Tổng số voucher dành cho Khách hàng mới
                     </span>
-                    <span className="text-2xl font-black text-emerald-600 mt-1 block">
+                    <span className="text-xl font-black text-blue-600 mt-0.5 block">
+                      {formVoucherNewCustomerCount.toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+
+                {/* Dấu + trực quan */}
+                <div className="relative flex items-center justify-center -my-1 z-10">
+                  <div className="bg-white border-2 border-emerald-400 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
+                    +
+                  </div>
+                </div>
+
+                {/* 3. Tổng số Voucher dành cho khách hàng hiện hữu */}
+                <div className="bg-white rounded-xl border border-emerald-200 p-3 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-gray-600 block">
+                      (2) Tổng số Voucher dành cho khách hàng hiện hữu
+                    </span>
+                    <span className="text-xl font-black text-emerald-600 mt-0.5 block">
                       {formVoucherExistingCustomerCount.toLocaleString('vi-VN')}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                    <Building className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <Building className="w-4 h-4" />
                   </div>
                 </div>
               </div>
@@ -4512,19 +5551,11 @@ export const DiscountManagementModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons: Thêm dòng, Tạo Voucher */}
+              {/* Action Buttons: Tạo Voucher */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleAddVoucherRow}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm dòng</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsGenerateVoucherModalOpen(true)}
+                  onClick={handleOpenGenerateVoucher}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -4533,7 +5564,7 @@ export const DiscountManagementModule: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. BẢNG CHI TIẾT */}
+            {/* 3. BẢNG CHI TIẾT (READ-ONLY) */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto max-h-[calc(100vh-380px)]">
                 <table className="w-full text-left border-collapse text-xs">
@@ -4556,19 +5587,19 @@ export const DiscountManagementModule: React.FC = () => {
                     {filteredVouchers.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-gray-400">
-                          Không tìm thấy mã Voucher nào phù hợp. Nhấn <strong>"+ Thêm dòng"</strong> hoặc <strong>"Tạo Voucher"</strong> để bổ sung.
+                          Không tìm thấy mã Voucher nào phù hợp. Nhấn <strong>"Tạo Voucher"</strong> để bổ sung.
                         </td>
                       </tr>
                     ) : (
                       filteredVouchers.map((v, idx) => (
                         <tr key={v.id} className="hover:bg-blue-50/20 transition-colors">
                           {/* STT */}
-                          <td className="py-2 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
+                          <td className="py-2.5 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
                             {idx + 1}
                           </td>
 
                           {/* Mã Voucher */}
-                          <td className="py-1.5 px-2.5 border-r border-gray-100">
+                          <td className="py-2.5 px-3 border-r border-gray-100">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-mono font-bold text-[#1A73E8]">
                                 {v.code}
@@ -4593,103 +5624,55 @@ export const DiscountManagementModule: React.FC = () => {
                           </td>
 
                           {/* Mã khách hàng */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="text"
-                              value={v.customerCode || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'customerCode', e.target.value)}
-                              placeholder="Mã KH..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono font-medium text-gray-800"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 font-mono font-medium text-gray-800">
+                            {v.customerCode || '-'}
                           </td>
 
                           {/* Tên Khách hàng */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="text"
-                              value={v.customerName || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'customerName', e.target.value)}
-                              placeholder="Tên khách hàng..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 font-medium text-gray-900">
+                            {v.customerName || '-'}
                           </td>
 
                           {/* Địa chỉ */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="text"
-                              value={v.address || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'address', e.target.value)}
-                              placeholder="Địa chỉ..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 text-gray-700">
+                            {v.address || '-'}
                           </td>
 
                           {/* SĐT */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="text"
-                              value={v.phone || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'phone', e.target.value)}
-                              placeholder="SĐT..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 font-medium text-gray-800">
+                            {v.phone || '-'}
                           </td>
 
                           {/* Email */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="email"
-                              value={v.email || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'email', e.target.value)}
-                              placeholder="Email..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 text-gray-700">
+                            {v.email || '-'}
                           </td>
 
                           {/* MST */}
-                          <td className="py-1.5 px-2 border-r border-gray-100">
-                            <input
-                              type="text"
-                              value={v.taxCode || ''}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'taxCode', e.target.value)}
-                              placeholder="Mã số thuế..."
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono text-gray-700"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 font-mono text-gray-700">
+                            {v.taxCode || '-'}
                           </td>
 
                           {/* Công nợ */}
-                          <td className="py-1.5 px-2 border-r border-gray-100 text-right">
-                            <input
-                              type="text"
-                              value={typeof v.debt === 'number' ? v.debt.toLocaleString('vi-VN') : (v.debt || '0')}
-                              onChange={(e) => {
-                                const clean = e.target.value.replace(/\D/g, '');
-                                handleUpdateVoucherRow(v.id, 'debt', clean ? parseInt(clean, 10) : 0);
-                              }}
-                              placeholder="0"
-                              className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-semibold text-right text-gray-800"
-                            />
+                          <td className="py-2.5 px-3 border-r border-gray-100 text-right font-semibold text-gray-800">
+                            {(typeof v.debt === 'number' ? v.debt : (parseFloat(String(v.debt || '0')) || 0)).toLocaleString('vi-VN')} đ
                           </td>
 
                           {/* Xe trong Garage (Đang có, Không có) */}
-                          <td className="py-1.5 px-2 border-r border-gray-100 text-center">
-                            <select
-                              value={v.hasCarInGarage || 'Không có'}
-                              onChange={(e) => handleUpdateVoucherRow(v.id, 'hasCarInGarage', e.target.value as any)}
-                              className={`px-2 py-1 text-xs rounded-md font-bold border transition-colors outline-none cursor-pointer ${
+                          <td className="py-2.5 px-3 border-r border-gray-100 text-center">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${
                                 v.hasCarInGarage === 'Đang có'
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                                   : 'bg-gray-100 text-gray-600 border-gray-300'
                               }`}
                             >
-                              <option value="Đang có">Đang có</option>
-                              <option value="Không có">Không có</option>
-                            </select>
+                              {v.hasCarInGarage || 'Không có'}
+                            </span>
                           </td>
 
                           {/* Xóa */}
-                          <td className="py-1.5 px-2 text-center">
+                          <td className="py-2.5 px-2 text-center">
                             <button
                               type="button"
                               onClick={() => handleDeleteVoucher(v.id)}
@@ -4712,7 +5695,7 @@ export const DiscountManagementModule: React.FC = () => {
                   Hiển thị <strong>{filteredVouchers.length}</strong> / <strong>{formVouchersList.length}</strong> voucher
                 </span>
                 <span className="text-[11px] text-gray-400 italic">
-                  * Nhấp chuột trực tiếp vào các ô để chỉnh sửa nhanh thông tin khách hàng và công nợ
+                  * Dữ liệu danh sách Voucher ở chế độ chỉ đọc (read-only)
                 </span>
               </div>
             </div>
@@ -4720,98 +5703,377 @@ export const DiscountManagementModule: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Tạo Voucher */}
+      {/* Modal: Tạo Voucher (Full màn hình) */}
       {isGenerateVoucherModalOpen && (
-        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/80">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <Ticket className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Tạo Voucher</h3>
-                  <p className="text-xs text-gray-500">Phát hành mã Voucher tự động</p>
-                </div>
+        <div className="fixed inset-0 z-[70] bg-white flex flex-col overflow-hidden animate-fadeIn">
+          {/* Header */}
+          <div className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1A73E8] flex items-center justify-center font-bold">
+                <Ticket className="w-5 h-5" />
               </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  Tạo Voucher
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200">
+                    Giao diện toàn màn hình
+                  </span>
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Cấu hình đối tượng áp dụng và số lượng mã Voucher cần phát hành
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsGenerateVoucherModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                title="Đóng"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+          </div>
 
-            <div className="p-6 space-y-4">
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/60">
+            {/* KHU VỰC: Đối tượng áp dụng Voucher */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Số lượng Voucher cần tạo <span className="text-red-500">*</span>
+                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider block">
+                  Đối tượng áp dụng Voucher <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="500"
-                  value={genVoucherQty}
-                  onChange={(e) => setGenVoucherQty(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1A73E8]"
-                  placeholder="Nhập số lượng (vd: 10, 50, 100)..."
-                />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Đối tượng áp dụng Voucher
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Tick chọn "Dành cho Khách hàng mới" */}
+                <label
+                  onClick={() => setGenVoucherTargetType('new_customer')}
+                  className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    genVoucherTargetType === 'new_customer'
+                      ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="genVoucherTargetChoice"
+                    checked={genVoucherTargetType === 'new_customer'}
+                    onChange={() => setGenVoucherTargetType('new_customer')}
+                    className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                  />
+                  <div className="space-y-1">
+                    <span className="font-bold text-sm text-gray-900 block">
+                      Dành cho Khách hàng mới
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      Phát hành số lượng mã Voucher dự phòng cho khách hàng mới đến garage.
+                    </p>
+                  </div>
                 </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
-                    <input
-                      type="radio"
-                      name="genVoucherTarget"
-                      checked={genVoucherTarget === 'both'}
-                      onChange={() => setGenVoucherTarget('both')}
-                      className="text-[#1A73E8]"
-                    />
-                    <span className="font-medium text-gray-800">Cả Khách hàng mới và Hiện hữu (chia đều)</span>
-                  </label>
-                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
-                    <input
-                      type="radio"
-                      name="genVoucherTarget"
-                      checked={genVoucherTarget === 'new_customer'}
-                      onChange={() => setGenVoucherTarget('new_customer')}
-                      className="text-[#1A73E8]"
-                    />
-                    <span className="font-medium text-gray-800">Chỉ dành cho Khách hàng mới</span>
-                  </label>
-                  <label className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer text-xs">
-                    <input
-                      type="radio"
-                      name="genVoucherTarget"
-                      checked={genVoucherTarget === 'existing_customer'}
-                      onChange={() => setGenVoucherTarget('existing_customer')}
-                      className="text-[#1A73E8]"
-                    />
-                    <span className="font-medium text-gray-800">Chỉ dành cho Khách hàng hiện hữu</span>
-                  </label>
-                </div>
+
+                {/* Tick chọn "Dành cho khách hàng hiện hữu" */}
+                <label
+                  onClick={() => setGenVoucherTargetType('existing_customer')}
+                  className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    genVoucherTargetType === 'existing_customer'
+                      ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="genVoucherTargetChoice"
+                    checked={genVoucherTargetType === 'existing_customer'}
+                    onChange={() => setGenVoucherTargetType('existing_customer')}
+                    className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                  />
+                  <div className="space-y-1">
+                    <span className="font-bold text-sm text-gray-900 block">
+                      Dành cho khách hàng hiện hữu
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      Gán trực tiếp mã Voucher cho các khách hàng đã có trong danh sách của garage.
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/80 flex items-center justify-end gap-2.5">
+            {/* KHI CHỌN: Dành cho Khách hàng mới */}
+            {genVoucherTargetType === 'new_customer' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
+                  <div className="max-w-md space-y-2">
+                    <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider">
+                      Số lượng Voucher cần tạo <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={genVoucherQty}
+                        onChange={(e) => setGenVoucherQty(e.target.value)}
+                        placeholder="Nhập số lượng Voucher cần tạo..."
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold outline-none focus:border-[#1A73E8] bg-white shadow-2xs"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                        mã Voucher
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dòng thông báo số lượng Voucher sắp tạo */}
+                <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold flex-shrink-0">
+                      <Info className="w-4 h-4" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Bạn sắp tạo Mã Voucher có số lượng:{' '}
+                      <span className="text-blue-700 font-bold text-base px-1.5 py-0.5 bg-white border border-blue-200 rounded-md">
+                        {genVoucherQty || 0}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* KHI CHỌN: Dành cho khách hàng hiện hữu */}
+            {genVoucherTargetType === 'existing_customer' && (
+              <div className="space-y-6">
+                {/* PHẦN 1: Nhóm khách hàng áp dụng */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-gray-100">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-[#1A73E8]" />
+                        Phần 1: Nhóm khách hàng áp dụng
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        (cho phép chọn nhiều, Danh sách dưới được hiển thị từ Module Nhóm Khách hàng)
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddGroupsToExistingCustList}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm vào Danh sách</span>
+                    </button>
+                  </div>
+
+                  {/* Danh sách nhóm khách hàng dạng checkbox */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+                    {CUSTOMER_GROUP_OPTIONS.map((group) => {
+                      const isSelected = genSelectedCustomerGroups.includes(group);
+                      return (
+                        <label
+                          key={group}
+                          className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'border-[#1A73E8] bg-blue-50/40 text-blue-900 font-semibold'
+                              : 'border-gray-200 hover:bg-gray-50 text-gray-700 font-medium'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setGenSelectedCustomerGroups((prev) =>
+                                isSelected ? prev.filter((g) => g !== group) : [...prev, group]
+                              );
+                            }}
+                            className="w-4 h-4 text-[#1A73E8] rounded border-gray-300 focus:ring-[#1A73E8] cursor-pointer"
+                          />
+                          <span className="text-xs">{group}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* PHẦN 2: Danh sách khách hàng hiện hữu */}
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs space-y-0">
+                  <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2 bg-gray-50/60">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <Building className="w-4 h-4 text-emerald-600" />
+                        Phần 2: Danh sách khách hàng hiện hữu
+                      </h3>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {genExistingCustRows.length} khách hàng
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddRowToExistingCustList}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm dòng</span>
+                    </button>
+                  </div>
+
+                  {/* Bảng chi tiết: STT, Mã khách hàng, Tên Khách hàng, Địa chỉ, SĐT, Email, MST, Công nợ, Xe trong Garage (Đang có, Không có), Xóa */}
+                  <div className="overflow-x-auto max-h-[420px]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead className="bg-[#F8FAFC] text-gray-700 font-bold border-b border-gray-200 sticky top-0 z-10">
+                        <tr>
+                          <th className="py-2.5 px-3 text-center w-12 border-r border-gray-200/80">STT</th>
+                          <th className="py-2.5 px-3 min-w-[130px] border-r border-gray-200/80">Mã khách hàng</th>
+                          <th className="py-2.5 px-3 min-w-[170px] border-r border-gray-200/80">Tên Khách hàng</th>
+                          <th className="py-2.5 px-3 min-w-[200px] border-r border-gray-200/80">Địa chỉ</th>
+                          <th className="py-2.5 px-3 min-w-[120px] border-r border-gray-200/80">SĐT</th>
+                          <th className="py-2.5 px-3 min-w-[160px] border-r border-gray-200/80">Email</th>
+                          <th className="py-2.5 px-3 min-w-[120px] border-r border-gray-200/80">MST</th>
+                          <th className="py-2.5 px-3 min-w-[130px] text-right border-r border-gray-200/80">Công nợ</th>
+                          <th className="py-2.5 px-3 min-w-[140px] text-center border-r border-gray-200/80">Xe trong Garage</th>
+                          <th className="py-2.5 px-2 text-center w-14">Xóa</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {genExistingCustRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} className="py-12 text-center text-gray-400">
+                              Chưa có khách hàng nào trong danh sách. Vui lòng chọn Nhóm khách hàng ở <strong>Phần 1</strong> rồi nhấn <strong>"Thêm vào Danh sách"</strong>, hoặc nhấn <strong>"+ Thêm dòng"</strong>.
+                            </td>
+                          </tr>
+                        ) : (
+                          genExistingCustRows.map((row, idx) => (
+                            <tr key={row.id} className="hover:bg-blue-50/20 transition-colors">
+                              <td className="py-2 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
+                                {idx + 1}
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="text"
+                                  value={row.customerCode}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'customerCode', e.target.value)}
+                                  placeholder="Mã KH..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono font-medium text-gray-800"
+                                />
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="text"
+                                  value={row.customerName}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'customerName', e.target.value)}
+                                  placeholder="Tên khách hàng..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
+                                />
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="text"
+                                  value={row.address}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'address', e.target.value)}
+                                  placeholder="Địa chỉ..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
+                                />
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="text"
+                                  value={row.phone}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'phone', e.target.value)}
+                                  placeholder="SĐT..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-medium text-gray-800"
+                                />
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="email"
+                                  value={row.email}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'email', e.target.value)}
+                                  placeholder="Email..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none text-gray-700"
+                                />
+                              </td>
+                              <td className="py-1 px-2 border-r border-gray-100">
+                                <input
+                                  type="text"
+                                  value={row.taxCode}
+                                  onChange={(e) => handleUpdateGenExistingRow(row.id, 'taxCode', e.target.value)}
+                                  placeholder="MST..."
+                                  className="w-full px-2 py-1 text-xs border border-transparent hover:border-gray-200 focus:border-[#1A73E8] rounded outline-none font-mono text-gray-700"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 border-r border-gray-100 text-right font-semibold text-gray-800">
+                                {(typeof row.debt === 'number' ? row.debt : (parseFloat(String(row.debt || '0')) || 0)).toLocaleString('vi-VN')} đ
+                              </td>
+                              <td className="py-2.5 px-3 border-r border-gray-100 text-center">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${
+                                    row.hasCarInGarage === 'Đang có'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                      : 'bg-gray-100 text-gray-600 border-gray-300'
+                                  }`}
+                                >
+                                  {row.hasCarInGarage || 'Không có'}
+                                </span>
+                              </td>
+                              <td className="py-1 px-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRowFromExistingCustList(row.id)}
+                                  className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                  title="Xóa dòng"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* PHẦN 3: Dòng chữ thông báo số lượng */}
+                <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold flex-shrink-0">
+                      <Info className="w-4 h-4" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Bạn sắp tạo Mã Voucher có số lượng:{' '}
+                      <span className="text-blue-700 font-bold text-base px-1.5 py-0.5 bg-white border border-blue-200 rounded-md">
+                        {genExistingCustRows.length}
+                      </span>{' '}
+                      khách hàng.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="h-16 px-6 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
+            <div className="text-xs text-gray-500">
+              {genVoucherTargetType === 'existing_customer'
+                ? `Dự kiến tạo: ${genExistingCustRows.length} mã Voucher tương ứng ${genExistingCustRows.length} khách hàng hiện hữu`
+                : null}
+            </div>
+
+            <div className="flex items-center">
               <button
                 type="button"
-                onClick={() => setIsGenerateVoucherModalOpen(false)}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-semibold cursor-pointer"
+                onClick={handleConfirmGenerateVouchers}
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
               >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerateVouchers}
-                className="px-5 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              >
-                Xác nhận tạo
+                <Check className="w-4 h-4" />
+                <span>Xác nhận Tạo</span>
               </button>
             </div>
           </div>
