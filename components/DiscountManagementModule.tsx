@@ -1317,7 +1317,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     customerScope: 'all_with_new',
     selectedCustomerGroups: [],
     targetCustomers: [],
-    maxUsageTotal: undefined,
+    maxUsageTotal: 1000,
     maxUsagePerCustomer: undefined,
     maxUsagePerPlate: undefined,
     discountMethod: 'product',
@@ -1465,7 +1465,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     customerScope: 'specific',
     selectedCustomerGroups: ['Khách hàng Doanh nghiệp'],
     targetCustomers: [],
-    maxUsageTotal: undefined,
+    maxUsageTotal: 300,
     maxUsagePerCustomer: undefined,
     maxUsagePerPlate: undefined,
     discountMethod: 'order',
@@ -1795,7 +1795,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     customerScope: 'all_with_new',
     selectedCustomerGroups: [],
     targetCustomers: [],
-    maxUsageTotal: undefined,
+    maxUsageTotal: 150,
     maxUsagePerCustomer: undefined,
     maxUsagePerPlate: undefined,
     discountMethod: 'product',
@@ -2980,6 +2980,7 @@ export const DiscountManagementModule: React.FC = () => {
       'Thời gian kết thúc',
       'Trạng thái',
       'Ngày tạo',
+      'Tổng lượt tối đa',
       'Số lượng RO',
     ];
     const rows = filteredDiscounts.map((d, idx) => [
@@ -2991,6 +2992,9 @@ export const DiscountManagementModule: React.FC = () => {
       `"${d.endDate}"`,
       d.status === 'active' ? '"Hiệu lực"' : '"Dừng hiệu lực"',
       `"${d.createdAt}"`,
+      d.maxUsageTotal !== undefined && d.maxUsageTotal !== null && d.maxUsageTotal !== ''
+        ? d.maxUsageTotal
+        : '"Không giới hạn"',
       d.roCount ?? 0,
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -3307,6 +3311,7 @@ export const DiscountManagementModule: React.FC = () => {
                 <th className="py-3.5 px-4 min-w-[180px]">THỜI GIAN HIỆU LỰC</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center">TRẠNG THÁI</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">NGÀY TẠO</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-center">TỔNG LƯỢT TỐI ĐA</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center">SỐ LƯỢNG RO</th>
                 <th className="py-3.5 px-4 text-center whitespace-nowrap">THAO TÁC</th>
               </tr>
@@ -3314,7 +3319,7 @@ export const DiscountManagementModule: React.FC = () => {
             <tbody className="divide-y divide-gray-100 text-sm">
               {paginatedDiscounts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-16 text-center text-gray-400 text-sm">
+                  <td colSpan={11} className="py-16 text-center text-gray-400 text-sm">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="w-14 h-14 rounded-full bg-blue-50 text-[#1A73E8] flex items-center justify-center">
                         <Tag className="w-7 h-7" />
@@ -3400,6 +3405,17 @@ export const DiscountManagementModule: React.FC = () => {
 
                       <td className="py-3.5 px-4 align-middle whitespace-nowrap text-gray-600 text-xs">
                         {discount.createdAt}
+                      </td>
+
+                      <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center font-semibold text-gray-800">
+                        {discount.maxUsageTotal !== undefined &&
+                        discount.maxUsageTotal !== null &&
+                        discount.maxUsageTotal !== '' &&
+                        Number(discount.maxUsageTotal) > 0 ? (
+                          Number(discount.maxUsageTotal).toLocaleString('vi-VN')
+                        ) : (
+                          <span className="text-gray-400 font-normal italic">Không giới hạn</span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 align-middle whitespace-nowrap text-center font-semibold text-gray-800">
@@ -6901,6 +6917,9 @@ export const DiscountManagementModule: React.FC = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-[#F8FAFC] text-gray-700 border-b border-gray-200 sticky top-0 z-10 select-none">
                 <tr className="divide-x divide-gray-200">
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap w-12 text-center">
+                    STT
+                  </th>
                   <th className="py-2.5 px-4 font-semibold whitespace-nowrap min-w-[130px]">
                     <div className="flex items-center gap-1">
                       <span>Biển số xe</span>
@@ -6933,9 +6952,6 @@ export const DiscountManagementModule: React.FC = () => {
                   </th>
                   <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[110px] text-center">
                     Trạng thái
-                  </th>
-                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap min-w-[110px] text-center">
-                    Thao tác
                   </th>
                   <th className="py-2.5 px-3 min-w-[20px]"></th>
                 </tr>
@@ -6980,8 +6996,13 @@ export const DiscountManagementModule: React.FC = () => {
                     );
                   }
 
-                  return paginatedROList.map((row) => (
+                  return paginatedROList.map((row, idx) => (
                     <tr key={row.id} className="hover:bg-blue-50/20 divide-x divide-gray-200 transition-colors">
+                      {/* STT */}
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-center text-gray-500 font-medium">
+                        {(roCurrentPage - 1) * roPageSize + idx + 1}
+                      </td>
+
                       {/* Biển số xe */}
                       <td className="py-2.5 px-4 align-middle whitespace-nowrap">
                         <span className="px-2.5 py-1 bg-[#0284C7] text-white font-bold text-xs rounded tracking-wider shadow-2xs inline-block">
@@ -7101,40 +7122,6 @@ export const DiscountManagementModule: React.FC = () => {
                             Huỷ
                           </span>
                         )}
-                      </td>
-
-                      {/* Thao tác */}
-                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-center">
-                        <div className="inline-flex items-center gap-1.5 text-gray-500">
-                          <button
-                            type="button"
-                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                            title="Mở tab mới"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-[#0284C7]" />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                            title="Chỉnh sửa"
-                          >
-                            <SquarePen className="w-3.5 h-3.5 text-gray-600" />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                            title="Chia sẻ"
-                          >
-                            <Share2 className="w-3.5 h-3.5 text-[#16A34A]" />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                            title="Thao tác khác"
-                          >
-                            <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
-                          </button>
-                        </div>
                       </td>
 
                       <td className="py-2.5 px-3"></td>
