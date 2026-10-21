@@ -2036,6 +2036,7 @@ export const DiscountManagementModule: React.FC = () => {
   const [editingDiscount, setEditingDiscount] = useState<DiscountRecord | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [campaignModalDiscount, setCampaignModalDiscount] = useState<DiscountRecord | null>(null);
 
   // Full-screen RO Modal State
   const [viewingRODiscount, setViewingRODiscount] = useState<DiscountRecord | null>(null);
@@ -2456,6 +2457,24 @@ export const DiscountManagementModule: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [viewingRODiscount]);
 
+  // Keyboard shortcut Escape for closing campaign modal
+  useEffect(() => {
+    if (!campaignModalDiscount) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const targetId = campaignModalDiscount.id;
+        setDiscounts((prev) =>
+          prev.map((d) =>
+            d.id === targetId ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
+          )
+        );
+        setCampaignModalDiscount(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [campaignModalDiscount]);
+
   const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -2762,14 +2781,22 @@ export const DiscountManagementModule: React.FC = () => {
     );
   };
 
-  // Chạy chiến dịch - Tăng số lượt gửi mỗi lần nhấn nút
-  const handleRunCampaign = (id: string, e?: React.MouseEvent) => {
+  // Chạy chiến dịch - Hiển thị popup tính năng đang phát triển, khi đóng màn hình số sẽ tăng thêm 1
+  const handleOpenCampaignModal = (discount: DiscountRecord, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setDiscounts((prev) =>
-      prev.map((d) =>
-        d.id === id ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
-      )
-    );
+    setCampaignModalDiscount(discount);
+  };
+
+  const handleCloseCampaignModal = () => {
+    if (campaignModalDiscount) {
+      const targetId = campaignModalDiscount.id;
+      setDiscounts((prev) =>
+        prev.map((d) =>
+          d.id === targetId ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
+        )
+      );
+    }
+    setCampaignModalDiscount(null);
   };
 
   // Confirm Delete
@@ -3455,7 +3482,7 @@ export const DiscountManagementModule: React.FC = () => {
                           {/* Biểu tượng Chạy chiến dịch kèm số lần nhấn nút */}
                           <button
                             type="button"
-                            onClick={(e) => handleRunCampaign(discount.id, e)}
+                            onClick={(e) => handleOpenCampaignModal(discount, e)}
                             className="inline-flex items-center gap-1 px-1.5 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-all cursor-pointer group"
                             title={`Chạy chiến dịch (Đã gửi ${discount.campaignRunCount ?? 0} lần - Nhấn để chạy chiến dịch)`}
                           >
@@ -7317,6 +7344,83 @@ export const DiscountManagementModule: React.FC = () => {
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thông báo Chạy chiến dịch */}
+      {campaignModalDiscount && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] animate-fadeIn"
+          onClick={handleCloseCampaignModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden transform transition-all animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <Rocket className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 leading-tight">
+                    Chạy chiến dịch
+                  </h3>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    {campaignModalDiscount.code} - {campaignModalDiscount.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseCampaignModal}
+                className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-4">
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse" />
+                <div className="text-sm font-semibold text-amber-900">
+                  Tính năng đang phát triển tiếp - chưa xong
+                </div>
+              </div>
+
+              <div className="space-y-2.5 text-sm text-gray-700">
+                <div className="font-bold text-gray-900 text-sm">Mục đích:</div>
+                <div className="space-y-2.5">
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
+                    <span className="text-emerald-600 font-bold shrink-0 mt-0.5">•</span>
+                    <div className="leading-relaxed text-gray-700">
+                      <span className="font-semibold text-gray-900">Với Khách hàng hiện hữu:</span> hệ thống sẽ tự động gửi thông báo chiến dịch qua Email hoặc Số điện thoại.
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
+                    <span className="text-blue-600 font-bold shrink-0 mt-0.5">•</span>
+                    <div className="leading-relaxed text-gray-700">
+                      <span className="font-semibold text-gray-900">Với Khách hàng mới:</span> đẩy chiến dịch ra các Kênh bên ngoài để tạo Leads
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3.5 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCloseCampaignModal}
+                className="px-6 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
