@@ -45,6 +45,8 @@ import {
   ChevronDown,
   Wrench,
   Rocket,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -144,10 +146,10 @@ export interface DiscountRecord {
   targetAudience: string;
   minOrderValue?: number;
   maxDiscountAmount?: number;
-  startDate: string;
-  endDate: string;
-  status: 'active' | 'paused' | 'expired'; // active = 'Hiệu lực', paused = 'Dừng hiệu lực'
-  statusDisplay?: 'Hiệu lực' | 'Dừng hiệu lực';
+  startDate: string; // Ngày hiệu lực
+  endDate: string; // Ngày hết hiệu lực
+  status: 'active' | 'paused' | 'expired'; // active = 'Mở khóa', paused = 'Khóa'
+  statusDisplay?: 'Khóa' | 'Mở khóa';
   stackable?: 'allow' | 'disallow';
   allowStacking?: boolean;
   roCount?: number;
@@ -1119,7 +1121,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-01-01',
     endDate: '2025-12-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'disallow',
     allowStacking: false,
     roCount: 28,
@@ -1176,7 +1178,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-01-15',
     endDate: '2025-06-30',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'allow',
     allowStacking: true,
     roCount: 14,
@@ -1309,7 +1311,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-02-01',
     endDate: '2025-08-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'allow',
     allowStacking: true,
     roCount: 45,
@@ -1409,7 +1411,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-03-01',
     endDate: '2025-05-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'disallow',
     allowStacking: false,
     roCount: 32,
@@ -1458,7 +1460,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-01-01',
     endDate: '2025-12-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'allow',
     allowStacking: true,
     roCount: 63,
@@ -1514,7 +1516,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-02-15',
     endDate: '2025-05-15',
     status: 'paused',
-    statusDisplay: 'Dừng hiệu lực',
+    statusDisplay: 'Khóa',
     stackable: 'disallow',
     allowStacking: false,
     roCount: 9,
@@ -1616,7 +1618,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-03-01',
     endDate: '2025-10-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'allow',
     allowStacking: true,
     roCount: 21,
@@ -1687,7 +1689,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-01-01',
     endDate: '2025-04-30',
     status: 'paused',
-    statusDisplay: 'Dừng hiệu lực',
+    statusDisplay: 'Khóa',
     stackable: 'disallow',
     allowStacking: false,
     roCount: 17,
@@ -1788,7 +1790,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-02-10',
     endDate: '2025-12-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'allow',
     allowStacking: true,
     roCount: 38,
@@ -1887,7 +1889,7 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     startDate: '2025-01-01',
     endDate: '2025-12-31',
     status: 'active',
-    statusDisplay: 'Hiệu lực',
+    statusDisplay: 'Mở khóa',
     stackable: 'disallow',
     allowStacking: false,
     roCount: 52,
@@ -2037,6 +2039,8 @@ export const DiscountManagementModule: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [campaignModalDiscount, setCampaignModalDiscount] = useState<DiscountRecord | null>(null);
+  const [lockedCampaignDiscount, setLockedCampaignDiscount] = useState<DiscountRecord | null>(null);
+  const [campaignChannels, setCampaignChannels] = useState<string[]>(['Google Maps', 'Website', 'Facebook']);
 
   // Full-screen RO Modal State
   const [viewingRODiscount, setViewingRODiscount] = useState<DiscountRecord | null>(null);
@@ -2084,7 +2088,7 @@ export const DiscountManagementModule: React.FC = () => {
   const [formDescription, setFormDescription] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
-  const [formStatus, setFormStatus] = useState<'active' | 'paused'>('active'); // active: Hiệu lực, paused: Dừng hiệu lực
+  const [formStatus, setFormStatus] = useState<'active' | 'paused'>('active'); // active: Mở khóa, paused: Khóa
   const [formStackable, setFormStackable] = useState<'allow' | 'disallow'>('allow'); // Cho phép cộng dồn / Không cho phép cộng dồn
 
   // Khu vực 2 State
@@ -2475,6 +2479,18 @@ export const DiscountManagementModule: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [campaignModalDiscount]);
 
+  // Keyboard shortcut Escape for closing locked campaign notice modal
+  useEffect(() => {
+    if (!lockedCampaignDiscount) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLockedCampaignDiscount(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lockedCampaignDiscount]);
+
   const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -2665,7 +2681,7 @@ export const DiscountManagementModule: React.FC = () => {
       return;
     }
     if (!formStartDate || !formEndDate) {
-      setFormError('Vui lòng chọn Ngày bắt đầu và Ngày kết thúc.');
+      setFormError('Vui lòng chọn Ngày hiệu lực và Ngày hết hiệu lực.');
       return;
     }
 
@@ -2713,7 +2729,7 @@ export const DiscountManagementModule: React.FC = () => {
       startDate: formStartDate,
       endDate: formEndDate,
       status: formStatus === 'active' ? 'active' : 'paused',
-      statusDisplay: formStatus === 'active' ? 'Hiệu lực' : 'Dừng hiệu lực',
+      statusDisplay: formStatus === 'active' ? 'Mở khóa' : 'Khóa',
       stackable: formStackable,
       allowStacking: formStackable === 'allow',
       roCount: editingDiscount ? editingDiscount.roCount ?? 0 : 0,
@@ -2773,7 +2789,7 @@ export const DiscountManagementModule: React.FC = () => {
           return {
             ...d,
             status: nextStatus,
-            statusDisplay: nextStatus === 'active' ? 'Hiệu lực' : 'Dừng hiệu lực',
+            statusDisplay: nextStatus === 'active' ? 'Mở khóa' : 'Khóa',
           };
         }
         return d;
@@ -2781,13 +2797,29 @@ export const DiscountManagementModule: React.FC = () => {
     );
   };
 
-  // Chạy chiến dịch - Hiển thị popup tính năng đang phát triển, khi đóng màn hình số sẽ tăng thêm 1
+  // Chạy chiến dịch - Nếu Trạng thái = Khóa thì thông báo Tính năng đang tạm khóa, nếu Mở khóa thì hiển thị popup chạy chiến dịch
   const handleOpenCampaignModal = (discount: DiscountRecord, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (discount.status === 'paused' || discount.statusDisplay === 'Khóa') {
+      setLockedCampaignDiscount(discount);
+      return;
+    }
     setCampaignModalDiscount(discount);
   };
 
   const handleCloseCampaignModal = () => {
+    if (campaignModalDiscount) {
+      const targetId = campaignModalDiscount.id;
+      setDiscounts((prev) =>
+        prev.map((d) =>
+          d.id === targetId ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
+        )
+      );
+    }
+    setCampaignModalDiscount(null);
+  };
+
+  const handleExecuteCampaign = () => {
     if (campaignModalDiscount) {
       const targetId = campaignModalDiscount.id;
       setDiscounts((prev) =>
@@ -3024,8 +3056,8 @@ export const DiscountManagementModule: React.FC = () => {
       'Mã chương trình / chiến dịch',
       'Tên chương trình / chiến dịch',
       'Loại',
-      'Thời gian bắt đầu',
-      'Thời gian kết thúc',
+      'Ngày hiệu lực',
+      'Ngày hết hiệu lực',
       'Trạng thái',
       'Ngày tạo',
       'Tổng lượt tối đa',
@@ -3038,7 +3070,7 @@ export const DiscountManagementModule: React.FC = () => {
       `"${d.category || (d.type === 'percentage' ? 'Chiết khấu' : 'Voucher')}"`,
       `"${d.startDate}"`,
       `"${d.endDate}"`,
-      d.status === 'active' ? '"Hiệu lực"' : '"Dừng hiệu lực"',
+      d.status === 'active' ? '"Mở khóa"' : '"Khóa"',
       `"${d.createdAt}"`,
       d.maxUsageTotal !== undefined && d.maxUsageTotal !== null && d.maxUsageTotal !== ''
         ? d.maxUsageTotal
@@ -3081,6 +3113,7 @@ export const DiscountManagementModule: React.FC = () => {
         const cols = lines[i].split(',').map((col) => col.replace(/^"|"$/g, '').trim());
         if (cols.length >= 3) {
           const isVoucher = (cols[3] || '').toLowerCase().includes('voucher');
+          const isLocked = (cols[6] || '').toLowerCase().includes('khóa') && !(cols[6] || '').toLowerCase().includes('mở');
           imported.push({
             id: `disc-imp-${Date.now()}-${i}`,
             code: cols[1] || `CK-2026-${discounts.length + i + 100}`,
@@ -3091,8 +3124,8 @@ export const DiscountManagementModule: React.FC = () => {
             targetAudience: 'Tất cả khách hàng',
             startDate: cols[4] || '2026-01-01',
             endDate: cols[5] || '2026-12-31',
-            status: cols[6]?.includes('dừng') ? 'paused' : 'active',
-            statusDisplay: cols[6]?.includes('dừng') ? 'Dừng hiệu lực' : 'Hiệu lực',
+            status: isLocked ? 'paused' : 'active',
+            statusDisplay: isLocked ? 'Khóa' : 'Mở khóa',
             roCount: 0,
             createdAt: cols[8] || today,
 
@@ -3198,15 +3231,15 @@ export const DiscountManagementModule: React.FC = () => {
     if (status === 'active') {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          Hiệu lực
+          <Unlock className="w-3.5 h-3.5" />
+          Mở khóa
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-        <Clock className="w-3.5 h-3.5" />
-        Dừng hiệu lực
+        <Lock className="w-3.5 h-3.5" />
+        Khóa
       </span>
     );
   };
@@ -3309,8 +3342,8 @@ export const DiscountManagementModule: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:border-[#1A73E8] bg-white cursor-pointer"
             >
               <option value="ALL">-- Tất cả trạng thái --</option>
-              <option value="active">Hiệu lực</option>
-              <option value="paused">Dừng hiệu lực</option>
+              <option value="active">Mở khóa</option>
+              <option value="paused">Khóa</option>
             </select>
           </div>
 
@@ -3356,7 +3389,7 @@ export const DiscountManagementModule: React.FC = () => {
                 <th className="py-3.5 px-4 whitespace-nowrap">MÃ CHƯƠNG TRÌNH / CHIẾN DỊCH</th>
                 <th className="py-3.5 px-4 min-w-[240px]">TÊN CHƯƠNG TRÌNH / CHIẾN DỊCH</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">LOẠI</th>
-                <th className="py-3.5 px-4 min-w-[180px]">THỜI GIAN HIỆU LỰC</th>
+                <th className="py-3.5 px-4 min-w-[200px] whitespace-nowrap">NGÀY HIỆU LỰC - HẾT HIỆU LỰC</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center">TRẠNG THÁI</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">NGÀY TẠO</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-center">TỔNG LƯỢT TỐI ĐA</th>
@@ -3483,11 +3516,23 @@ export const DiscountManagementModule: React.FC = () => {
                           <button
                             type="button"
                             onClick={(e) => handleOpenCampaignModal(discount, e)}
-                            className="inline-flex items-center gap-1 px-1.5 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-all cursor-pointer group"
-                            title={`Chạy chiến dịch (Đã gửi ${discount.campaignRunCount ?? 0} lần - Nhấn để chạy chiến dịch)`}
+                            className={`inline-flex items-center gap-1 px-1.5 py-1 rounded-md transition-all cursor-pointer group ${
+                              discount.status === 'paused' || discount.statusDisplay === 'Khóa'
+                                ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                            }`}
+                            title={
+                              discount.status === 'paused' || discount.statusDisplay === 'Khóa'
+                                ? 'Chiến dịch đang bị Khóa. Nhấn để xem thông báo.'
+                                : `Chạy chiến dịch (Đã gửi ${discount.campaignRunCount ?? 0} lần - Nhấn để chạy chiến dịch)`
+                            }
                           >
                             <Rocket className="w-4 h-4 transition-transform group-hover:scale-110" />
-                            <span className="text-[11px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full min-w-[18px] text-center border border-emerald-200 leading-none">
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border leading-none ${
+                              discount.status === 'paused' || discount.statusDisplay === 'Khóa'
+                                ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            }`}>
                               {discount.campaignRunCount ?? 0}
                             </span>
                           </button>
@@ -3526,14 +3571,14 @@ export const DiscountManagementModule: React.FC = () => {
                             }`}
                             title={
                               discount.status === 'active'
-                                ? 'Dừng hiệu lực chính sách'
-                                : 'Kích hoạt hiệu lực'
+                                ? 'Khóa chính sách'
+                                : 'Mở khóa chính sách'
                             }
                           >
                             {discount.status === 'active' ? (
-                              <Clock className="w-4 h-4" />
+                              <Lock className="w-4 h-4" />
                             ) : (
-                              <CheckCircle2 className="w-4 h-4" />
+                              <Unlock className="w-4 h-4" />
                             )}
                           </button>
                         </div>
@@ -3765,11 +3810,11 @@ export const DiscountManagementModule: React.FC = () => {
                     />
                   </div>
 
-                  {/* Ngày bắt đầu + biểu tượng thông báo 2 dòng */}
+                  {/* Ngày hiệu lực + biểu tượng thông báo 2 dòng */}
                   <div className="relative">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <label className="block text-xs font-semibold text-gray-700">
-                        Ngày bắt đầu <span className="text-red-500">*</span>
+                        Ngày hiệu lực <span className="text-red-500">*</span>
                       </label>
                       <div className="relative inline-block">
                         <button
@@ -3778,14 +3823,14 @@ export const DiscountManagementModule: React.FC = () => {
                           onMouseEnter={() => setShowStartDateInfo(true)}
                           onMouseLeave={() => setShowStartDateInfo(false)}
                           className="p-0.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors cursor-pointer"
-                          title="Nhấn để xem quy tắc áp dụng ngày bắt đầu"
+                          title="Nhấn để xem quy tắc áp dụng ngày hiệu lực"
                         >
                           <Info className="w-3.5 h-3.5" />
                         </button>
                         {showStartDateInfo && (
                           <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-gray-900 text-white rounded-lg shadow-xl text-xs z-30 animate-fadeIn border border-gray-700 pointer-events-none">
                             <div className="font-medium text-blue-300 pb-1 border-b border-gray-800 mb-1.5">
-                              Quy tắc tính ngày bắt đầu:
+                              Quy tắc tính ngày hiệu lực:
                             </div>
                             <div className="leading-relaxed space-y-1 text-gray-200">
                               <div>
@@ -3808,10 +3853,10 @@ export const DiscountManagementModule: React.FC = () => {
                     />
                   </div>
 
-                  {/* Ngày kết thúc */}
+                  {/* Ngày hết hiệu lực */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      Ngày kết thúc <span className="text-red-500">*</span>
+                      Ngày hết hiệu lực <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -3916,67 +3961,94 @@ export const DiscountManagementModule: React.FC = () => {
                           <span className={`w-2 h-2 rounded-full ${formStatus === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                           <span>Trạng thái</span>
                           <span className="text-red-500">*</span>
+
+                          {/* Tooltip hiển thị giải thích tính năng Trạng thái */}
+                          <div className="relative inline-flex items-center group">
+                            <span
+                              className="p-0.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors cursor-pointer"
+                              title="Khóa: Vô hiệu hóa nút &quot;Chạy chiến dịch&quot; tại cột Thao tác.&#10;Mở khóa: Kích hoạt nút &quot;Chạy chiến dịch&quot; tại cột Thao tác."
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </span>
+                            <div className="absolute left-0 bottom-full mb-2 w-72 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl border border-gray-700 font-normal leading-relaxed text-left hidden group-hover:block pointer-events-none z-50 animate-fadeIn">
+                              <div className="font-semibold text-blue-300 pb-1 border-b border-gray-800 mb-1.5 flex items-center gap-1">
+                                <Info className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                <span>Giải thích Trạng thái</span>
+                              </div>
+                              <div className="space-y-1.5 text-gray-200">
+                                <div className="flex items-start gap-1.5">
+                                  <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                  <span><strong className="text-amber-300">Khóa:</strong> Vô hiệu hóa nút "Chạy chiến dịch" tại cột Thao tác.</span>
+                                </div>
+                                <div className="flex items-start gap-1.5">
+                                  <Unlock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                  <span><strong className="text-emerald-300">Mở khóa:</strong> Kích hoạt nút "Chạy chiến dịch" tại cột Thao tác.</span>
+                                </div>
+                              </div>
+                              <div className="absolute left-3 top-full w-2 h-2 bg-gray-900 transform rotate-45 -mt-1 border-r border-b border-gray-700"></div>
+                            </div>
+                          </div>
                         </label>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${
                           formStatus === 'active'
                             ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                             : 'bg-amber-100 text-amber-800 border-amber-300'
                         }`}>
-                          {formStatus === 'active' ? 'Đang kích hoạt' : 'Tạm dừng'}
+                          {formStatus === 'active' ? 'Mở khóa' : 'Khóa'}
                         </span>
                       </div>
 
                       <div className="inline-flex items-center p-0.5 bg-white rounded-lg border border-gray-300/80 shadow-2xs gap-1">
-                        {/* Button 1: Hiệu lực */}
+                        {/* Button 1: Mở khóa */}
                         <div className="relative group inline-flex">
                           <button
                             type="button"
                             onClick={() => setFormStatus('active')}
-                            title="Chiết khấu đang hiệu lực. Chỉ áp dụng khi Đơn hàng nằm trong khoảng Ngày bắt đầu và Ngày kết thúc"
+                            title="Mở khóa: Kích hoạt nút &quot;Chạy chiến dịch&quot; tại cột Thao tác."
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                               formStatus === 'active'
                                 ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400/40'
                                 : 'text-gray-600 hover:text-emerald-700 hover:bg-emerald-50/60'
                             }`}
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                            <span>Hiệu lực</span>
+                            <Unlock className="w-3.5 h-3.5 shrink-0" />
+                            <span>Mở khóa</span>
                           </button>
 
-                          {/* Tooltip khi rê chuột vào button Hiệu lực */}
+                          {/* Tooltip khi rê chuột vào button Mở khóa */}
                           <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-40 hidden group-hover:block pointer-events-none transition-all">
                             <div className="w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl border border-gray-700 font-normal leading-relaxed text-left animate-fadeIn">
                               <div className="flex items-start gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                                <span>Chiết khấu đang hiệu lực. Chỉ áp dụng khi Đơn hàng nằm trong khoảng Ngày bắt đầu và Ngày kết thúc</span>
+                                <Unlock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                <span><strong>Mở khóa:</strong> Kích hoạt nút "Chạy chiến dịch" tại cột Thao tác.</span>
                               </div>
                             </div>
                             <div className="w-2 h-2 bg-gray-900 transform rotate-45 mx-auto -mt-1 border-r border-b border-gray-700"></div>
                           </div>
                         </div>
 
-                        {/* Button 2: Dừng hiệu lực */}
+                        {/* Button 2: Khóa */}
                         <div className="relative group inline-flex">
                           <button
                             type="button"
                             onClick={() => setFormStatus('paused')}
-                            title="Chiết khấu hết hiệu lực và Vô hiệu hóa toàn bộ. Đơn hàng không thể áp dụng dưới mọi hình thức."
+                            title="Khóa: Vô hiệu hóa nút &quot;Chạy chiến dịch&quot; tại cột Thao tác."
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                               formStatus === 'paused'
                                 ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400/40'
                                 : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50/60'
                             }`}
                           >
-                            <Clock className="w-3.5 h-3.5 shrink-0" />
-                            <span>Dừng hiệu lực</span>
+                            <Lock className="w-3.5 h-3.5 shrink-0" />
+                            <span>Khóa</span>
                           </button>
 
-                          {/* Tooltip khi rê chuột vào button Dừng hiệu lực */}
+                          {/* Tooltip khi rê chuột vào button Khóa */}
                           <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-40 hidden group-hover:block pointer-events-none transition-all">
                             <div className="w-64 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl border border-gray-700 font-normal leading-relaxed text-left animate-fadeIn">
                               <div className="flex items-start gap-1.5">
-                                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                                <span>Chiết khấu hết hiệu lực và Vô hiệu hóa toàn bộ. Đơn hàng không thể áp dụng dưới mọi hình thức.</span>
+                                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span><strong>Khóa:</strong> Vô hiệu hóa nút "Chạy chiến dịch" tại cột Thao tác.</span>
                               </div>
                             </div>
                             <div className="w-2 h-2 bg-gray-900 transform rotate-45 mx-auto -mt-1 border-r border-b border-gray-700"></div>
@@ -5730,10 +5802,12 @@ export const DiscountManagementModule: React.FC = () => {
                     </div>
                   )}
                   <div>
-                    <span className="text-gray-500">Thời gian hiệu lực: </span>
-                    <span className="font-medium text-gray-800">
-                      {viewingDiscount.startDate} → {viewingDiscount.endDate}
-                    </span>
+                    <span className="text-gray-500">Ngày hiệu lực: </span>
+                    <span className="font-medium text-gray-800">{viewingDiscount.startDate}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Ngày hết hiệu lực: </span>
+                    <span className="font-medium text-gray-800">{viewingDiscount.endDate}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Trạng thái: </span>
@@ -6192,18 +6266,18 @@ export const DiscountManagementModule: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Ngày bắt đầu */}
+                  {/* Ngày hiệu lực */}
                   <div>
-                    <span className="text-gray-500 block mb-1">Ngày bắt đầu:</span>
+                    <span className="text-gray-500 block mb-1">Ngày hiệu lực:</span>
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800">
                       <Calendar className="w-3.5 h-3.5 text-[#1A73E8]" />
                       <span>{formStartDate ? formStartDate.split('-').reverse().join('/') : '--/--/----'}</span>
                     </div>
                   </div>
 
-                  {/* Ngày kết thúc */}
+                  {/* Ngày hết hiệu lực */}
                   <div>
-                    <span className="text-gray-500 block mb-1">Ngày kết thúc:</span>
+                    <span className="text-gray-500 block mb-1">Ngày hết hiệu lực:</span>
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800">
                       <Calendar className="w-3.5 h-3.5 text-red-500" />
                       <span>{formEndDate ? formEndDate.split('-').reverse().join('/') : '--/--/----'}</span>
@@ -7388,25 +7462,125 @@ export const DiscountManagementModule: React.FC = () => {
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse" />
                 <div className="text-sm font-semibold text-amber-900">
-                  Tính năng đang phát triển tiếp - chưa xong
+                  Tính năng &quot;Chạy chiến dịch&quot; tạm dừng.
                 </div>
               </div>
 
-              <div className="space-y-2.5 text-sm text-gray-700">
-                <div className="font-bold text-gray-900 text-sm">Mục đích:</div>
-                <div className="space-y-2.5">
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold shrink-0 mt-0.5">•</span>
-                    <div className="leading-relaxed text-gray-700">
-                      <span className="font-semibold text-gray-900">Với Khách hàng hiện hữu:</span> hệ thống sẽ tự động gửi thông báo chiến dịch qua Email hoặc Số điện thoại.
-                    </div>
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                <div className="text-sm text-gray-800 leading-relaxed">
+                  <span className="font-bold text-gray-900">Mục đích Tính năng:</span> Đẩy Chiến dịch ra khỏi Module này và đến được Khách hàng
+                </div>
+              </div>
+
+              {/* Tick chọn nhiều: Google Maps, Website, Facebook */}
+              <div className="space-y-2 pt-1">
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Tick chọn nhiều:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'Google Maps', label: 'Google Maps' },
+                    { id: 'Website', label: 'Website' },
+                    { id: 'Facebook', label: 'Facebook' },
+                  ].map((channel) => {
+                    const isChecked = campaignChannels.includes(channel.id);
+                    return (
+                      <label
+                        key={channel.id}
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900 shadow-2xs'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCampaignChannels([...campaignChannels, channel.id]);
+                            } else {
+                              setCampaignChannels(campaignChannels.filter((c) => c !== channel.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                        />
+                        <span className="text-sm font-semibold">{channel.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3.5 bg-gray-50 border-t border-gray-200 flex justify-end items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCloseCampaignModal}
+                className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteCampaign}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Rocket className="w-4 h-4" />
+                <span>Chạy</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thông báo khi Trạng thái = Khóa */}
+      {lockedCampaignDiscount && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] animate-fadeIn"
+          onClick={() => setLockedCampaignDiscount(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 overflow-hidden transform transition-all animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/40 border-b border-amber-200/80 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 leading-tight">
+                    Thông báo
+                  </h3>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    {lockedCampaignDiscount.code} - {lockedCampaignDiscount.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLockedCampaignDiscount(null)}
+                className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-amber-50 border border-amber-200/90 rounded-xl space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse" />
+                  <div className="text-sm font-bold text-amber-950 leading-snug">
+                    &quot;Tính năng đang tạm khóa&quot; do Trạng thái chiến dịch đang bị Khóa.
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold shrink-0 mt-0.5">•</span>
-                    <div className="leading-relaxed text-gray-700">
-                      <span className="font-semibold text-gray-900">Với Khách hàng mới:</span> đẩy chiến dịch ra các Kênh bên ngoài để tạo Leads
-                    </div>
-                  </div>
+                </div>
+                <div className="text-sm text-gray-700 pl-5.5 leading-relaxed">
+                  Để thực thi &quot;Chạy chiến dịch&quot; cần thay đổi trạng thái = <strong className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold">Mở khóa</strong>
                 </div>
               </div>
             </div>
@@ -7415,7 +7589,7 @@ export const DiscountManagementModule: React.FC = () => {
             <div className="px-6 py-3.5 bg-gray-50 border-t border-gray-200 flex justify-end">
               <button
                 type="button"
-                onClick={handleCloseCampaignModal}
+                onClick={() => setLockedCampaignDiscount(null)}
                 className="px-6 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
               >
                 Đóng
