@@ -2040,6 +2040,7 @@ export const DiscountManagementModule: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [campaignModalDiscount, setCampaignModalDiscount] = useState<DiscountRecord | null>(null);
   const [lockedCampaignDiscount, setLockedCampaignDiscount] = useState<DiscountRecord | null>(null);
+  const [campaignChannels, setCampaignChannels] = useState<string[]>(['Google Maps', 'Website', 'Facebook']);
 
   // Full-screen RO Modal State
   const [viewingRODiscount, setViewingRODiscount] = useState<DiscountRecord | null>(null);
@@ -2807,6 +2808,18 @@ export const DiscountManagementModule: React.FC = () => {
   };
 
   const handleCloseCampaignModal = () => {
+    if (campaignModalDiscount) {
+      const targetId = campaignModalDiscount.id;
+      setDiscounts((prev) =>
+        prev.map((d) =>
+          d.id === targetId ? { ...d, campaignRunCount: (d.campaignRunCount ?? 0) + 1 } : d
+        )
+      );
+    }
+    setCampaignModalDiscount(null);
+  };
+
+  const handleExecuteCampaign = () => {
     if (campaignModalDiscount) {
       const targetId = campaignModalDiscount.id;
       setDiscounts((prev) =>
@@ -7449,37 +7462,73 @@ export const DiscountManagementModule: React.FC = () => {
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse" />
                 <div className="text-sm font-semibold text-amber-900">
-                  Tính năng đang phát triển tiếp - chưa xong
+                  Tính năng &quot;Chạy chiến dịch&quot; tạm dừng.
                 </div>
               </div>
 
-              <div className="space-y-2.5 text-sm text-gray-700">
-                <div className="font-bold text-gray-900 text-sm">Mục đích:</div>
-                <div className="space-y-2.5">
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
-                    <span className="text-emerald-600 font-bold shrink-0 mt-0.5">•</span>
-                    <div className="leading-relaxed text-gray-700">
-                      <span className="font-semibold text-gray-900">Với Khách hàng hiện hữu:</span> hệ thống sẽ tự động gửi thông báo chiến dịch qua Email hoặc Số điện thoại.
-                    </div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2.5">
-                    <span className="text-blue-600 font-bold shrink-0 mt-0.5">•</span>
-                    <div className="leading-relaxed text-gray-700">
-                      <span className="font-semibold text-gray-900">Với Khách hàng mới:</span> đẩy chiến dịch ra các Kênh bên ngoài để tạo Leads
-                    </div>
-                  </div>
+              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                <div className="text-sm text-gray-800 leading-relaxed">
+                  <span className="font-bold text-gray-900">Mục đích Tính năng:</span> Đẩy Chiến dịch ra khỏi Module này và đến được Khách hàng
+                </div>
+              </div>
+
+              {/* Tick chọn nhiều: Google Maps, Website, Facebook */}
+              <div className="space-y-2 pt-1">
+                <div className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Tick chọn nhiều:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'Google Maps', label: 'Google Maps' },
+                    { id: 'Website', label: 'Website' },
+                    { id: 'Facebook', label: 'Facebook' },
+                  ].map((channel) => {
+                    const isChecked = campaignChannels.includes(channel.id);
+                    return (
+                      <label
+                        key={channel.id}
+                        className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900 shadow-2xs'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCampaignChannels([...campaignChannels, channel.id]);
+                            } else {
+                              setCampaignChannels(campaignChannels.filter((c) => c !== channel.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                        />
+                        <span className="text-sm font-semibold">{channel.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-3.5 bg-gray-50 border-t border-gray-200 flex justify-end items-center gap-3">
               <button
                 type="button"
                 onClick={handleCloseCampaignModal}
-                className="px-6 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
+                className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg shadow-2xs transition-colors cursor-pointer"
               >
                 Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteCampaign}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Rocket className="w-4 h-4" />
+                <span>Chạy</span>
               </button>
             </div>
           </div>
