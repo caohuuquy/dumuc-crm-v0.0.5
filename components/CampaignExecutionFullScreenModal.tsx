@@ -536,8 +536,8 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
 
           {/* ===================================================================== */}
           {/* CỘT Ở GIỮA: LỊCH SỬ BÀI ĐĂNG */}
-          {/* Dạng list "Tiêu đề", khi chọn -> tự động hiển thị lại nội dung đó trong Cột 1 */}
-          {/* Kèm xem trước bài đăng (Live Preview) */}
+          {/* 1. Đưa phần "Xem trước bài đăng (Live Preview):" lên trên, ngang hàng với Cột 1 */}
+          {/* 2. Phần "Lịch sử bài đăng" gọn lại ở dưới, chỉ hiển thị "Tiêu đề" và "Thời gian gửi" */}
           {/* ===================================================================== */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -550,65 +550,11 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
                 </h2>
               </div>
               <span className="text-[11px] text-gray-400 font-medium italic">
-                Nhấp chọn để nạp vào NỘI DUNG BÀI ĐĂNG
+                Xem trước & Lịch sử
               </span>
             </div>
 
-            {/* Danh sách Lịch sử Bài đăng dạng list "Tiêu đề" */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Danh sách Lịch sử Bài đăng:</span>
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  {postHistoryList.length} bài
-                </span>
-              </div>
-
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {postHistoryList.map((item) => {
-                  const isSelected = selectedHistoryId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleSelectHistoryItem(item)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer text-left group ${
-                        isSelected
-                          ? 'bg-blue-50/80 border-blue-400 shadow-xs ring-1 ring-blue-300'
-                          : 'bg-gray-50/70 border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-2xs'
-                      }`}
-                      title="Nhấn để tự động nạp bài đăng này vào NỘI DUNG BÀI ĐĂNG"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="text-xs font-bold text-gray-900 group-hover:text-blue-700 transition-colors line-clamp-1 leading-snug">
-                          {item.title}
-                        </div>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
-                          {item.status}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-1.5">
-                        {item.content}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-100">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-gray-400" />
-                          <span>{item.date} {item.time}</span>
-                        </span>
-                        <span className="font-medium text-blue-600 group-hover:underline">
-                          {isSelected ? '✓ Đang hiển thị' : 'Chọn nạp NỘI DUNG BÀI ĐĂNG →'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Mục Xem trước (Live Preview) mô phỏng bài đăng trên các kênh */}
+            {/* 1. MỤC XEM TRƯỚC (LIVE PREVIEW) - ĐƯA LÊN TRÊN ĐỂ NGANG HÀNG CÙNG DÒNG VỚI NỘI DUNG ĐĂNG CỘT 1 */}
             <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
@@ -659,7 +605,7 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
                 </div>
 
                 {postImages.length > 0 && (
-                  <div className="rounded-lg overflow-hidden border border-gray-100 aspect-video bg-gray-100">
+                  <div className="rounded-lg overflow-hidden border border-gray-100 aspect-video bg-gray-100 max-h-40">
                     <img
                       src={postImages[0]}
                       alt="Xem trước ảnh"
@@ -667,6 +613,55 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
                     />
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* 2. DANH SÁCH LỊCH SỬ BÀI ĐĂNG GỌN LẠI: CHỈ HIỂN THỊ "TIÊU ĐỀ" VÀ "THỜI GIAN GỬI" */}
+            <div className="space-y-2 pt-1 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Lịch sử bài đăng ({postHistoryList.length}):</span>
+                </span>
+                <span className="text-[10px] text-gray-400 italic">
+                  Nhấp để nạp vào Cột 1
+                </span>
+              </div>
+
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {postHistoryList.map((item) => {
+                  const isSelected = selectedHistoryId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectHistoryItem(item)}
+                      className={`px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-left group ${
+                        isSelected
+                          ? 'bg-blue-50/90 border-blue-400 shadow-2xs ring-1 ring-blue-300'
+                          : 'bg-gray-50/70 border-gray-200 hover:bg-white hover:border-blue-300 hover:shadow-2xs'
+                      }`}
+                      title="Nhấn để tự động nạp bài đăng này vào NỘI DUNG BÀI ĐĂNG"
+                    >
+                      {/* Tiêu đề */}
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            isSelected ? 'bg-blue-600' : 'bg-gray-400 group-hover:bg-blue-500'
+                          }`}
+                        />
+                        <span className="text-xs font-semibold text-gray-900 group-hover:text-blue-700 truncate transition-colors">
+                          {item.title}
+                        </span>
+                      </div>
+
+                      {/* Thời gian gửi */}
+                      <div className="flex items-center gap-1 shrink-0 text-[11px] text-gray-500 font-mono">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span>{item.date} {item.time}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
