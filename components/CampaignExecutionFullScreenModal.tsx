@@ -159,17 +159,17 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
     websiteStatus: 'Đã kết nối',
   });
 
-  // Chọn 1 bài đăng trong Lịch sử Bài đăng -> tự động đổ vào Cột 1
+  // Chọn 1 bài đăng trong Lịch sử Bài đăng -> tự động đổ vào NỘI DUNG BÀI ĐĂNG
   const handleSelectHistoryItem = (item: PostHistoryItem) => {
     setSelectedHistoryId(item.id);
     setPostTitle(item.title);
     setPostContent(item.content);
     setPostImages([...item.images]);
-    setSuccessToast(`Đã tự động nạp nội dung bài đăng "${item.title.slice(0, 35)}..." vào Cột 1`);
+    setSuccessToast(`Đã tự động nạp nội dung bài đăng "${item.title.slice(0, 35)}..." vào NỘI DUNG BÀI ĐĂNG`);
     setTimeout(() => setSuccessToast(null), 3000);
   };
 
-  // Thêm ảnh vào Cột 1
+  // Thêm ảnh vào NỘI DUNG BÀI ĐĂNG
   const handleAddImage = (url: string) => {
     if (!url.trim()) return;
     setPostImages((prev) => [...prev, url.trim()]);
@@ -194,12 +194,12 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
     if (sendZaloOANew) selectedChannels.push('Zalo OA (Mới)');
 
     if (selectedChannels.length === 0) {
-      alert('Vui lòng chọn ít nhất 1 kênh nhận tại Cột 2 trước khi chạy chiến dịch.');
+      alert('Vui lòng chọn ít nhất 1 kênh nhận tại ĐỐI TƯỢNG / KÊNH NHẬN trước khi chạy chiến dịch.');
       return;
     }
 
     if (!postTitle.trim()) {
-      alert('Vui lòng nhập tiêu đề bài đăng tại Cột 1.');
+      alert('Vui lòng nhập tiêu đề bài đăng tại NỘI DUNG BÀI ĐĂNG.');
       return;
     }
 
@@ -210,10 +210,12 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
       title: postTitle,
       content: postContent,
       images: [...postImages],
-      date: isScheduled ? now.toISOString().split('T')[0] : scheduledDate,
-      time: isScheduled ? `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` : scheduledTime,
+      date: isScheduled ? scheduledDate : now.toISOString().split('T')[0],
+      time: isScheduled
+        ? scheduledTime
+        : `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
       channels: selectedChannels,
-      status: isScheduled ? 'Đã gửi' : 'Đang lên lịch',
+      status: isScheduled ? 'Đang lên lịch' : 'Đã gửi',
     };
 
     setPostHistoryList((prev) => [newHistoryItem, ...prev]);
@@ -225,14 +227,14 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
       images: postImages,
       channels: selectedChannels,
       isScheduled,
-      scheduledDate: !isScheduled ? scheduledDate : undefined,
-      scheduledTime: !isScheduled ? scheduledTime : undefined,
+      scheduledDate: isScheduled ? scheduledDate : undefined,
+      scheduledTime: isScheduled ? scheduledTime : undefined,
     });
 
     setSuccessToast(
       isScheduled
-        ? `Đã kích hoạt Chạy chiến dịch thành công qua ${selectedChannels.length} kênh truyền thông!`
-        : `Đã lên lịch Chạy chiến dịch vào ngày ${scheduledDate} lúc ${scheduledTime} qua ${selectedChannels.length} kênh!`
+        ? `Đã lên lịch Chạy chiến dịch vào ngày ${scheduledDate} lúc ${scheduledTime} qua ${selectedChannels.length} kênh!`
+        : `Đã kích hoạt Chạy chiến dịch thành công qua ${selectedChannels.length} kênh truyền thông!`
     );
 
     setTimeout(() => {
@@ -367,13 +369,13 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
       )}
 
       {/* ========================================================================= */}
-      {/* BODY: GIAO DIỆN CHIA THÀNH 3 CỘT */}
-      {/* Cột 1: Nội dung bài đăng */}
-      {/* Cột 2: Đối tượng nhận */}
-      {/* Cột 3: Lịch sử Bài đăng & Xem trước */}
+      {/* BODY: GIAO DIỆN CHIA THÀNH 3 CỘT (HIỂN THỊ RỘNG GẦN NHƯ FULL MÀN HÌNH) */}
+      {/* Cột 1: NỘI DUNG BÀI ĐĂNG */}
+      {/* Cột 2 (Ở GIỮA): LỊCH SỬ BÀI ĐĂNG */}
+      {/* Cột 3 (BÊN PHẢI): ĐỐI TƯỢNG / KÊNH NHẬN */}
       {/* ========================================================================= */}
-      <main className="flex-1 p-5 md:p-6 overflow-y-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-[1600px] mx-auto h-full items-start">
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 w-full h-full items-start">
           {/* ===================================================================== */}
           {/* CỘT 1: NỘI DUNG BÀI ĐĂNG */}
           {/* Tiêu đề: gõ vào */}
@@ -387,7 +389,7 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
                   1
                 </span>
                 <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  Cột 1: Nội dung bài đăng
+                  NỘI DUNG BÀI ĐĂNG
                 </h2>
               </div>
               <span className="text-[11px] text-gray-400 font-medium italic">
@@ -533,19 +535,156 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
           </section>
 
           {/* ===================================================================== */}
-          {/* CỘT 2: ĐỐI TƯỢNG NHẬN */}
+          {/* CỘT Ở GIỮA: LỊCH SỬ BÀI ĐĂNG */}
+          {/* Dạng list "Tiêu đề", khi chọn -> tự động hiển thị lại nội dung đó trong Cột 1 */}
+          {/* Kèm xem trước bài đăng (Live Preview) */}
+          {/* ===================================================================== */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
+                  2
+                </span>
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  LỊCH SỬ BÀI ĐĂNG
+                </h2>
+              </div>
+              <span className="text-[11px] text-gray-400 font-medium italic">
+                Nhấp chọn để nạp vào NỘI DUNG BÀI ĐĂNG
+              </span>
+            </div>
+
+            {/* Danh sách Lịch sử Bài đăng dạng list "Tiêu đề" */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Danh sách Lịch sử Bài đăng:</span>
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  {postHistoryList.length} bài
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {postHistoryList.map((item) => {
+                  const isSelected = selectedHistoryId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectHistoryItem(item)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer text-left group ${
+                        isSelected
+                          ? 'bg-blue-50/80 border-blue-400 shadow-xs ring-1 ring-blue-300'
+                          : 'bg-gray-50/70 border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-2xs'
+                      }`}
+                      title="Nhấn để tự động nạp bài đăng này vào NỘI DUNG BÀI ĐĂNG"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="text-xs font-bold text-gray-900 group-hover:text-blue-700 transition-colors line-clamp-1 leading-snug">
+                          {item.title}
+                        </div>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                          {item.status}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-1.5">
+                        {item.content}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-100">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-gray-400" />
+                          <span>{item.date} {item.time}</span>
+                        </span>
+                        <span className="font-medium text-blue-600 group-hover:underline">
+                          {isSelected ? '✓ Đang hiển thị' : 'Chọn nạp NỘI DUNG BÀI ĐĂNG →'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mục Xem trước (Live Preview) mô phỏng bài đăng trên các kênh */}
+            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Xem trước bài đăng (Live Preview):</span>
+                </span>
+
+                <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-gray-200">
+                  {(['Zalo', 'Facebook', 'SMS', 'Web'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActivePreviewTab(tab)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        activePreviewTab === tab
+                          ? 'bg-[#1A73E8] text-white shadow-2xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Khung mô phỏng hiển thị trên kênh */}
+              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-2xs space-y-2">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">
+                    G
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-900 leading-none">
+                      Garage Du Mục Auto Care
+                    </div>
+                    <div className="text-[9px] text-gray-400 mt-0.5">
+                      Đăng qua {activePreviewTab} • Vừa xong
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">
+                  {postTitle || 'Chưa nhập tiêu đề'}
+                </div>
+
+                <div className="text-[11px] text-gray-700 leading-relaxed whitespace-pre-line line-clamp-3">
+                  {postContent || 'Chưa có nội dung bài đăng...'}
+                </div>
+
+                {postImages.length > 0 && (
+                  <div className="rounded-lg overflow-hidden border border-gray-100 aspect-video bg-gray-100">
+                    <img
+                      src={postImages[0]}
+                      alt="Xem trước ảnh"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ===================================================================== */}
+          {/* CỘT BÊN PHẢI: ĐỐI TƯỢNG / KÊNH NHẬN */}
           {/* Đẩy Chiến dịch đến với Khách hàng hiện hữu qua: Zalo OA, Email, SMS */}
           {/* Đẩy Chiến dịch đến với Khách hàng mới qua: Google Maps, Website, Facebook, Tiktok, Zalo OA */}
-          {/* field "Lên lịch đăng": tick/un-tick. Nếu un-tick, hiển thị 2 field : Ngày đăng, Giờ đăng */}
+          {/* FIELD "LÊN LỊCH ĐĂNG": KHI TICK THÌ MỚI HIỂN THỊ 2 FIELD "NGÀY ĐĂNG" VÀ "GIỜ ĐĂNG" */}
           {/* ===================================================================== */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                  2
+                  3
                 </span>
                 <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  Cột 2: Đối tượng nhận
+                  ĐỐI TƯỢNG / KÊNH NHẬN
                 </h2>
               </div>
               <span className="text-[11px] text-gray-400 font-medium italic">
@@ -717,7 +856,7 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
               </div>
             </div>
 
-            {/* Nhóm 3: field "Lên lịch đăng": tick/un-tick. Nếu un-tick, hiển thị 2 field : Ngày đăng, GIờ đăng */}
+            {/* Nhóm 3: FIELD "LÊN LỊCH ĐĂNG": KHI TICK THÌ MỚI HIỂN THỊ 2 FIELD "NGÀY ĐĂNG" VÀ "GIỜ ĐĂNG" */}
             <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2.5 cursor-pointer">
@@ -734,16 +873,16 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
                 </label>
 
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  !isScheduled
-                    ? 'bg-amber-100 text-amber-800 border-amber-300'
-                    : 'bg-blue-100 text-blue-800 border-blue-300'
+                  isScheduled
+                    ? 'bg-blue-100 text-blue-800 border-blue-300'
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                 }`}>
-                  {!isScheduled ? 'Tự chọn Ngày & Giờ đăng' : 'Đăng ngay lập tức'}
+                  {isScheduled ? 'Lên lịch theo Ngày & Giờ' : 'Đăng ngay lập tức'}
                 </span>
               </div>
 
-              {/* Nếu un-tick, hiển thị 2 field : Ngày đăng, Giờ đăng */}
-              {!isScheduled && (
+              {/* KHI TICK THÌ MỚI HIỂN THỊ 2 FIELD "NGÀY ĐĂNG" VÀ "GIỜ ĐĂNG" */}
+              {isScheduled && (
                 <div className="pt-2 border-t border-gray-200/80 grid grid-cols-2 gap-3 animate-fadeIn">
                   <div>
                     <label className="block text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
@@ -774,142 +913,6 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
               )}
             </div>
           </section>
-
-          {/* ===================================================================== */}
-          {/* CỘT 3: LỊCH SỬ BÀI ĐĂNG (DẠNG LIST "TIÊU ĐỀ", KHI CHỌN -> TỰ ĐỘNG ĐỔ VÀO CỘT 1) */}
-          {/* KÈM XEM TRƯỚC BÀI ĐĂNG (PREVIEW) */}
-          {/* ===================================================================== */}
-          <section className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
-                  3
-                </span>
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                  Cột 3: Lịch sử Bài đăng
-                </h2>
-              </div>
-              <span className="text-[11px] text-gray-400 font-medium italic">
-                Nhấp chọn để nạp vào Cột 1
-              </span>
-            </div>
-
-            {/* Danh sách Lịch sử Bài đăng dạng list "Tiêu đề" */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Danh sách Lịch sử Bài đăng:</span>
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  {postHistoryList.length} bài
-                </span>
-              </div>
-
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {postHistoryList.map((item) => {
-                  const isSelected = selectedHistoryId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleSelectHistoryItem(item)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer text-left group ${
-                        isSelected
-                          ? 'bg-blue-50/80 border-blue-400 shadow-xs ring-1 ring-blue-300'
-                          : 'bg-gray-50/70 border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-2xs'
-                      }`}
-                      title="Nhấn để tự động nạp bài đăng này vào Cột 1"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="text-xs font-bold text-gray-900 group-hover:text-blue-700 transition-colors line-clamp-1 leading-snug">
-                          {item.title}
-                        </div>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
-                          {item.status}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-1.5">
-                        {item.content}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-100">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-gray-400" />
-                          <span>{item.date} {item.time}</span>
-                        </span>
-                        <span className="font-medium text-blue-600 group-hover:underline">
-                          {isSelected ? '✓ Đang hiển thị' : 'Chọn nạp Cột 1 →'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Mục Xem trước (Live Preview) mô phỏng bài đăng trên các kênh */}
-            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Xem trước bài đăng (Live Preview):</span>
-                </span>
-
-                <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-gray-200">
-                  {(['Zalo', 'Facebook', 'SMS', 'Web'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setActivePreviewTab(tab)}
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer ${
-                        activePreviewTab === tab
-                          ? 'bg-[#1A73E8] text-white shadow-2xs'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Khung mô phỏng hiển thị trên kênh */}
-              <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-2xs space-y-2">
-                <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                  <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">
-                    G
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-bold text-gray-900 leading-none">
-                      Garage Du Mục Auto Care
-                    </div>
-                    <div className="text-[9px] text-gray-400 mt-0.5">
-                      Đăng qua {activePreviewTab} • Vừa xong
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">
-                  {postTitle || 'Chưa nhập tiêu đề'}
-                </div>
-
-                <div className="text-[11px] text-gray-700 leading-relaxed whitespace-pre-line line-clamp-3">
-                  {postContent || 'Chưa có nội dung bài đăng...'}
-                </div>
-
-                {postImages.length > 0 && (
-                  <div className="rounded-lg overflow-hidden border border-gray-100 aspect-video bg-gray-100">
-                    <img
-                      src={postImages[0]}
-                      alt="Xem trước ảnh"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
         </div>
       </main>
 
@@ -925,8 +928,8 @@ export const CampaignExecutionFullScreenModal: React.FC<CampaignExecutionFullScr
           <span className="text-gray-400">|</span>
           <span>
             {isScheduled
-              ? 'Chế độ: Đăng ngay lập tức'
-              : `Lên lịch phát hành: ${scheduledDate} ${scheduledTime}`}
+              ? `Lên lịch phát hành: ${scheduledDate} ${scheduledTime}`
+              : 'Chế độ: Đăng ngay lập tức'}
           </span>
         </div>
 
