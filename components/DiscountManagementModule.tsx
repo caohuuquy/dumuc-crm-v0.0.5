@@ -136,12 +136,14 @@ export interface DocumentItem {
   contractFiles?: ContractFileItem[];
 }
 
+export type DiscountCategory = 'Chiết khấu' | 'Voucher' | 'Khách cũ giới thiệu Khách mới';
+
 export interface DiscountRecord {
   id: string;
   code: string;
   discountCode?: string; // Mã Chiết khấu khi Loại = 'Chiết khấu'
   name: string;
-  category: 'Chiết khấu' | 'Voucher';
+  category: DiscountCategory;
   type: 'percentage' | 'fixed_amount';
   value: number;
   targetAudience: string;
@@ -2009,6 +2011,63 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
       },
     ],
   },
+  {
+    id: 'disc-11',
+    code: 'GT-2026-101',
+    name: 'Chương trình Khách cũ giới thiệu Khách mới - Tặng Voucher 200K',
+    category: 'Khách cũ giới thiệu Khách mới',
+    type: 'fixed_amount',
+    value: 200000,
+    targetAudience: 'Khách cũ & Khách mới',
+    startDate: '2026-01-01',
+    endDate: '2026-12-31',
+    status: 'active',
+    statusDisplay: 'Mở khóa',
+    stackable: 'allow',
+    allowStacking: true,
+    roCount: 15,
+    campaignRunCount: 3,
+    description: 'Chính sách tri ân khách hàng cũ giới thiệu bạn bè mang xe đến garage, áp dụng cho cả hai bên.',
+    createdAt: '2026-01-01 08:00',
+    branchScope: 'all',
+    selectedBranches: [],
+    plateColorScope: 'all',
+    selectedPlateColors: [],
+    customerScope: 'all_with_new',
+    selectedCustomerGroups: [],
+    targetCustomers: [],
+    discountMethod: 'order',
+    orderDiscountType: 'fixed_amount',
+    orderFixedAmount: 200000,
+    orderMinOrderValue: 1000000,
+    productDiscountType: 'percentage',
+    productItems: [],
+    documents: [],
+    vouchersList: [
+      {
+        id: 'vc-gt-01',
+        code: 'GT-KHM-001',
+        targetType: 'new_customer',
+        status: 'available',
+        createdAt: '01/01/2026',
+      },
+      {
+        id: 'vc-gt-02',
+        code: 'GT-KHC-002',
+        targetType: 'existing_customer',
+        status: 'available',
+        createdAt: '01/01/2026',
+        customerCode: 'KH-2024-001',
+        customerName: 'Nguyễn Văn An',
+        phone: '0901234567',
+        address: 'Quận 7, TP.HCM',
+        email: 'an.nguyen@example.com',
+        taxCode: '0301234567',
+        debt: 0,
+        hasCarInGarage: 'Đang có',
+      },
+    ],
+  },
 ];
 
 export const DiscountManagementModule: React.FC = () => {
@@ -2083,7 +2142,7 @@ export const DiscountManagementModule: React.FC = () => {
   // Form State
   const [formName, setFormName] = useState('');
   const [formCode, setFormCode] = useState('');
-  const [formCategory, setFormCategory] = useState<'Chiết khấu' | 'Voucher'>('Chiết khấu');
+  const [formCategory, setFormCategory] = useState<DiscountCategory>('Chiết khấu');
   const [formDiscountCode, setFormDiscountCode] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
@@ -2541,10 +2600,10 @@ export const DiscountManagementModule: React.FC = () => {
     return `${num.toLocaleString('vi-VN')} đ`;
   };
 
-  const generateAutoCode = (cat: 'Chiết khấu' | 'Voucher') => {
+  const generateAutoCode = (cat: DiscountCategory) => {
     const today = new Date();
     const yyyy = today.getFullYear();
-    const prefix = cat === 'Voucher' ? 'VC' : 'CK';
+    const prefix = cat === 'Voucher' ? 'VC' : cat === 'Khách cũ giới thiệu Khách mới' ? 'GT' : 'CK';
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     return `${prefix}-${yyyy}-${randomSuffix}`;
   };
@@ -3146,6 +3205,7 @@ export const DiscountManagementModule: React.FC = () => {
       if (appliedFilters.type !== 'ALL') {
         if (appliedFilters.type === 'Voucher' && d.category !== 'Voucher') return false;
         if (appliedFilters.type === 'Chiết khấu' && d.category !== 'Chiết khấu') return false;
+        if (appliedFilters.type === 'Khách cũ giới thiệu Khách mới' && d.category !== 'Khách cũ giới thiệu Khách mới') return false;
       }
 
       if (appliedFilters.status !== 'ALL') {
@@ -3306,6 +3366,7 @@ export const DiscountManagementModule: React.FC = () => {
               <option value="ALL">-- Tất cả loại --</option>
               <option value="Chiết khấu">Chiết khấu</option>
               <option value="Voucher">Voucher</option>
+              <option value="Khách cũ giới thiệu Khách mới">Khách cũ giới thiệu Khách mới</option>
             </select>
           </div>
 
@@ -3437,6 +3498,8 @@ export const DiscountManagementModule: React.FC = () => {
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold ${
                             discount.category === 'Voucher'
                               ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : discount.category === 'Khách cũ giới thiệu Khách mới'
+                              ? 'bg-teal-50 text-teal-700 border border-teal-200'
                               : 'bg-blue-50 text-blue-700 border border-blue-200'
                           }`}
                         >
@@ -3669,7 +3732,7 @@ export const DiscountManagementModule: React.FC = () => {
                     : 'Thêm mới chương trình chiết khấu'}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  {formCategory === 'Voucher'
+                  {formCategory === 'Voucher' || formCategory === 'Khách cũ giới thiệu Khách mới'
                     ? 'Cấu hình: Thông tin chung, Quản lý Voucher, Thiết lập Voucher, Tài liệu'
                     : 'Cấu hình: Thông tin chung, Phạm vi áp dụng, Thiết lập chiết khấu, Tài liệu'}
                 </p>
@@ -3850,16 +3913,17 @@ export const DiscountManagementModule: React.FC = () => {
                       <select
                         value={formCategory}
                         onChange={(e) => {
-                          const newCat = e.target.value as 'Chiết khấu' | 'Voucher';
+                          const newCat = e.target.value as DiscountCategory;
                           setFormCategory(newCat);
-                          if (!formCode || formCode.startsWith('CK-') || formCode.startsWith('VC-')) {
+                          if (!formCode || formCode.startsWith('CK-') || formCode.startsWith('VC-') || formCode.startsWith('GT-')) {
                             setFormCode(generateAutoCode(newCat));
                           }
                         }}
-                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:border-[#1A73E8] bg-white cursor-pointer shadow-2xs h-[38px]"
+                        className="min-w-[210px] px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:border-[#1A73E8] bg-white cursor-pointer shadow-2xs h-[38px]"
                       >
                         <option value="Chiết khấu">Chiết khấu</option>
                         <option value="Voucher">Voucher</option>
+                        <option value="Khách cũ giới thiệu Khách mới">Khách cũ giới thiệu Khách mới</option>
                       </select>
                     </div>
 
@@ -3898,9 +3962,9 @@ export const DiscountManagementModule: React.FC = () => {
                         >
                           <Layers className="w-3.5 h-3.5 shrink-0" />
                           <span>
-                            {formCategory === 'Voucher'
-                              ? 'Cho phép Cộng dồn với Chương trình Chiết khấu'
-                              : 'Cho phép Cộng dồn với Voucher'}
+                            {formCategory === 'Chiết khấu'
+                              ? 'Cho phép Cộng dồn với Voucher'
+                              : 'Cho phép Cộng dồn với Chương trình Chiết khấu'}
                           </span>
                         </button>
 
@@ -3916,9 +3980,9 @@ export const DiscountManagementModule: React.FC = () => {
                         >
                           <Ban className="w-3.5 h-3.5 shrink-0" />
                           <span>
-                            {formCategory === 'Voucher'
-                              ? 'Không cho phép Cộng dồn với Chương trình Chiết khấu'
-                              : 'Không cho phép Cộng dồn với Voucher'}
+                            {formCategory === 'Chiết khấu'
+                              ? 'Không cho phép Cộng dồn với Voucher'
+                              : 'Không cho phép Cộng dồn với Chương trình Chiết khấu'}
                           </span>
                         </button>
                       </div>
@@ -4043,7 +4107,7 @@ export const DiscountManagementModule: React.FC = () => {
                     2
                   </div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                    {formCategory === 'Voucher' ? 'Quản lý Voucher' : 'Phạm vi áp dụng'}
+                    {formCategory === 'Voucher' || formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Quản lý Voucher' : 'Phạm vi áp dụng'}
                   </h3>
                 </div>
 
@@ -4129,8 +4193,8 @@ export const DiscountManagementModule: React.FC = () => {
                   )}
                 </div>
 
-                {/* Khi field "Loại" = Voucher: bổ sung dưới Chi nhánh áp dụng */}
-                {formCategory === 'Voucher' && (
+                {/* Khi field "Loại" = Voucher hoặc "Khách cũ giới thiệu Khách mới": bổ sung dưới Chi nhánh áp dụng */}
+                {(formCategory === 'Voucher' || formCategory === 'Khách cũ giới thiệu Khách mới') && (
                   <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-4">
                     {/* Dòng 1: 3 field read-only */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -4197,8 +4261,8 @@ export const DiscountManagementModule: React.FC = () => {
                   </div>
                 )}
 
-                {/* 2. Màu sắc biển số xe (ẩn khi Loại là Voucher) */}
-                {formCategory !== 'Voucher' && (
+                {/* 2. Màu sắc biển số xe (ẩn khi Loại là Voucher hoặc Khách cũ giới thiệu Khách mới) */}
+                {formCategory !== 'Voucher' && formCategory !== 'Khách cũ giới thiệu Khách mới' && (
                   <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
@@ -4288,8 +4352,8 @@ export const DiscountManagementModule: React.FC = () => {
                   </div>
                 )}
 
-                {/* 3. Khách hàng (Đối tượng áp dụng & Giới hạn số lượng - ẩn khi Loại là Voucher) */}
-                {formCategory !== 'Voucher' && (
+                {/* 3. Khách hàng (Đối tượng áp dụng & Giới hạn số lượng - ẩn khi Loại là Voucher hoặc Khách cũ giới thiệu Khách mới) */}
+                {formCategory !== 'Voucher' && formCategory !== 'Khách cũ giới thiệu Khách mới' && (
                   <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200 space-y-3.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5 uppercase tracking-wide">
