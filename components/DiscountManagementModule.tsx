@@ -2357,7 +2357,7 @@ export const DiscountManagementModule: React.FC = () => {
   });
 
   const handleOpenGenerateVoucher = () => {
-    setGenVoucherTargetType('new_customer');
+    setGenVoucherTargetType(formCategory === 'Khách cũ giới thiệu Khách mới' ? 'existing_customer' : 'new_customer');
     setGenVoucherQty('10');
     setGenSelectedCustomerGroups([]);
     setGenExistingCustRows([]);
@@ -2446,8 +2446,9 @@ export const DiscountManagementModule: React.FC = () => {
   const handleConfirmGenerateVouchers = () => {
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const isReferralCategory = formCategory === 'Khách cũ giới thiệu Khách mới';
 
-    if (genVoucherTargetType === 'new_customer') {
+    if (!isReferralCategory && genVoucherTargetType === 'new_customer') {
       const qty = Math.max(1, Math.min(1000, parseInt(genVoucherQty, 10) || 1));
       const newItems: VoucherItem[] = [];
 
@@ -2475,7 +2476,11 @@ export const DiscountManagementModule: React.FC = () => {
       setIsGenerateVoucherModalOpen(false);
     } else {
       if (genExistingCustRows.length === 0) {
-        alert('Vui lòng thêm ít nhất 1 khách hàng hiện hữu vào danh sách trước khi xác nhận tạo.');
+        alert(
+          isReferralCategory
+            ? 'Vui lòng thêm ít nhất 1 khách hàng vào danh sách trước khi xác nhận tạo.'
+            : 'Vui lòng thêm ít nhất 1 khách hàng hiện hữu vào danh sách trước khi xác nhận tạo.'
+        );
         return;
       }
 
@@ -2484,7 +2489,7 @@ export const DiscountManagementModule: React.FC = () => {
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         return {
           id: `vchr-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
-          code: `VC-${randomCode}-${randomNum}`,
+          code: isReferralCategory ? `REF-${randomCode}-${randomNum}` : `VC-${randomCode}-${randomNum}`,
           targetType: 'existing_customer',
           status: 'available',
           createdAt: dateStr,
@@ -6471,14 +6476,16 @@ export const DiscountManagementModule: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-gray-900">
-                    Danh sách Voucher
+                    {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Danh sách Mã giới thiệu' : 'Danh sách Voucher'}
                   </h2>
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200">
-                    Quản lý Voucher
+                    {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Quản lý Mã giới thiệu' : 'Quản lý Voucher'}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Xem và quản lý toàn bộ các mã Voucher phát hành trong chương trình
+                  {formCategory === 'Khách cũ giới thiệu Khách mới'
+                    ? 'Xem và quản lý toàn bộ các mã giới thiệu phát hành trong chương trình'
+                    : 'Xem và quản lý toàn bộ các mã Voucher phát hành trong chương trình'}
                 </p>
               </div>
             </div>
@@ -6563,77 +6570,121 @@ export const DiscountManagementModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Thống kê: Tổng số Voucher hiện có = Tổng số voucher dành cho Khách hàng mới + Tổng số Voucher dành cho khách hàng hiện hữu */}
-              <div className="lg:col-span-5 flex flex-col gap-2 bg-slate-50/80 p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                {/* 1. Tổng số Voucher hiện có */}
-                <div className="bg-white rounded-xl border-2 border-blue-400 p-3.5 shadow-xs flex items-center justify-between bg-gradient-to-r from-blue-50/40 to-white">
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">
-                        Tổng số Voucher hiện có
+              {/* Thống kê: Voucher / Mã giới thiệu */}
+              {formCategory === 'Khách cũ giới thiệu Khách mới' ? (
+                <div className="lg:col-span-5 flex flex-col justify-between bg-white rounded-xl border border-blue-200 p-5 shadow-xs bg-gradient-to-br from-blue-50/50 via-white to-slate-50">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="w-4 h-4 text-[#1A73E8]" />
+                      <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                        Thống kê Mã giới thiệu
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-[#1A73E8] border border-blue-200">
+                      Hợp lệ
+                    </span>
+                  </div>
+
+                  <div className="py-4 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wide block">
+                        Tổng Mã giới thiệu
                       </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#1A73E8] rounded border border-blue-200">
-                        = (1) + (2)
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-3xl font-black text-[#1A73E8]">
+                          {formVoucherTotalCount.toLocaleString('vi-VN')}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          mã giới thiệu
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold shadow-2xs">
+                      <Ticket className="w-6 h-6" />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                    <span>Mã áp dụng cho người được giới thiệu</span>
+                    <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                      Sẵn sàng sử dụng
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Thống kê Voucher: Tổng số Voucher hiện có = Tổng số voucher dành cho Khách hàng mới + Tổng số Voucher dành cho khách hàng hiện hữu */
+                <div className="lg:col-span-5 flex flex-col gap-2 bg-slate-50/80 p-3.5 rounded-xl border border-gray-200 shadow-2xs">
+                  {/* 1. Tổng số Voucher hiện có */}
+                  <div className="bg-white rounded-xl border-2 border-blue-400 p-3.5 shadow-xs flex items-center justify-between bg-gradient-to-r from-blue-50/40 to-white">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                          Tổng số Voucher hiện có
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-[#1A73E8] rounded border border-blue-200">
+                          = (1) + (2)
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-black text-[#1A73E8]">
+                          {formVoucherTotalCount.toLocaleString('vi-VN')}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          (= {formVoucherNewCustomerCount.toLocaleString('vi-VN')} + {formVoucherExistingCustomerCount.toLocaleString('vi-VN')})
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold shadow-2xs">
+                      <Ticket className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Dấu = trực quan */}
+                  <div className="relative flex items-center justify-center -my-1 z-10">
+                    <div className="bg-white border-2 border-blue-400 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
+                      =
+                    </div>
+                  </div>
+
+                  {/* 2. Tổng số voucher dành cho Khách hàng mới */}
+                  <div className="bg-white rounded-xl border border-blue-200 p-3 shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-600 block">
+                        (1) Tổng số voucher dành cho Khách hàng mới
+                      </span>
+                      <span className="text-xl font-black text-blue-600 mt-0.5 block">
+                        {formVoucherNewCustomerCount.toLocaleString('vi-VN')}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-2xl font-black text-[#1A73E8]">
-                        {formVoucherTotalCount.toLocaleString('vi-VN')}
-                      </span>
-                      <span className="text-xs text-gray-500 font-medium">
-                        (= {formVoucherNewCustomerCount.toLocaleString('vi-VN')} + {formVoucherExistingCustomerCount.toLocaleString('vi-VN')})
-                      </span>
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Users className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold shadow-2xs">
-                    <Ticket className="w-5 h-5" />
-                  </div>
-                </div>
 
-                {/* Dấu = trực quan */}
-                <div className="relative flex items-center justify-center -my-1 z-10">
-                  <div className="bg-white border-2 border-blue-400 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
-                    =
+                  {/* Dấu + trực quan */}
+                  <div className="relative flex items-center justify-center -my-1 z-10">
+                    <div className="bg-white border-2 border-emerald-400 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
+                      +
+                    </div>
                   </div>
-                </div>
 
-                {/* 2. Tổng số voucher dành cho Khách hàng mới */}
-                <div className="bg-white rounded-xl border border-blue-200 p-3 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-600 block">
-                      (1) Tổng số voucher dành cho Khách hàng mới
-                    </span>
-                    <span className="text-xl font-black text-blue-600 mt-0.5 block">
-                      {formVoucherNewCustomerCount.toLocaleString('vi-VN')}
-                    </span>
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <Users className="w-4 h-4" />
-                  </div>
-                </div>
-
-                {/* Dấu + trực quan */}
-                <div className="relative flex items-center justify-center -my-1 z-10">
-                  <div className="bg-white border-2 border-emerald-400 text-emerald-700 w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shadow-2xs">
-                    +
+                  {/* 3. Tổng số Voucher dành cho khách hàng hiện hữu */}
+                  <div className="bg-white rounded-xl border border-emerald-200 p-3 shadow-xs flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-600 block">
+                        (2) Tổng số Voucher dành cho khách hàng hiện hữu
+                      </span>
+                      <span className="text-xl font-black text-emerald-600 mt-0.5 block">
+                        {formVoucherExistingCustomerCount.toLocaleString('vi-VN')}
+                      </span>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <Building className="w-4 h-4" />
+                    </div>
                   </div>
                 </div>
-
-                {/* 3. Tổng số Voucher dành cho khách hàng hiện hữu */}
-                <div className="bg-white rounded-xl border border-emerald-200 p-3 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-semibold text-gray-600 block">
-                      (2) Tổng số Voucher dành cho khách hàng hiện hữu
-                    </span>
-                    <span className="text-xl font-black text-emerald-600 mt-0.5 block">
-                      {formVoucherExistingCustomerCount.toLocaleString('vi-VN')}
-                    </span>
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                    <Building className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* 2. DÒNG CHUYÊN SEARCH / FILTER CÁC GIÁ TRỊ BẢNG */}
@@ -6646,7 +6697,11 @@ export const DiscountManagementModule: React.FC = () => {
                     type="text"
                     value={voucherSearchTerm}
                     onChange={(e) => setVoucherSearchTerm(e.target.value)}
-                    placeholder="Tìm theo Mã voucher, Mã KH, Tên KH, SĐT, Email, MST, Địa chỉ..."
+                    placeholder={
+                      formCategory === 'Khách cũ giới thiệu Khách mới'
+                        ? 'Tìm theo Mã giới thiệu, Mã KH, Tên KH, SĐT, Email, MST, Địa chỉ...'
+                        : 'Tìm theo Mã voucher, Mã KH, Tên KH, SĐT, Email, MST, Địa chỉ...'
+                    }
                     className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:border-[#1A73E8] bg-white font-medium"
                   />
                   {voucherSearchTerm && (
@@ -6703,7 +6758,7 @@ export const DiscountManagementModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons: Tạo Voucher */}
+              {/* Action Buttons: Tạo Voucher / Tạo Mã giới thiệu */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -6711,7 +6766,7 @@ export const DiscountManagementModule: React.FC = () => {
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Tạo Voucher</span>
+                  <span>{formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Tạo Mã giới thiệu' : 'Tạo Voucher'}</span>
                 </button>
               </div>
             </div>
@@ -6723,7 +6778,9 @@ export const DiscountManagementModule: React.FC = () => {
                   <thead className="bg-[#F8FAFC] text-gray-700 font-bold border-b border-gray-200 sticky top-0 z-10">
                     <tr>
                       <th className="py-3 px-3 text-center w-12 border-r border-gray-200/80">STT</th>
-                      <th className="py-3 px-3 min-w-[130px] border-r border-gray-200/80">Mã Voucher</th>
+                      <th className="py-3 px-3 min-w-[140px] border-r border-gray-200/80">
+                        {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Mã giới thiệu hợp lệ' : 'Mã Voucher'}
+                      </th>
                       <th className="py-3 px-3 min-w-[130px] border-r border-gray-200/80">Mã khách hàng</th>
                       <th className="py-3 px-3 min-w-[170px] border-r border-gray-200/80">Tên Khách hàng</th>
                       <th className="py-3 px-3 min-w-[200px] border-r border-gray-200/80">Địa chỉ</th>
@@ -6739,7 +6796,11 @@ export const DiscountManagementModule: React.FC = () => {
                     {filteredVouchers.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-gray-400">
-                          Không tìm thấy mã Voucher nào phù hợp. Nhấn <strong>"Tạo Voucher"</strong> để bổ sung.
+                          {formCategory === 'Khách cũ giới thiệu Khách mới' ? (
+                            <>Không tìm thấy mã giới thiệu nào phù hợp. Nhấn <strong>"Tạo Mã giới thiệu"</strong> để bổ sung.</>
+                          ) : (
+                            <>Không tìm thấy mã Voucher nào phù hợp. Nhấn <strong>"Tạo Voucher"</strong> để bổ sung.</>
+                          )}
                         </td>
                       </tr>
                     ) : (
@@ -6750,7 +6811,7 @@ export const DiscountManagementModule: React.FC = () => {
                             {idx + 1}
                           </td>
 
-                          {/* Mã Voucher */}
+                          {/* Mã Voucher / Mã giới thiệu hợp lệ */}
                           <td className="py-2.5 px-3 border-r border-gray-100">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-mono font-bold text-[#1A73E8]">
@@ -6815,8 +6876,8 @@ export const DiscountManagementModule: React.FC = () => {
                             <span
                               className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${
                                 v.hasCarInGarage === 'Đang có'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                  : 'bg-gray-100 text-gray-600 border-gray-300'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                : 'bg-gray-100 text-gray-600 border-gray-300'
                               }`}
                             >
                               {v.hasCarInGarage || 'Không có'}
@@ -6829,7 +6890,7 @@ export const DiscountManagementModule: React.FC = () => {
                               type="button"
                               onClick={() => handleDeleteVoucher(v.id)}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                              title="Xóa voucher"
+                              title={formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Xóa mã giới thiệu' : 'Xóa voucher'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -6844,10 +6905,10 @@ export const DiscountManagementModule: React.FC = () => {
               {/* Table Footer */}
               <div className="bg-gray-50 border-t border-gray-200 px-4 py-2.5 flex items-center justify-between text-xs text-gray-600">
                 <span>
-                  Hiển thị <strong>{filteredVouchers.length}</strong> / <strong>{formVouchersList.length}</strong> voucher
+                  Hiển thị <strong>{filteredVouchers.length}</strong> / <strong>{formVouchersList.length}</strong> {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'mã giới thiệu' : 'voucher'}
                 </span>
                 <span className="text-[11px] text-gray-400 italic">
-                  * Dữ liệu danh sách Voucher ở chế độ chỉ đọc (read-only)
+                  * Dữ liệu danh sách {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Mã giới thiệu' : 'Voucher'} ở chế độ chỉ đọc (read-only)
                 </span>
               </div>
             </div>
@@ -6866,13 +6927,15 @@ export const DiscountManagementModule: React.FC = () => {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  Tạo Voucher
+                  {formCategory === 'Khách cũ giới thiệu Khách mới' ? 'Tạo Mã giới thiệu' : 'Tạo Voucher'}
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200">
                     Giao diện toàn màn hình
                   </span>
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Cấu hình đối tượng áp dụng và số lượng mã Voucher cần phát hành
+                  {formCategory === 'Khách cũ giới thiệu Khách mới'
+                    ? 'Cấu hình nhóm khách hàng và danh sách khách hàng được cấp mã giới thiệu'
+                    : 'Cấu hình đối tượng áp dụng và số lượng mã Voucher cần phát hành'}
                 </p>
               </div>
             </div>
@@ -6891,71 +6954,73 @@ export const DiscountManagementModule: React.FC = () => {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/60">
-            {/* KHU VỰC: Đối tượng áp dụng Voucher */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider block">
-                  Đối tượng áp dụng Voucher <span className="text-red-500">*</span>
-                </label>
+            {/* KHU VỰC: Đối tượng áp dụng Voucher (chỉ hiển thị khi KHÔNG PHẢI là 'Khách cũ giới thiệu Khách mới') */}
+            {formCategory !== 'Khách cũ giới thiệu Khách mới' && (
+              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-800 uppercase tracking-wider block">
+                    Đối tượng áp dụng Voucher <span className="text-red-500">*</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Tick chọn "Dành cho Khách hàng mới" */}
+                  <label
+                    onClick={() => setGenVoucherTargetType('new_customer')}
+                    className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      genVoucherTargetType === 'new_customer'
+                        ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="genVoucherTargetChoice"
+                      checked={genVoucherTargetType === 'new_customer'}
+                      onChange={() => setGenVoucherTargetType('new_customer')}
+                      className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                    />
+                    <div className="space-y-1">
+                      <span className="font-bold text-sm text-gray-900 block">
+                        Dành cho Khách hàng mới
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        Phát hành số lượng mã Voucher dự phòng cho khách hàng mới đến garage.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Tick chọn "Dành cho khách hàng hiện hữu" */}
+                  <label
+                    onClick={() => setGenVoucherTargetType('existing_customer')}
+                    className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      genVoucherTargetType === 'existing_customer'
+                        ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="genVoucherTargetChoice"
+                      checked={genVoucherTargetType === 'existing_customer'}
+                      onChange={() => setGenVoucherTargetType('existing_customer')}
+                      className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                    />
+                    <div className="space-y-1">
+                      <span className="font-bold text-sm text-gray-900 block">
+                        Dành cho khách hàng hiện hữu
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        Gán trực tiếp mã Voucher cho các khách hàng đã có trong danh sách của garage.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Tick chọn "Dành cho Khách hàng mới" */}
-                <label
-                  onClick={() => setGenVoucherTargetType('new_customer')}
-                  className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    genVoucherTargetType === 'new_customer'
-                      ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="genVoucherTargetChoice"
-                    checked={genVoucherTargetType === 'new_customer'}
-                    onChange={() => setGenVoucherTargetType('new_customer')}
-                    className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
-                  />
-                  <div className="space-y-1">
-                    <span className="font-bold text-sm text-gray-900 block">
-                      Dành cho Khách hàng mới
-                    </span>
-                    <p className="text-xs text-gray-500">
-                      Phát hành số lượng mã Voucher dự phòng cho khách hàng mới đến garage.
-                    </p>
-                  </div>
-                </label>
-
-                {/* Tick chọn "Dành cho khách hàng hiện hữu" */}
-                <label
-                  onClick={() => setGenVoucherTargetType('existing_customer')}
-                  className={`flex items-start gap-3.5 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    genVoucherTargetType === 'existing_customer'
-                      ? 'border-[#1A73E8] bg-blue-50/30 shadow-2xs'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="genVoucherTargetChoice"
-                    checked={genVoucherTargetType === 'existing_customer'}
-                    onChange={() => setGenVoucherTargetType('existing_customer')}
-                    className="mt-0.5 w-4 h-4 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
-                  />
-                  <div className="space-y-1">
-                    <span className="font-bold text-sm text-gray-900 block">
-                      Dành cho khách hàng hiện hữu
-                    </span>
-                    <p className="text-xs text-gray-500">
-                      Gán trực tiếp mã Voucher cho các khách hàng đã có trong danh sách của garage.
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* KHI CHỌN: Dành cho Khách hàng mới */}
-            {genVoucherTargetType === 'new_customer' && (
+            {/* KHI CHỌN: Dành cho Khách hàng mới (chỉ với Voucher thông thường) */}
+            {formCategory !== 'Khách cũ giới thiệu Khách mới' && genVoucherTargetType === 'new_customer' && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
                   <div className="max-w-md space-y-2">
@@ -6996,8 +7061,8 @@ export const DiscountManagementModule: React.FC = () => {
               </div>
             )}
 
-            {/* KHI CHỌN: Dành cho khách hàng hiện hữu */}
-            {genVoucherTargetType === 'existing_customer' && (
+            {/* HIỂN THỊ PHẦN 1 VÀ PHẦN 2: Khi là 'Khách cũ giới thiệu Khách mới' hoặc khi genVoucherTargetType === 'existing_customer' */}
+            {(formCategory === 'Khách cũ giới thiệu Khách mới' || genVoucherTargetType === 'existing_customer') && (
               <div className="space-y-6">
                 {/* PHẦN 1: Nhóm khách hàng áp dụng */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-3">
@@ -7198,7 +7263,9 @@ export const DiscountManagementModule: React.FC = () => {
                       <Info className="w-4 h-4" />
                     </div>
                     <p className="text-sm font-semibold text-gray-800">
-                      Bạn sắp tạo Mã Voucher có số lượng:{' '}
+                      {formCategory === 'Khách cũ giới thiệu Khách mới'
+                        ? 'Bạn sắp tạo Mã giới thiệu có số lượng: '
+                        : 'Bạn sắp tạo Mã Voucher có số lượng: '}
                       <span className="text-blue-700 font-bold text-base px-1.5 py-0.5 bg-white border border-blue-200 rounded-md">
                         {genExistingCustRows.length}
                       </span>{' '}
@@ -7213,7 +7280,9 @@ export const DiscountManagementModule: React.FC = () => {
           {/* Footer */}
           <div className="h-16 px-6 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
             <div className="text-xs text-gray-500">
-              {genVoucherTargetType === 'existing_customer'
+              {formCategory === 'Khách cũ giới thiệu Khách mới'
+                ? `Dự kiến tạo: ${genExistingCustRows.length} mã giới thiệu tương ứng ${genExistingCustRows.length} khách hàng`
+                : genVoucherTargetType === 'existing_customer'
                 ? `Dự kiến tạo: ${genExistingCustRows.length} mã Voucher tương ứng ${genExistingCustRows.length} khách hàng hiện hữu`
                 : null}
             </div>
