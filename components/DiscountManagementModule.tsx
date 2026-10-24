@@ -23,6 +23,7 @@ import {
   Info,
   HelpCircle,
   Sparkles,
+  RotateCcw,
   Check,
   Building,
   Car,
@@ -48,6 +49,11 @@ import {
   Lock,
   Unlock,
   History,
+  Mail,
+  MessageSquare,
+  Send,
+  Smartphone,
+  Gift,
 } from 'lucide-react';
 import {
   EXISTING_CUSTOMERS_IN_MODULE,
@@ -183,11 +189,29 @@ export interface DiscountRecord {
   productDiscountType: 'percentage' | 'fixed_amount';
   productItems: ProductDiscountItem[];
 
+  // Thiết lập cho Người giới thiệu (Khách hiện hữu) khi Loại = "Khách cũ giới thiệu Khách mới"
+  referrerDiscountMethod?: 'order' | 'product';
+  referrerOrderDiscountType?: 'percentage' | 'fixed_amount';
+  referrerOrderPercent?: number | string;
+  referrerOrderMaxDiscountAmount?: number | string;
+  referrerOrderFixedAmount?: number | string;
+  referrerOrderMinOrderValue?: number | string;
+  referrerProductDiscountType?: 'percentage' | 'fixed_amount';
+  referrerProductItems?: ProductDiscountItem[];
+
+  // Gửi Mã quà tặng cho người giới thiệu khi Loại = "Khách cũ giới thiệu Khách mới"
+  sendReferrerGiftCode?: boolean;
+  referrerCodePrefix?: string;
+  referrerCodeSuffixType?: 'STT tăng dần' | 'Số điện thoại' | 'Email';
+  referrerValidityDays?: number | string;
+  referrerSendChannels?: string[];
+
   // Khu vực: Tài liệu
   documents?: DocumentItem[];
 
   // Quản lý Voucher
   vouchersList?: VoucherItem[];
+  referralCodeMethod?: 'phone' | 'email' | 'customer_code';
 }
 
 const BRANCH_OPTIONS = [
@@ -2039,11 +2063,25 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
     targetCustomers: [],
     discountMethod: 'order',
     orderDiscountType: 'fixed_amount',
-    orderFixedAmount: 200000,
-    orderMinOrderValue: 1000000,
+    orderPercent: '10',
+    orderFixedAmount: 150000,
+    orderMinOrderValue: 800000,
     productDiscountType: 'percentage',
     productItems: [],
+    referrerDiscountMethod: 'order',
+    referrerOrderDiscountType: 'fixed_amount',
+    referrerOrderPercent: '10',
+    referrerOrderFixedAmount: 200000,
+    referrerOrderMinOrderValue: 1000000,
+    referrerProductDiscountType: 'percentage',
+    referrerProductItems: [],
+    sendReferrerGiftCode: true,
+    referrerCodePrefix: 'QT-',
+    referrerCodeSuffixType: 'STT tăng dần',
+    referrerValidityDays: 30,
+    referrerSendChannels: ['SMS', 'Zalo OA', 'Email'],
     documents: [],
+    referralCodeMethod: 'phone',
     vouchersList: [
       {
         id: 'vc-gt-01',
@@ -2051,6 +2089,14 @@ export const INITIAL_DISCOUNTS: DiscountRecord[] = [
         targetType: 'new_customer',
         status: 'available',
         createdAt: '01/01/2026',
+        customerCode: 'KH-2024-018',
+        customerName: 'Nguyễn Thị Bích Ngọc',
+        address: '102 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh',
+        phone: '0987 654 321',
+        email: 'bichngoc.law@gmail.com',
+        taxCode: '0311223344',
+        debt: 0,
+        hasCarInGarage: 'Không có',
       },
       {
         id: 'vc-gt-02',
@@ -2308,8 +2354,62 @@ export const DiscountManagementModule: React.FC = () => {
   const [formProductDiscountType, setFormProductDiscountType] = useState<'percentage' | 'fixed_amount'>('percentage');
   const [formProductItems, setFormProductItems] = useState<ProductDiscountItem[]>([]);
 
+  // Khu vực 3: Thiết lập cho Khách hiện hữu (Người giới thiệu) khi Loại = "Khách cũ giới thiệu Khách mới"
+  const [referrerDiscountMethod, setReferrerDiscountMethod] = useState<'order' | 'product'>('order');
+  const [referrerOrderDiscountType, setReferrerOrderDiscountType] = useState<'percentage' | 'fixed_amount'>('fixed_amount');
+  const [referrerOrderPercent, setReferrerOrderPercent] = useState<string>('10');
+  const [referrerOrderMaxDiscountAmount, setReferrerOrderMaxDiscountAmount] = useState<string>('');
+  const [referrerOrderFixedAmount, setReferrerOrderFixedAmount] = useState<string>('200000');
+  const [referrerOrderMinOrderValue, setReferrerOrderMinOrderValue] = useState<string>('1000000');
+  const [referrerProductDiscountType, setReferrerProductDiscountType] = useState<'percentage' | 'fixed_amount'>('percentage');
+  const [referrerProductItems, setReferrerProductItems] = useState<ProductDiscountItem[]>([]);
+
+  // Gửi Mã quà tặng cho người giới thiệu khi Loại = "Khách cũ giới thiệu Khách mới"
+  const [formSendReferrerGiftCode, setFormSendReferrerGiftCode] = useState<boolean>(false);
+  const [formReferrerCodePrefix, setFormReferrerCodePrefix] = useState<string>('QT-');
+  const [formReferrerCodeSuffixType, setFormReferrerCodeSuffixType] = useState<'STT tăng dần' | 'Số điện thoại' | 'Email'>('STT tăng dần');
+  const [formReferrerValidityDays, setFormReferrerValidityDays] = useState<string>('30');
+  const [formReferrerSendChannels, setFormReferrerSendChannels] = useState<string[]>(['SMS', 'Zalo OA', 'Email']);
+  const [isPreviewMessageModalOpen, setIsPreviewMessageModalOpen] = useState<boolean>(false);
+  const [previewChannelTab, setPreviewChannelTab] = useState<'SMS' | 'Zalo OA' | 'Email'>('SMS');
+  const [isEditingPreviewTemplate, setIsEditingPreviewTemplate] = useState<boolean>(false);
+
+  // Nội dung mẫu tin nhắn có thể Sửa (SMS, Zalo OA, Email)
+  const [smsTemplateText, setSmsTemplateText] = useState<string>(
+    'Cam on Quy khach {TEN_NGUOI_GIOI_THIEU} da gioi thieu khach hang {TEN_NGUOI_DUOC_GT} den Garage Du Muc! Don hang {MA_DON_HANG} da hoan tat thanh toan. Garage xin tang Quy khach Ma qua tang tri an: {MA_QUA_TANG} ({GIA_TRI_UU_DAI}). Thoi han su dung: {HAN_DUNG_NGAY} ngay. Hotline: 1900 8899. Tran trong!'
+  );
+  const [zaloTemplate, setZaloTemplate] = useState<{
+    title: string;
+    subtitle: string;
+    ctaText: string;
+    secondaryCtaText: string;
+    note: string;
+  }>({
+    title: 'TẶNG MÃ QUÀ TẶNG TRI ÂN NGƯỜI GIỚI THIỆU',
+    subtitle: 'Người bạn được giới thiệu ({TEN_NGUOI_DUOC_GT}) đã hoàn tất đơn hàng {MA_DON_HANG}',
+    ctaText: 'Đặt hẹn & Áp dụng mã ngay',
+    secondaryCtaText: 'Lưu mã vào Ví Zalo',
+    note: 'Áp dụng cho mọi dịch vụ bảo dưỡng và sửa chữa tại hệ thống Garage Du Mục',
+  });
+  const [emailTemplate, setEmailTemplate] = useState<{
+    subject: string;
+    greeting: string;
+    intro: string;
+    orderNote: string;
+    boxTitle: string;
+    footerNote: string;
+  }>({
+    subject: '🎁 [Garage Du Mục] Cảm ơn Quý khách {TEN_NGUOI_GIOI_THIEU} - Tặng Mã quà tặng tri ân giới thiệu bạn bè',
+    greeting: 'Kính gửi Quý khách {TEN_NGUOI_GIOI_THIEU},',
+    intro: 'Garage Du Mục xin gửi lời cảm ơn chân thành tới Quý khách vì đã tin tưởng giới thiệu người bạn {TEN_NGUOI_DUOC_GT} sử dụng dịch vụ tại garage của chúng tôi.',
+    orderNote: 'Đơn hàng sửa chữa/bảo dưỡng {MA_DON_HANG} của bạn Quý khách đã hoàn tất thanh toán thành công. Chúng tôi xin trân trọng gửi tặng Quý khách phần quà tri ân đặc biệt:',
+    boxTitle: 'MÃ QUÀ TẶNG TRI ÂN KHÁCH HÀNG',
+    footerNote: 'Hotline hỗ trợ: 1900 8899 • Hệ thống Garage Du Mục toàn quốc',
+  });
+
   // Quản lý Voucher State
   const [formVouchersList, setFormVouchersList] = useState<VoucherItem[]>([]);
+  const [referralCodeMethod, setReferralCodeMethod] = useState<'phone' | 'email' | 'customer_code'>('phone');
   const [isViewVoucherListModalOpen, setIsViewVoucherListModalOpen] = useState(false);
   const [isGenerateVoucherModalOpen, setIsGenerateVoucherModalOpen] = useState(false);
   const [genVoucherTargetType, setGenVoucherTargetType] = useState<'new_customer' | 'existing_customer'>('new_customer');
@@ -2548,8 +2648,17 @@ export const DiscountManagementModule: React.FC = () => {
     // 1. Text search
     if (voucherSearchTerm.trim()) {
       const q = voucherSearchTerm.toLowerCase();
+      const effectiveCode =
+        formCategory === 'Khách cũ giới thiệu Khách mới'
+          ? referralCodeMethod === 'phone'
+            ? v.phone?.trim() || v.code
+            : referralCodeMethod === 'email'
+            ? v.email?.trim() || v.code
+            : v.customerCode?.trim() || v.code
+          : v.code;
       const match =
         v.code.toLowerCase().includes(q) ||
+        effectiveCode.toLowerCase().includes(q) ||
         (v.customerCode && v.customerCode.toLowerCase().includes(q)) ||
         (v.customerName && v.customerName.toLowerCase().includes(q)) ||
         (v.address && v.address.toLowerCase().includes(q)) ||
@@ -2831,9 +2940,26 @@ export const DiscountManagementModule: React.FC = () => {
     }));
     setFormProductItems(initialProductItems);
 
+    // Khu vực 3 (Người giới thiệu) defaults
+    setReferrerDiscountMethod('order');
+    setReferrerOrderDiscountType('fixed_amount');
+    setReferrerOrderPercent('10');
+    setReferrerOrderMaxDiscountAmount('');
+    setReferrerOrderFixedAmount('200000');
+    setReferrerProductDiscountType('percentage');
+    setReferrerProductItems([]);
+
+    // Gửi Mã quà tặng cho người giới thiệu defaults (mặc định un-tick)
+    setFormSendReferrerGiftCode(false);
+    setFormReferrerCodePrefix('QT-');
+    setFormReferrerCodeSuffixType('STT tăng dần');
+    setFormReferrerValidityDays('30');
+    setFormReferrerSendChannels(['SMS', 'Zalo OA', 'Email']);
+
     // Khu vực: Tài liệu (mặc định 1 dòng trống khi thêm mới)
     setFormDocuments([createBlankDocumentItem()]);
     setFormVouchersList([]);
+    setReferralCodeMethod('phone');
 
     setFormError('');
     setShowStartDateInfo(false);
@@ -2879,9 +3005,27 @@ export const DiscountManagementModule: React.FC = () => {
     setFormProductDiscountType(discount.productDiscountType || 'percentage');
     setFormProductItems(discount.productItems || []);
 
+    // Khu vực 3 (Người giới thiệu)
+    setReferrerDiscountMethod(discount.referrerDiscountMethod || 'order');
+    setReferrerOrderDiscountType(discount.referrerOrderDiscountType || 'fixed_amount');
+    setReferrerOrderPercent(discount.referrerOrderPercent !== undefined ? String(discount.referrerOrderPercent) : '10');
+    setReferrerOrderMaxDiscountAmount(discount.referrerOrderMaxDiscountAmount !== undefined ? String(discount.referrerOrderMaxDiscountAmount) : '');
+    setReferrerOrderFixedAmount(discount.referrerOrderFixedAmount !== undefined ? String(discount.referrerOrderFixedAmount) : '200000');
+    setReferrerOrderMinOrderValue(discount.referrerOrderMinOrderValue !== undefined ? String(discount.referrerOrderMinOrderValue) : '1000000');
+    setReferrerProductDiscountType(discount.referrerProductDiscountType || 'percentage');
+    setReferrerProductItems(discount.referrerProductItems || []);
+
+    // Gửi Mã quà tặng cho người giới thiệu
+    setFormSendReferrerGiftCode(discount.sendReferrerGiftCode === true);
+    setFormReferrerCodePrefix(discount.referrerCodePrefix || 'QT-');
+    setFormReferrerCodeSuffixType(discount.referrerCodeSuffixType || 'STT tăng dần');
+    setFormReferrerValidityDays(discount.referrerValidityDays !== undefined ? String(discount.referrerValidityDays) : '30');
+    setFormReferrerSendChannels(discount.referrerSendChannels && discount.referrerSendChannels.length > 0 ? discount.referrerSendChannels : ['SMS', 'Zalo OA', 'Email']);
+
     // Khu vực: Tài liệu
     setFormDocuments(discount.documents && discount.documents.length > 0 ? discount.documents : [createBlankDocumentItem()]);
     setFormVouchersList(discount.vouchersList || []);
+    setReferralCodeMethod(discount.referralCodeMethod || 'phone');
 
     setFormError('');
     setShowStartDateInfo(false);
@@ -2975,11 +3119,29 @@ export const DiscountManagementModule: React.FC = () => {
       productDiscountType: formProductDiscountType,
       productItems: formProductItems,
 
+      // Thiết lập cho Người giới thiệu (Khách hiện hữu) khi Loại = "Khách cũ giới thiệu Khách mới"
+      referrerDiscountMethod: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerDiscountMethod : undefined,
+      referrerOrderDiscountType: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerOrderDiscountType : undefined,
+      referrerOrderPercent: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerOrderPercent : undefined,
+      referrerOrderMaxDiscountAmount: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerOrderMaxDiscountAmount : undefined,
+      referrerOrderFixedAmount: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerOrderFixedAmount : undefined,
+      referrerOrderMinOrderValue: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerOrderMinOrderValue : undefined,
+      referrerProductDiscountType: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerProductDiscountType : undefined,
+      referrerProductItems: formCategory === 'Khách cũ giới thiệu Khách mới' ? referrerProductItems : [],
+
+      // Gửi Mã quà tặng cho người giới thiệu
+      sendReferrerGiftCode: formCategory === 'Khách cũ giới thiệu Khách mới' ? formSendReferrerGiftCode : undefined,
+      referrerCodePrefix: formCategory === 'Khách cũ giới thiệu Khách mới' ? formReferrerCodePrefix : undefined,
+      referrerCodeSuffixType: formCategory === 'Khách cũ giới thiệu Khách mới' ? formReferrerCodeSuffixType : undefined,
+      referrerValidityDays: formCategory === 'Khách cũ giới thiệu Khách mới' ? formReferrerValidityDays : undefined,
+      referrerSendChannels: formCategory === 'Khách cũ giới thiệu Khách mới' ? formReferrerSendChannels : undefined,
+
       // Khu vực: Tài liệu
       documents: formDocuments,
 
       // Quản lý Voucher
       vouchersList: formVouchersList,
+      referralCodeMethod: formCategory === 'Khách cũ giới thiệu Khách mới' ? referralCodeMethod : undefined,
     };
 
     if (editingDiscount) {
@@ -3439,6 +3601,557 @@ export const DiscountManagementModule: React.FC = () => {
         <Lock className="w-3.5 h-3.5" />
         Khóa
       </span>
+    );
+  };
+
+  const handleAddProductItemTo = (
+    setItems: React.Dispatch<React.SetStateAction<ProductDiscountItem[]>>,
+    currentProdType: 'percentage' | 'fixed_amount',
+    catalogItem?: typeof SAMPLE_GARAGE_CATALOG[0]
+  ) => {
+    const base = catalogItem || {
+      itemCode: `VT-${Math.floor(1000 + Math.random() * 9000)}`,
+      itemName: 'Hàng hóa / phụ tùng mới',
+      unit: 'Cái',
+      vat: 10,
+      priceBeforeVat: 100000,
+      priceAfterVat: 110000,
+    };
+
+    let discountPercent = currentProdType === 'percentage' ? 10 : 0;
+    let fixedDiscountAmount = currentProdType === 'percentage' ? Math.round(base.priceAfterVat * 0.1) : 20000;
+    let newPriceBeforeVat = Math.round(base.priceBeforeVat * 0.9);
+    let newPriceAfterVat = Math.round(base.priceAfterVat * 0.9);
+
+    if (currentProdType === 'fixed_amount') {
+      newPriceAfterVat = Math.max(0, base.priceAfterVat - 20000);
+      newPriceBeforeVat = Math.round(newPriceAfterVat / (1 + base.vat / 100));
+      discountPercent = Number(((20000 / base.priceAfterVat) * 100).toFixed(1));
+    }
+
+    const newRow: ProductDiscountItem = {
+      id: `prod-row-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      itemCode: base.itemCode,
+      itemName: base.itemName,
+      unit: base.unit,
+      vat: base.vat,
+      priceBeforeVat: base.priceBeforeVat,
+      priceAfterVat: base.priceAfterVat,
+      discountPercent,
+      fixedDiscountAmount,
+      newPriceBeforeVat,
+      newPriceAfterVat,
+      minBuyQuantity: '',
+    };
+    setItems((prev) => [...prev, newRow]);
+  };
+
+  const renderDiscountSetupFields = (
+    method: 'order' | 'product',
+    setMethod: (v: 'order' | 'product') => void,
+    orderType: 'percentage' | 'fixed_amount',
+    setOrderType: (v: 'percentage' | 'fixed_amount') => void,
+    orderPercent: string,
+    setOrderPercent: (v: string) => void,
+    orderMaxDiscountAmount: string,
+    setOrderMaxDiscountAmount: (v: string) => void,
+    orderFixedAmount: string,
+    setOrderFixedAmount: (v: string) => void,
+    orderMinOrderValue: string,
+    setOrderMinOrderValue: (v: string) => void,
+    productType: 'percentage' | 'fixed_amount',
+    setProductType: (v: 'percentage' | 'fixed_amount') => void,
+    productItems: ProductDiscountItem[],
+    setProductItems: React.Dispatch<React.SetStateAction<ProductDiscountItem[]>>,
+    scopeKey: string,
+    accent: 'blue' | 'emerald' = 'blue'
+  ) => {
+    const isEmerald = accent === 'emerald';
+    const activeBtnClass = isEmerald ? 'bg-emerald-600 text-white shadow-xs' : 'bg-[#1A73E8] text-white shadow-xs';
+    const activeSubBtnClass = isEmerald ? 'bg-emerald-600 text-white shadow-xs' : 'bg-[#1A73E8] text-white shadow-xs';
+    const borderFocusClass = isEmerald ? 'focus:border-emerald-600' : 'focus:border-[#1A73E8]';
+    const boxBg = isEmerald ? 'bg-emerald-50/40 border-emerald-100' : 'bg-blue-50/40 border-blue-100';
+
+    return (
+      <div className="space-y-5">
+        {/* 1. Chọn 1 trong 2: Chiết khấu theo đơn vs Chiết khấu theo sản phẩm */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">
+            Hình thức áp dụng: <span className="text-red-500">*</span>
+          </label>
+          <div className="inline-flex items-center p-1.5 bg-gray-100 rounded-xl border border-gray-200 gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setMethod('order')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                method === 'order' ? activeBtnClass : 'text-gray-600 hover:bg-gray-200/60'
+              }`}
+            >
+              <Receipt className="w-4 h-4" />
+              Chiết khấu theo đơn (Áp dụng trên tổng giá trị RO)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMethod('product')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                method === 'product' ? activeBtnClass : 'text-gray-600 hover:bg-gray-200/60'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Chiết khấu theo sản phẩm
+            </button>
+          </div>
+        </div>
+
+        {/* TRƯỜNG HỢP A: Chiết khấu theo đơn */}
+        {method === 'order' && (
+          <div className={`p-5 rounded-xl border space-y-5 animate-fadeIn ${boxBg}`}>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
+                Kiểu chiết khấu đơn hàng:
+              </label>
+              <div className="inline-flex items-center p-1 bg-white rounded-lg border border-gray-200 gap-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setOrderType('percentage')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    orderType === 'percentage' ? activeSubBtnClass : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Percent className="w-3.5 h-3.5" />
+                  Theo tỉ lệ phần trăm (%)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOrderType('fixed_amount')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    orderType === 'fixed_amount' ? activeSubBtnClass : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  Theo Số tiền cố định
+                </button>
+              </div>
+            </div>
+
+            {/* Khi tick vào "Theo tỉ lệ phần trăm (%)" */}
+            {orderType === 'percentage' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 animate-fadeIn">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Số phần trăm (%) giảm giá: <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={orderPercent}
+                      onChange={(e) => setOrderPercent(e.target.value)}
+                      placeholder="VD: 10"
+                      className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none font-semibold bg-white ${borderFocusClass}`}
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-gray-400 font-bold text-sm pointer-events-none">
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Số tiền giảm giá tối đa (VNĐ):
+                    </label>
+                    <span
+                      className="inline-flex items-center text-gray-400 hover:text-blue-600 cursor-pointer"
+                      title="Để trống, nếu không giới hạn"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
+                    </span>
+                    <span className="text-[11px] text-gray-500 italic">
+                      (Để trống, nếu không giới hạn)
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="10000"
+                      value={orderMaxDiscountAmount}
+                      onChange={(e) => setOrderMaxDiscountAmount(e.target.value)}
+                      placeholder="Để trống nếu không giới hạn tối đa"
+                      className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none bg-white font-medium ${borderFocusClass}`}
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-gray-400 text-xs font-semibold pointer-events-none">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Khi tick vào "Theo số tiền cố định" */}
+            {orderType === 'fixed_amount' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 animate-fadeIn">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Số tiền giảm giá (VNĐ): <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="10000"
+                      value={orderFixedAmount}
+                      onChange={(e) => setOrderFixedAmount(e.target.value)}
+                      placeholder="VD: 200000"
+                      className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none bg-white font-semibold ${borderFocusClass}`}
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-gray-400 text-xs font-semibold pointer-events-none">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Giá trị đơn hàng tối thiểu (VNĐ):
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="50000"
+                      value={orderMinOrderValue}
+                      onChange={(e) => setOrderMinOrderValue(e.target.value)}
+                      placeholder="VD: 1000000"
+                      className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm outline-none bg-white font-medium ${borderFocusClass}`}
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-gray-400 text-xs font-semibold pointer-events-none">
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TRƯỜNG HỢP B: Chiết khấu theo sản phẩm */}
+        {method === 'product' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
+              <div>
+                <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                  Kiểu chiết khấu sản phẩm:
+                </div>
+                <div className="text-[11px] text-gray-500">
+                  Chọn cách thức tính chiết khấu cho bảng hàng hóa vật tư bên dưới
+                </div>
+              </div>
+
+              <div className="inline-flex items-center p-1 bg-white rounded-lg border border-gray-200 gap-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductType('percentage');
+                    setProductItems((prev) =>
+                      prev.map((r) => calculateProductRow(r, 'percentage', 'discountPercent', r.discountPercent || 10))
+                    );
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    productType === 'percentage' ? activeSubBtnClass : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Percent className="w-3.5 h-3.5" />
+                  Chiết khấu theo tỉ lệ phần trăm (%)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductType('fixed_amount');
+                    setProductItems((prev) =>
+                      prev.map((r) => calculateProductRow(r, 'fixed_amount', 'fixedDiscountAmount', r.fixedDiscountAmount || 20000))
+                    );
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    productType === 'fixed_amount' ? activeSubBtnClass : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  Chiết khấu theo số tiền cố định
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-[#1A73E8]" />
+                  <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                    Bảng Hàng hóa vật tư áp dụng ({productItems.length} mục)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    onChange={(e) => {
+                      const found = SAMPLE_GARAGE_CATALOG.find((c) => c.itemCode === e.target.value);
+                      if (found) {
+                        handleAddProductItemTo(setProductItems, productType, found);
+                      }
+                      e.target.value = '';
+                    }}
+                    className="text-xs px-2.5 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 outline-none cursor-pointer"
+                  >
+                    <option value="">+ Chọn nhanh từ kho vật tư mẫu...</option>
+                    {SAMPLE_GARAGE_CATALOG.map((cat) => (
+                      <option key={cat.itemCode} value={cat.itemCode}>
+                        {cat.itemCode} - {cat.itemName} ({formatCurrency(cat.priceAfterVat)})
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAddProductItemTo(setProductItems, productType)}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                      isEmerald ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#1A73E8] hover:bg-blue-700'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Thêm dòng
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto max-h-96">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 bg-gray-100/90 text-gray-700 border-b border-gray-200 font-bold z-10 whitespace-nowrap">
+                    <tr>
+                      <th className="py-2.5 px-3 text-center w-10">STT</th>
+                      <th className="py-2.5 px-3 min-w-[110px]">Mã Hàng hóa vật tư</th>
+                      <th className="py-2.5 px-3 min-w-[170px]">Tên Hàng hóa vật tư</th>
+                      <th className="py-2.5 px-2 w-16">Đơn vị tính</th>
+                      <th className="py-2.5 px-2 w-20 text-center">Thuế VAT (%)</th>
+                      <th className="py-2.5 px-3 min-w-[110px] text-right">Giá bán (chưa thuế)</th>
+                      <th className="py-2.5 px-3 min-w-[110px] text-right">Giá bán (có thuế)</th>
+                      <th className="py-2.5 px-3 min-w-[100px] text-center bg-blue-50/50">CK theo tỉ lệ %</th>
+                      <th className="py-2.5 px-3 min-w-[120px] text-right bg-blue-50/50">Số tiền giảm giá cố định</th>
+                      <th className="py-2.5 px-3 min-w-[110px] text-right text-emerald-700">Giá bán mới (chưa thuế)</th>
+                      <th className="py-2.5 px-3 min-w-[110px] text-right text-emerald-700 font-extrabold">Giá bán mới (có thuế)</th>
+                      <th className="py-2.5 px-3 min-w-[150px]">
+                        <div className="flex items-center gap-1.5 relative group">
+                          <span>Số lượng mua tối thiểu</span>
+                          <span
+                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100/70 rounded-full transition-colors cursor-pointer inline-flex items-center justify-center"
+                            title={"Để trống: Không ràng buộc (Đơn hàng bao nhiêu tiền cũng được giảm giá).\nNếu nhập vào: Phải đạt số lượng tổng tiền này mới được áp dụng Chiết khấu."}
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-2 text-center w-10">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {productItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={13} className="py-8 text-center text-gray-400">
+                          Chưa có mặt hàng nào trong bảng. Chọn nhanh từ danh mục mẫu hoặc bấm "+ Thêm dòng".
+                        </td>
+                      </tr>
+                    ) : (
+                      productItems.map((prod, idx) => (
+                        <tr key={prod.id} className="hover:bg-blue-50/20">
+                          <td className="py-2 px-2 text-center text-gray-500 font-medium">
+                            {idx + 1}
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="text"
+                              value={prod.itemCode}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, itemCode: v } : p))
+                                );
+                              }}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none font-mono font-medium"
+                              placeholder="Mã VT"
+                            />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="text"
+                              value={prod.itemName}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, itemName: v } : p))
+                                );
+                              }}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none font-medium"
+                              placeholder="Tên vật tư"
+                            />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="text"
+                              value={prod.unit}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, unit: v } : p))
+                                );
+                              }}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none text-center"
+                              placeholder="ĐVT"
+                            />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <select
+                              value={prod.vat}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                setProductItems((prev) =>
+                                  prev.map((p) =>
+                                    p.id === prod.id
+                                      ? calculateProductRow(p, productType, 'vat', v)
+                                      : p
+                                  )
+                                );
+                              }}
+                              className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none text-center bg-white cursor-pointer"
+                            >
+                              <option value={0}>0%</option>
+                              <option value={5}>5%</option>
+                              <option value={8}>8%</option>
+                              <option value={10}>10%</option>
+                            </select>
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="5000"
+                              value={prod.priceBeforeVat}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                setProductItems((prev) =>
+                                  prev.map((p) =>
+                                    p.id === prod.id
+                                      ? calculateProductRow(p, productType, 'priceBeforeVat', v)
+                                      : p
+                                  )
+                                );
+                              }}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none text-right font-medium"
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-right font-semibold text-gray-800">
+                            {formatCurrency(prod.priceAfterVat)}
+                          </td>
+                          <td className={`py-1.5 px-2 ${productType === "percentage" ? "bg-blue-50/30" : "bg-gray-100/60"}`}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.5"
+                              readOnly={productType === "fixed_amount"}
+                              value={productType === "fixed_amount" ? "" : prod.discountPercent}
+                              onChange={(e) => {
+                                if (productType === "fixed_amount") return;
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) =>
+                                    p.id === prod.id
+                                      ? calculateProductRow(p, "percentage", "discountPercent", v)
+                                      : p
+                                  )
+                                );
+                              }}
+                              className={`w-full px-2 py-1 border rounded text-xs outline-none text-center font-bold ${
+                                productType === "fixed_amount"
+                                  ? "bg-gray-100 text-transparent border-gray-200 cursor-not-allowed select-none placeholder:text-transparent"
+                                  : "bg-white border-blue-200 text-[#1A73E8] focus:border-[#1A73E8]"
+                              }`}
+                              placeholder={productType === "fixed_amount" ? "" : "%"}
+                            />
+                          </td>
+                          <td className={`py-1.5 px-2 ${productType === "fixed_amount" ? "bg-blue-50/30" : "bg-gray-100/60"}`}>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              readOnly={productType === "percentage"}
+                              value={productType === "percentage" ? "" : prod.fixedDiscountAmount}
+                              onChange={(e) => {
+                                if (productType === "percentage") return;
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) =>
+                                    p.id === prod.id
+                                      ? calculateProductRow(p, "fixed_amount", "fixedDiscountAmount", v)
+                                      : p
+                                  )
+                                );
+                              }}
+                              className={`w-full px-2 py-1 border rounded text-xs outline-none text-right font-semibold ${
+                                productType === "percentage"
+                                  ? "bg-gray-100 text-transparent border-gray-200 cursor-not-allowed select-none placeholder:text-transparent"
+                                  : "bg-white border-blue-200 text-gray-800 focus:border-[#1A73E8]"
+                              }`}
+                              placeholder={productType === "percentage" ? "" : "Số tiền giảm"}
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-right text-gray-700 font-medium">
+                            {formatCurrency(prod.newPriceBeforeVat)}
+                          </td>
+                          <td className="py-2 px-3 text-right text-emerald-600 font-bold">
+                            {formatCurrency(prod.newPriceAfterVat)}
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              min="0"
+                              value={prod.minBuyQuantity}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setProductItems((prev) =>
+                                  prev.map((p) =>
+                                    p.id === prod.id ? { ...p, minBuyQuantity: v } : p
+                                  )
+                                );
+                              }}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#1A73E8] outline-none text-center"
+                              placeholder="Để trống nếu K.buộc"
+                            />
+                          </td>
+                          <td className="py-1.5 px-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setProductItems((prev) => prev.filter((p) => p.id !== prod.id))}
+                              className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                              title="Xóa dòng"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -4083,6 +4796,24 @@ export const DiscountManagementModule: React.FC = () => {
                           setFormCategory(newCat);
                           if (!formCode || formCode.startsWith('CK-') || formCode.startsWith('VC-') || formCode.startsWith('GT-')) {
                             setFormCode(generateAutoCode(newCat));
+                          }
+                          if (newCat === 'Khách cũ giới thiệu Khách mới' && formVouchersList.length === 0) {
+                            const sampleReferrals: VoucherItem[] = EXISTING_CUSTOMERS_IN_MODULE.slice(0, 5).map((cust, idx) => ({
+                              id: `vc-gt-preload-${idx + 1}`,
+                              code: `GT-KHC-${String(idx + 1).padStart(3, '0')}`,
+                              targetType: 'existing_customer',
+                              status: 'available',
+                              createdAt: '01/01/2026',
+                              customerCode: cust.customerCode,
+                              customerName: cust.customerName,
+                              address: cust.address,
+                              phone: cust.phone,
+                              email: cust.email,
+                              taxCode: cust.taxCode,
+                              debt: idx % 2 === 0 ? 0 : 3500000,
+                              hasCarInGarage: idx % 2 === 0 ? 'Đang có' : 'Không có',
+                            }));
+                            setFormVouchersList(sampleReferrals);
                           }
                         }}
                         className="min-w-[210px] px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:border-[#1A73E8] bg-white cursor-pointer shadow-2xs h-[38px]"
@@ -5046,7 +5777,279 @@ export const DiscountManagementModule: React.FC = () => {
                   </h3>
                 </div>
 
-                {/* 1. Chọn 1 trong 2: Chiết khấu theo đơn vs Chiết khấu theo sản phẩm */}
+                {formCategory === 'Khách cũ giới thiệu Khách mới' ? (
+                  <div className="space-y-6">
+                    {/* Khu vực 1: Ưu đãi cho Người mới (Người được giới thiệu) */}
+                    <div className="p-5 rounded-2xl border-2 border-blue-200 bg-white shadow-xs space-y-5">
+                      <div className="flex items-start justify-between pb-3.5 border-b border-blue-100 flex-wrap gap-2">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#1A73E8] flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs mt-0.5">
+                            <Users className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                                Ưu đãi cho Người mới (Người được giới thiệu)
+                              </h4>
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#1A73E8] border border-blue-200">
+                                Người được giới thiệu
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 font-medium">
+                              Giảm giá khi đặt đơn đầu tiên có kèm mã giới thiệu
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {renderDiscountSetupFields(
+                        formDiscountMethod,
+                        setFormDiscountMethod,
+                        formOrderDiscountType,
+                        setFormOrderDiscountType,
+                        formOrderPercent,
+                        setFormOrderPercent,
+                        formOrderMaxDiscountAmount,
+                        setFormOrderMaxDiscountAmount,
+                        formOrderFixedAmount,
+                        setFormOrderFixedAmount,
+                        formOrderMinOrderValue,
+                        setFormOrderMinOrderValue,
+                        formProductDiscountType,
+                        setFormProductDiscountType,
+                        formProductItems,
+                        setFormProductItems,
+                        'new_cust',
+                        'blue'
+                      )}
+                    </div>
+
+                    {/* Cấu hình Gửi Mã quà tặng cho người giới thiệu */}
+                    <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-4 shadow-2xs">
+                      <div className="flex items-start justify-between flex-wrap gap-2">
+                        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={formSendReferrerGiftCode}
+                            onChange={(e) => setFormSendReferrerGiftCode(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-gray-900 tracking-wide uppercase flex items-center gap-1.5">
+                              <Gift className="w-4 h-4 text-emerald-600" />
+                              Gửi Mã quà tặng cho người giới thiệu
+                            </span>
+                            <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                              Điều kiện: Khi người được giới thiệu hoàn thành thanh toán
+                            </p>
+                          </div>
+                        </label>
+
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                            formSendReferrerGiftCode
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                              : 'bg-gray-100 text-gray-500 border-gray-200'
+                          }`}
+                        >
+                          {formSendReferrerGiftCode ? 'Đang kích hoạt tặng mã' : 'Không gửi'}
+                        </span>
+                      </div>
+
+                      {/* Khi tick chọn vào "Gửi Mã quà tặng cho người giới thiệu" thì hiển thị các field này */}
+                      {formSendReferrerGiftCode && (
+                        <div className="pt-3.5 border-t border-emerald-100 space-y-4 animate-fadeIn">
+                          {/* Trên 1 dòng: Tiền tố mã tự tạo, Hậu tố hệ thống tự tạo, và vùng hiển thị rõ sau field Hậu tố hệ thống tự tạo */}
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+                            {/* 1. Tiền tố mã tự tạo: tự input */}
+                            <div className="md:col-span-4">
+                              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                Tiền tố mã tự tạo <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={formReferrerCodePrefix}
+                                onChange={(e) => setFormReferrerCodePrefix(e.target.value)}
+                                placeholder="Nhập tiền tố (VD: QT-)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono font-medium outline-none focus:border-emerald-600 bg-white shadow-2xs h-[38px]"
+                              />
+                            </div>
+
+                            {/* 2. Hậu tố hệ thống tự tạo: list (STT tăng dần, Số điện thoại, Email) */}
+                            <div className="md:col-span-4">
+                              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                Hậu tố hệ thống tự tạo <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                value={formReferrerCodeSuffixType}
+                                onChange={(e) =>
+                                  setFormReferrerCodeSuffixType(
+                                    e.target.value as 'STT tăng dần' | 'Số điện thoại' | 'Email'
+                                  )
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium outline-none focus:border-emerald-600 bg-white cursor-pointer shadow-2xs h-[38px]"
+                              >
+                                <option value="STT tăng dần">STT tăng dần</option>
+                                <option value="Số điện thoại">Số điện thoại</option>
+                                <option value="Email">Email</option>
+                              </select>
+                            </div>
+
+                            {/* 3. Vùng hiển thị rõ phần Tiền tố mã tự tạo và Hậu tố hệ thống tự tạo, sau field Hậu tố hệ thống tự tạo */}
+                            <div className="md:col-span-4">
+                              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                Định dạng Mã quà tặng mẫu:
+                              </label>
+                              <div className="h-[38px] px-3 bg-white rounded-lg border border-emerald-300 flex items-center justify-between gap-2 shadow-2xs overflow-hidden">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Ticket className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span className="font-mono font-bold text-xs text-emerald-800 tracking-wider truncate">
+                                    {formReferrerCodePrefix || 'QT-'}
+                                    {formReferrerCodeSuffixType === 'Số điện thoại'
+                                      ? '0901234567'
+                                      : formReferrerCodeSuffixType === 'Email'
+                                      ? 'an.nguyen'
+                                      : '001'}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0 border border-emerald-200">
+                                  Mã mẫu
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dòng 2: field "Thời gian hiệu lực (ngày)" ở trước field "Tự động gửi mã thưởng qua các kênh:" & Nút "Xem trước Nội dung gửi" */}
+                          <div className="flex items-center justify-between flex-wrap gap-4 pt-3.5 border-t border-emerald-100">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              {/* Field "Thời gian hiệu lực (ngày)" ở TRƯỚC */}
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+                                  Thời gian hiệu lực: <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative w-28">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={formReferrerValidityDays}
+                                    onChange={(e) => setFormReferrerValidityDays(e.target.value)}
+                                    placeholder="VD: 30"
+                                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold outline-none focus:border-emerald-600 bg-white shadow-2xs pr-8 text-center"
+                                  />
+                                  <span className="absolute right-2.5 top-1.5 text-xs text-gray-400 font-medium pointer-events-none">
+                                    ngày
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="hidden sm:block w-px h-6 bg-emerald-200" />
+
+                              {/* Field "Tự động gửi mã thưởng qua các kênh:" ở SAU */}
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+                                  Tự động gửi mã thưởng qua các kênh:
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  {(['SMS', 'Zalo OA', 'Email'] as const).map((ch) => {
+                                    const isChecked = formReferrerSendChannels.includes(ch);
+                                    return (
+                                      <label
+                                        key={ch}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border cursor-pointer transition-colors select-none ${
+                                          isChecked
+                                            ? 'bg-white border-emerald-500 text-emerald-800 shadow-2xs font-semibold ring-1 ring-emerald-200'
+                                            : 'bg-white/70 border-gray-200 text-gray-600 hover:bg-white'
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setFormReferrerSendChannels((prev) => [...prev, ch]);
+                                            } else {
+                                              setFormReferrerSendChannels((prev) => prev.filter((c) => c !== ch));
+                                            }
+                                          }}
+                                          className="w-3.5 h-3.5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                                        />
+                                        <span>{ch}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Nút Xem trước Nội dung gửi */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewChannelTab(
+                                  (formReferrerSendChannels[0] as any) || 'SMS'
+                                );
+                                setIsPreviewMessageModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1A73E8] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs shrink-0"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              Xem trước Nội dung gửi
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tick chọn vào "Gửi Mã quà tặng cho người giới thiệu" thì sẽ hiển thị khu vực "Ưu đãi cho Khách hiện hữu (Người giới thiệu)" */}
+                    {formSendReferrerGiftCode && (
+                      <div className="p-5 rounded-2xl border-2 border-emerald-200 bg-white shadow-xs space-y-5 animate-fadeIn">
+                        <div className="flex items-start justify-between pb-3.5 border-b border-emerald-100 flex-wrap gap-2">
+                          <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs mt-0.5">
+                              <Ticket className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                                  Ưu đãi cho Khách hiện hữu (Người giới thiệu)
+                                </h4>
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                  Người giới thiệu
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1 font-medium">
+                                Tự động sinh mã voucher tặng ngay sau khi đơn người mới hoàn tất
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {renderDiscountSetupFields(
+                          referrerDiscountMethod,
+                          setReferrerDiscountMethod,
+                          referrerOrderDiscountType,
+                          setReferrerOrderDiscountType,
+                          referrerOrderPercent,
+                          setReferrerOrderPercent,
+                          referrerOrderMaxDiscountAmount,
+                          setReferrerOrderMaxDiscountAmount,
+                          referrerOrderFixedAmount,
+                          setReferrerOrderFixedAmount,
+                          referrerOrderMinOrderValue,
+                          setReferrerOrderMinOrderValue,
+                          referrerProductDiscountType,
+                          setReferrerProductDiscountType,
+                          referrerProductItems,
+                          setReferrerProductItems,
+                          'referrer',
+                          'emerald'
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. Chọn 1 trong 2: Chiết khấu theo đơn vs Chiết khấu theo sản phẩm */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-2">
                     Hình thức áp dụng: <span className="text-red-500">*</span>
@@ -5628,6 +6631,8 @@ export const DiscountManagementModule: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                )}
+                  </>
                 )}
               </div>
 
@@ -6572,7 +7577,7 @@ export const DiscountManagementModule: React.FC = () => {
 
               {/* Thống kê: Voucher / Mã giới thiệu */}
               {formCategory === 'Khách cũ giới thiệu Khách mới' ? (
-                <div className="lg:col-span-5 flex flex-col justify-between bg-white rounded-xl border border-blue-200 p-5 shadow-xs bg-gradient-to-br from-blue-50/50 via-white to-slate-50">
+                <div className="lg:col-span-5 flex flex-col justify-between bg-white rounded-xl border border-blue-200 p-5 shadow-xs bg-gradient-to-br from-blue-50/50 via-white to-slate-50 gap-3">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                       <Ticket className="w-4 h-4 text-[#1A73E8]" />
@@ -6585,12 +7590,12 @@ export const DiscountManagementModule: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="py-4 flex items-center justify-between">
+                  <div className="py-2 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-gray-700 uppercase tracking-wide block">
                         Tổng Mã giới thiệu
                       </span>
-                      <div className="flex items-baseline gap-2 mt-2">
+                      <div className="flex items-baseline gap-2 mt-1.5">
                         <span className="text-3xl font-black text-[#1A73E8]">
                           {formVoucherTotalCount.toLocaleString('vi-VN')}
                         </span>
@@ -6604,7 +7609,63 @@ export const DiscountManagementModule: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                  {/* Bổ sung phần: Cách thức tạo Mã giới thiệu */}
+                  <div className="pt-3 pb-1 border-t border-blue-100/80">
+                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wide block mb-2">
+                      Cách thức tạo Mã giới thiệu:
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <label className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs cursor-pointer transition-all select-none ${
+                        referralCodeMethod === 'phone'
+                          ? 'bg-blue-50/90 border-[#1A73E8] text-[#1A73E8] font-bold shadow-2xs ring-1 ring-[#1A73E8]/30'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="referralCodeMethodRadio"
+                          value="phone"
+                          checked={referralCodeMethod === 'phone'}
+                          onChange={() => setReferralCodeMethod('phone')}
+                          className="w-3.5 h-3.5 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                        />
+                        <span className="truncate font-medium">Số điện thoại</span>
+                      </label>
+
+                      <label className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs cursor-pointer transition-all select-none ${
+                        referralCodeMethod === 'email'
+                          ? 'bg-blue-50/90 border-[#1A73E8] text-[#1A73E8] font-bold shadow-2xs ring-1 ring-[#1A73E8]/30'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="referralCodeMethodRadio"
+                          value="email"
+                          checked={referralCodeMethod === 'email'}
+                          onChange={() => setReferralCodeMethod('email')}
+                          className="w-3.5 h-3.5 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                        />
+                        <span className="truncate font-medium">Email</span>
+                      </label>
+
+                      <label className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs cursor-pointer transition-all select-none ${
+                        referralCodeMethod === 'customer_code'
+                          ? 'bg-blue-50/90 border-[#1A73E8] text-[#1A73E8] font-bold shadow-2xs ring-1 ring-[#1A73E8]/30'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="referralCodeMethodRadio"
+                          value="customer_code"
+                          checked={referralCodeMethod === 'customer_code'}
+                          onChange={() => setReferralCodeMethod('customer_code')}
+                          className="w-3.5 h-3.5 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                        />
+                        <span className="truncate font-medium">Mã Khách hàng</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
                     <span>Mã áp dụng cho người được giới thiệu</span>
                     <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
@@ -6804,37 +7865,46 @@ export const DiscountManagementModule: React.FC = () => {
                         </td>
                       </tr>
                     ) : (
-                      filteredVouchers.map((v, idx) => (
-                        <tr key={v.id} className="hover:bg-blue-50/20 transition-colors">
-                          {/* STT */}
-                          <td className="py-2.5 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
-                            {idx + 1}
-                          </td>
+                      filteredVouchers.map((v, idx) => {
+                        const validReferralCode =
+                          formCategory === 'Khách cũ giới thiệu Khách mới'
+                            ? referralCodeMethod === 'phone'
+                              ? v.phone?.trim() || v.code
+                              : referralCodeMethod === 'email'
+                              ? v.email?.trim() || v.code
+                              : v.customerCode?.trim() || v.code
+                            : v.code;
+                        return (
+                          <tr key={v.id} className="hover:bg-blue-50/20 transition-colors">
+                            {/* STT */}
+                            <td className="py-2.5 px-3 text-center text-gray-500 font-medium border-r border-gray-100">
+                              {idx + 1}
+                            </td>
 
-                          {/* Mã Voucher / Mã giới thiệu hợp lệ */}
-                          <td className="py-2.5 px-3 border-r border-gray-100">
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-mono font-bold text-[#1A73E8]">
-                                {v.code}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(v.code);
-                                  setVoucherCopiedId(v.id);
-                                  setTimeout(() => setVoucherCopiedId(null), 1500);
-                                }}
-                                className="p-1 text-gray-400 hover:text-[#1A73E8] rounded transition-colors cursor-pointer"
-                                title="Sao chép mã"
-                              >
-                                {voucherCopiedId === v.id ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
+                            {/* Mã Voucher / Mã giới thiệu hợp lệ */}
+                            <td className="py-2.5 px-3 border-r border-gray-100">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-mono font-bold text-[#1A73E8]">
+                                  {validReferralCode}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(validReferralCode);
+                                    setVoucherCopiedId(v.id);
+                                    setTimeout(() => setVoucherCopiedId(null), 1500);
+                                  }}
+                                  className="p-1 text-gray-400 hover:text-[#1A73E8] rounded transition-colors cursor-pointer"
+                                  title="Sao chép mã"
+                                >
+                                  {voucherCopiedId === v.id ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
 
                           {/* Mã khách hàng */}
                           <td className="py-2.5 px-3 border-r border-gray-100 font-mono font-medium text-gray-800">
@@ -6896,8 +7966,9 @@ export const DiscountManagementModule: React.FC = () => {
                             </button>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      );
+                    })
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -8002,6 +9073,770 @@ export const DiscountManagementModule: React.FC = () => {
                 type="button"
                 onClick={() => setIsReferralHistoryModalOpen(false)}
                 className="px-5 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: XEM TRƯỚC NỘI DUNG GỬI CHO NGƯỜI GIỚI THIỆU (FULL MÀN HÌNH & CÓ NÚT SỬA) */}
+      {/* ========================================================================= */}
+      {isPreviewMessageModalOpen && (
+        <div className="fixed inset-0 z-[70] bg-[#F4F6F9] flex flex-col overflow-hidden animate-fadeIn">
+          {/* Top Sticky Header */}
+          <div className="h-16 px-6 bg-white border-b border-gray-200 flex items-center justify-between shrink-0 shadow-xs z-20">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPreviewMessageModalOpen(false)}
+                className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                title="Quay lại"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1A73E8] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">
+                    Xem trước Nội dung gửi Mã quà tặng cho Người giới thiệu
+                  </h2>
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1A73E8] border border-blue-200">
+                    Toàn màn hình
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Tự động gửi ngay cho người giới thiệu khi đơn của khách mới hoàn tất thanh toán
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              {/* Nút Sửa */}
+              <button
+                type="button"
+                onClick={() => setIsEditingPreviewTemplate(!isEditingPreviewTemplate)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                  isEditingPreviewTemplate
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white ring-2 ring-amber-300'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'
+                }`}
+                title={isEditingPreviewTemplate ? 'Bấm để hoàn tất và xem trước' : 'Chỉnh sửa nội dung mẫu tin nhắn'}
+              >
+                <SquarePen className="w-4 h-4" />
+                <span>{isEditingPreviewTemplate ? 'Đang Sửa (Bấm để xem kết quả)' : 'Sửa'}</span>
+              </button>
+
+              {/* Nút Đóng */}
+              <button
+                type="button"
+                onClick={() => setIsPreviewMessageModalOpen(false)}
+                className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+
+          {/* Sub Header: Channels Navigation & Status */}
+          <div className="px-6 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between flex-wrap gap-3 shrink-0">
+            {/* Channel Tabs */}
+            <div className="flex items-center gap-2">
+              {(['SMS', 'Zalo OA', 'Email'] as const).map((ch) => {
+                const isSelected = previewChannelTab === ch;
+                const isConfigured = formReferrerSendChannels.includes(ch);
+                return (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => setPreviewChannelTab(ch)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? ch === 'SMS'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : ch === 'Zalo OA'
+                          ? 'bg-[#0068FF] text-white shadow-xs'
+                          : 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200/80'
+                    }`}
+                  >
+                    {ch === 'SMS' && <Smartphone className="w-4 h-4" />}
+                    {ch === 'Zalo OA' && <MessageSquare className="w-4 h-4" />}
+                    {ch === 'Email' && <Mail className="w-4 h-4" />}
+                    <span>{ch}</span>
+                    {isConfigured && (
+                      <span
+                        className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`}
+                        title="Được chọn gửi tự động"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Config & Status Information */}
+            <div className="flex items-center gap-3">
+              {formReferrerSendChannels.includes(previewChannelTab) ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Kênh <strong>{previewChannelTab}</strong> đang được chọn để gửi tự động
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Kênh <strong>{previewChannelTab}</strong> chưa được tick chọn trong danh sách gửi
+                </span>
+              )}
+
+              {/* Toggle Sửa Quick Button */}
+              {!isEditingPreviewTemplate ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPreviewTemplate(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <SquarePen className="w-3.5 h-3.5" />
+                  Sửa mẫu {previewChannelTab}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPreviewTemplate(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Xem kết quả mẫu {previewChannelTab}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Body Content */}
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F4F6F9]">
+            {(() => {
+              const sampleCode = `${formReferrerCodePrefix || 'QT-'}${
+                formReferrerCodeSuffixType === 'Số điện thoại'
+                  ? '0901234567'
+                  : formReferrerCodeSuffixType === 'Email'
+                  ? 'an.nguyen'
+                  : '001'
+              }`;
+              const sampleReward =
+                referrerDiscountMethod === 'order'
+                  ? referrerOrderDiscountType === 'percentage'
+                    ? `Giảm ${referrerOrderPercent || 10}% giá trị đơn hàng (tối đa ${
+                        referrerOrderMaxDiscountAmount
+                          ? `${parseInt(referrerOrderMaxDiscountAmount, 10).toLocaleString('vi-VN')} đ`
+                          : 'không giới hạn'
+                      })`
+                    : `Giảm ${parseInt(
+                        referrerOrderFixedAmount || '200000',
+                        10
+                      ).toLocaleString('vi-VN')} đ (Đơn từ ${parseInt(
+                        referrerOrderMinOrderValue || '1000000',
+                        10
+                      ).toLocaleString('vi-VN')} đ)`
+                  : 'Ưu đãi theo danh mục phụ tùng & vật tư bảo dưỡng';
+              const sampleDays = formReferrerValidityDays || '30';
+
+              const replacePlaceholders = (text: string) => {
+                if (!text) return '';
+                return text
+                  .replace(/\{TEN_NGUOI_GIOI_THIEU\}/g, 'Nguyễn Văn An')
+                  .replace(/\{TEN_NGUOI_DUOC_GT\}/g, 'Trần Đình Trọng')
+                  .replace(/\{MA_DON_HANG\}/g, 'RO-2026-0042')
+                  .replace(/\{MA_QUA_TANG\}/g, sampleCode)
+                  .replace(/\{GIA_TRI_UU_DAI\}/g, sampleReward)
+                  .replace(/\{HAN_DUNG_NGAY\}/g, `${sampleDays} ngày`)
+                  .replace(/\{HOTLINE\}/g, '1900 8899');
+              };
+
+              const dynamicVariables = [
+                { tag: '{TEN_NGUOI_GIOI_THIEU}', label: 'Tên người giới thiệu', sample: 'Nguyễn Văn An' },
+                { tag: '{TEN_NGUOI_DUOC_GT}', label: 'Tên khách mới', sample: 'Trần Đình Trọng' },
+                { tag: '{MA_DON_HANG}', label: 'Mã đơn hàng', sample: 'RO-2026-0042' },
+                { tag: '{MA_QUA_TANG}', label: 'Mã quà tặng sinh tự động', sample: sampleCode },
+                { tag: '{GIA_TRI_UU_DAI}', label: 'Giá trị ưu đãi', sample: sampleReward },
+                { tag: '{HAN_DUNG_NGAY}', label: 'Hạn dùng (ngày)', sample: `${sampleDays} ngày` },
+                { tag: '{HOTLINE}', label: 'Hotline Garage', sample: '1900 8899' },
+              ];
+
+              // Render device simulator
+              const renderSimulator = () => (
+                <div className="w-full max-w-xl mx-auto">
+                  {/* 1. SMS SIMULATION */}
+                  {previewChannelTab === 'SMS' && (
+                    <div className="bg-white rounded-3xl border-2 border-gray-300 shadow-xl overflow-hidden">
+                      {/* Phone Speaker & Camera Notch */}
+                      <div className="bg-gray-900 px-6 py-2.5 flex items-center justify-between text-white text-[11px]">
+                        <span className="font-semibold">14:30</span>
+                        <div className="w-20 h-3.5 bg-black rounded-full flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-gray-800" />
+                        </div>
+                        <span className="font-semibold">5G • 100%</span>
+                      </div>
+
+                      {/* SMS Header */}
+                      <div className="px-5 py-3.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                            <Smartphone className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                              GARAGE DUMUC
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            </div>
+                            <div className="text-[10px] text-gray-400">SMS Brandname viễn thông</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          Tin nhắn đã duyệt
+                        </span>
+                      </div>
+
+                      {/* SMS Message Bubble */}
+                      <div className="p-6 bg-slate-100/70 min-h-[300px] flex flex-col justify-start space-y-3">
+                        <div className="text-center">
+                          <span className="text-[10px] bg-gray-200/80 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                            Hôm nay 14:30
+                          </span>
+                        </div>
+
+                        <div className="max-w-[92%] bg-white rounded-2xl rounded-tl-xs p-4 shadow-sm border border-gray-200 text-xs text-gray-800 leading-relaxed space-y-2.5">
+                          <p className="whitespace-pre-wrap">{replacePlaceholders(smsTemplateText)}</p>
+                          <div className="p-2.5 bg-blue-50/70 rounded-lg border border-blue-200 text-center font-mono font-bold text-blue-700 text-sm tracking-wider">
+                            {sampleCode}
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] text-gray-400 px-2 flex items-center justify-between">
+                          <span>Độ dài: ~{smsTemplateText.length} ký tự (1 SMS tiêu chuẩn)</span>
+                          <span>Đầu số gửi: GARAGE DUMUC</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. ZALO OA SIMULATION */}
+                  {previewChannelTab === 'Zalo OA' && (
+                    <div className="bg-white rounded-3xl border-2 border-gray-300 shadow-xl overflow-hidden">
+                      {/* Phone Bar */}
+                      <div className="bg-[#0068FF] px-6 py-2.5 flex items-center justify-between text-white text-[11px]">
+                        <span className="font-semibold">14:30</span>
+                        <div className="w-20 h-3.5 bg-blue-900/40 rounded-full" />
+                        <span className="font-semibold">5G • 100%</span>
+                      </div>
+
+                      {/* Zalo Header */}
+                      <div className="px-5 py-3.5 bg-[#0068FF] text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-full bg-white text-[#0068FF] font-black text-xs flex items-center justify-center shadow-xs">
+                            DM
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold flex items-center gap-1">
+                              Garage Du Mục Official
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-200" />
+                            </div>
+                            <div className="text-[10px] text-blue-100">Zalo Notification Service (ZNS)</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] bg-white/20 px-2.5 py-0.5 rounded text-white font-medium">
+                          ZNS Verified
+                        </span>
+                      </div>
+
+                      {/* Zalo Body Card */}
+                      <div className="p-6 bg-slate-100/70 min-h-[300px]">
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+                          <div className="text-center pb-3 border-b border-gray-100">
+                            <span className="inline-block p-2.5 bg-emerald-100 text-emerald-700 rounded-full mb-1.5 shadow-2xs">
+                              <Gift className="w-5 h-5" />
+                            </span>
+                            <div className="text-xs font-bold text-gray-900 uppercase tracking-wide">
+                              {replacePlaceholders(zaloTemplate.title)}
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-1">
+                              {replacePlaceholders(zaloTemplate.subtitle)}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2.5 text-xs">
+                            <div className="flex justify-between py-1.5 border-b border-gray-100">
+                              <span className="text-gray-500">Khách hàng nhận:</span>
+                              <span className="font-semibold text-gray-800">Nguyễn Văn An</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-gray-100">
+                              <span className="text-gray-500">Mã quà tặng:</span>
+                              <span className="font-mono font-bold text-[#0068FF] text-sm">{sampleCode}</span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-gray-100">
+                              <span className="text-gray-500">Ưu đãi áp dụng:</span>
+                              <span className="font-semibold text-emerald-700 text-right max-w-[260px]">
+                                {sampleReward}
+                              </span>
+                            </div>
+                            <div className="flex justify-between py-1.5 border-b border-gray-100">
+                              <span className="text-gray-500">Thời hạn sử dụng:</span>
+                              <span className="font-semibold text-gray-800">{sampleDays} ngày kể từ hôm nay</span>
+                            </div>
+                          </div>
+
+                          {zaloTemplate.note && (
+                            <p className="text-[10px] text-gray-400 italic text-center">
+                              {replacePlaceholders(zaloTemplate.note)}
+                            </p>
+                          )}
+
+                          <div className="space-y-2 pt-1">
+                            <button
+                              type="button"
+                              className="w-full py-2.5 bg-[#0068FF] hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors shadow-xs"
+                            >
+                              {replacePlaceholders(zaloTemplate.ctaText)}
+                            </button>
+                            <button
+                              type="button"
+                              className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded-xl transition-colors"
+                            >
+                              {replacePlaceholders(zaloTemplate.secondaryCtaText)}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. EMAIL SIMULATION */}
+                  {previewChannelTab === 'Email' && (
+                    <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-xl overflow-hidden">
+                      {/* Email Header */}
+                      <div className="px-5 py-3.5 bg-gray-100 border-b border-gray-200 text-xs text-gray-600 space-y-1.5">
+                        <div>
+                          <span className="text-gray-400">Từ:</span>{' '}
+                          <span className="font-semibold text-gray-800">
+                            Garage Du Mục &lt;cskh@dumuc.com.vn&gt;
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Đến:</span>{' '}
+                          <span className="text-gray-800">Nguyễn Văn An &lt;an.nguyen@example.com&gt;</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Tiêu đề:</span>{' '}
+                          <span className="font-bold text-gray-900">
+                            {replacePlaceholders(emailTemplate.subject)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Email Body */}
+                      <div className="p-6 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+                          <div className="font-black text-sm text-[#1A73E8] tracking-wider">
+                            GARAGE DU MỤC
+                          </div>
+                          <span className="text-[11px] text-gray-500">
+                            Mã CT: {formCode || 'GT-2026-101'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs text-gray-700 leading-relaxed">
+                          <p className="font-bold text-gray-900">
+                            {replacePlaceholders(emailTemplate.greeting)}
+                          </p>
+                          <p className="whitespace-pre-wrap">
+                            {replacePlaceholders(emailTemplate.intro)}
+                          </p>
+                          <p className="whitespace-pre-wrap">
+                            {replacePlaceholders(emailTemplate.orderNote)}
+                          </p>
+                        </div>
+
+                        {/* Coupon Box */}
+                        <div className="p-5 rounded-2xl border-2 border-dashed border-emerald-400 bg-emerald-50/50 text-center space-y-2.5">
+                          <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+                            {replacePlaceholders(emailTemplate.boxTitle)}
+                          </span>
+                          <div className="inline-block px-6 py-2.5 bg-white rounded-xl border border-emerald-300 font-mono font-black text-lg text-emerald-700 tracking-widest shadow-xs">
+                            {sampleCode}
+                          </div>
+                          <div className="text-xs font-semibold text-gray-800">
+                            {sampleReward}
+                          </div>
+                          <div className="text-[11px] text-gray-500">
+                            Thời hạn sử dụng: {sampleDays} ngày kể từ ngày nhận email
+                          </div>
+                        </div>
+
+                        <div className="pt-3 text-[11px] text-gray-500 border-t border-gray-100 flex items-center justify-between">
+                          <span>{replacePlaceholders(emailTemplate.footerNote)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+
+              return (
+                <div className="space-y-6">
+                  {/* Dynamic Variable Chips Toolbar */}
+                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                          Biến động tự động điền (Bấm vào thẻ để sao chép tag):
+                        </h4>
+                      </div>
+                      <span className="text-[11px] text-gray-500 italic">
+                        Hệ thống sẽ tự động thay thế bằng dữ liệu thực tế khi gửi
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {dynamicVariables.map((v) => (
+                        <button
+                          key={v.tag}
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(v.tag);
+                            if (isEditingPreviewTemplate) {
+                              if (previewChannelTab === 'SMS') {
+                                setSmsTemplateText((prev) => `${prev} ${v.tag}`);
+                              }
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg text-xs font-medium text-gray-700 hover:text-blue-700 transition-colors cursor-pointer group"
+                          title={`Bấm để chép: ${v.tag} (Ví dụ: ${v.sample})`}
+                        >
+                          <code className="font-mono text-[11px] font-bold text-blue-600 bg-white px-1.5 py-0.5 rounded border border-gray-200 group-hover:border-blue-300">
+                            {v.tag}
+                          </code>
+                          <span className="text-[11px] text-gray-500 group-hover:text-blue-700">
+                            : {v.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Main Display: Toggle between Editing Mode and Viewing Mode */}
+                  {isEditingPreviewTemplate ? (
+                    /* 2-Column Split: Left = Edit Form, Right = Live Simulator */
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                      {/* Left: Edit Form */}
+                      <div className="xl:col-span-6 bg-white rounded-2xl border border-amber-300 shadow-sm p-5 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                          <div className="flex items-center gap-2">
+                            <SquarePen className="w-4 h-4 text-amber-600" />
+                            <h3 className="text-sm font-bold text-gray-900">
+                              Chỉnh sửa Mẫu tin nhắn {previewChannelTab}
+                            </h3>
+                          </div>
+
+                          {/* Reset button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (previewChannelTab === 'SMS') {
+                                setSmsTemplateText(
+                                  'Cam on Quy khach {TEN_NGUOI_GIOI_THIEU} da gioi thieu khach hang {TEN_NGUOI_DUOC_GT} den Garage Du Muc! Don hang {MA_DON_HANG} da hoan tat thanh toan. Garage xin tang Quy khach Ma qua tang tri an: {MA_QUA_TANG} ({GIA_TRI_UU_DAI}). Thoi han su dung: {HAN_DUNG_NGAY} ngay. Hotline: 1900 8899. Tran trong!'
+                                );
+                              } else if (previewChannelTab === 'Zalo OA') {
+                                setZaloTemplate({
+                                  title: 'TẶNG MÃ QUÀ TẶNG TRI ÂN NGƯỜI GIỚI THIỆU',
+                                  subtitle: 'Người bạn được giới thiệu ({TEN_NGUOI_DUOC_GT}) đã hoàn tất đơn hàng {MA_DON_HANG}',
+                                  ctaText: 'Đặt hẹn & Áp dụng mã ngay',
+                                  secondaryCtaText: 'Lưu mã vào Ví Zalo',
+                                  note: 'Áp dụng cho mọi dịch vụ bảo dưỡng và sửa chữa tại hệ thống Garage Du Mục',
+                                });
+                              } else {
+                                setEmailTemplate({
+                                  subject: '🎁 [Garage Du Mục] Cảm ơn Quý khách {TEN_NGUOI_GIOI_THIEU} - Tặng Mã quà tặng tri ân giới thiệu bạn bè',
+                                  greeting: 'Kính gửi Quý khách {TEN_NGUOI_GIOI_THIEU},',
+                                  intro: 'Garage Du Mục xin gửi lời cảm ơn chân thành tới Quý khách vì đã tin tưởng giới thiệu người bạn {TEN_NGUOI_DUOC_GT} sử dụng dịch vụ tại garage của chúng tôi.',
+                                  orderNote: 'Đơn hàng sửa chữa/bảo dưỡng {MA_DON_HANG} của bạn Quý khách đã hoàn tất thanh toán thành công. Chúng tôi xin trân trọng gửi tặng Quý khách phần quà tri ân đặc biệt:',
+                                  boxTitle: 'MÃ QUÀ TẶNG TRI ÂN KHÁCH HÀNG',
+                                  footerNote: 'Hotline hỗ trợ: 1900 8899 • Hệ thống Garage Du Mục toàn quốc',
+                                });
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                            title="Khôi phục nội dung mẫu ban đầu"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Khôi phục gốc
+                          </button>
+                        </div>
+
+                        {/* SMS Form Fields */}
+                        {previewChannelTab === 'SMS' && (
+                          <div className="space-y-4 text-xs">
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Tên định danh Brandname SMS:
+                              </label>
+                              <input
+                                type="text"
+                                readOnly
+                                value="GARAGE DUMUC"
+                                className="w-full px-3.5 py-2 bg-gray-100 border border-gray-300 rounded-lg font-bold text-gray-800 outline-none cursor-not-allowed select-none"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-semibold text-gray-700">
+                                  Nội dung tin nhắn SMS: <span className="text-red-500">*</span>
+                                </label>
+                                <span className="text-[11px] font-mono text-gray-500">
+                                  {smsTemplateText.length} ký tự
+                                </span>
+                              </div>
+                              <textarea
+                                rows={6}
+                                value={smsTemplateText}
+                                onChange={(e) => setSmsTemplateText(e.target.value)}
+                                className="w-full px-3.5 py-2.5 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-sans text-xs leading-relaxed"
+                                placeholder="Nhập nội dung tin nhắn SMS gửi cho người giới thiệu..."
+                              />
+                              <p className="text-[11px] text-gray-500 mt-1">
+                                Gợi ý: Với SMS viễn thông Brandname, nên dùng tiếng Việt không dấu để tối ưu 160 ký tự/tin.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Zalo OA Form Fields */}
+                        {previewChannelTab === 'Zalo OA' && (
+                          <div className="space-y-3.5 text-xs">
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Tiêu đề thông báo ZNS:
+                              </label>
+                              <input
+                                type="text"
+                                value={zaloTemplate.title}
+                                onChange={(e) => setZaloTemplate({ ...zaloTemplate, title: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-amber-300 focus:border-amber-500 rounded-lg font-bold outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Dòng phụ / Lý do tặng:
+                              </label>
+                              <input
+                                type="text"
+                                value={zaloTemplate.subtitle}
+                                onChange={(e) => setZaloTemplate({ ...zaloTemplate, subtitle: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block font-semibold text-gray-700 mb-1">
+                                  Nút chính:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={zaloTemplate.ctaText}
+                                  onChange={(e) => setZaloTemplate({ ...zaloTemplate, ctaText: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block font-semibold text-gray-700 mb-1">
+                                  Nút phụ:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={zaloTemplate.secondaryCtaText}
+                                  onChange={(e) => setZaloTemplate({ ...zaloTemplate, secondaryCtaText: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Ghi chú chân thông báo:
+                              </label>
+                              <input
+                                type="text"
+                                value={zaloTemplate.note}
+                                onChange={(e) => setZaloTemplate({ ...zaloTemplate, note: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Email Form Fields */}
+                        {previewChannelTab === 'Email' && (
+                          <div className="space-y-3 text-xs">
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Tiêu đề thư (Subject):
+                              </label>
+                              <input
+                                type="text"
+                                value={emailTemplate.subject}
+                                onChange={(e) => setEmailTemplate({ ...emailTemplate, subject: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-amber-300 focus:border-amber-500 rounded-lg font-bold outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Lời chào:
+                              </label>
+                              <input
+                                type="text"
+                                value={emailTemplate.greeting}
+                                onChange={(e) => setEmailTemplate({ ...emailTemplate, greeting: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Lời cảm ơn giới thiệu:
+                              </label>
+                              <textarea
+                                rows={2}
+                                value={emailTemplate.intro}
+                                onChange={(e) => setEmailTemplate({ ...emailTemplate, intro: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-gray-700 mb-1">
+                                Thông báo hoàn tất đơn hàng:
+                              </label>
+                              <textarea
+                                rows={2}
+                                value={emailTemplate.orderNote}
+                                onChange={(e) => setEmailTemplate({ ...emailTemplate, orderNote: e.target.value })}
+                                className="w-full px-3.5 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block font-semibold text-gray-700 mb-1">
+                                  Tiêu đề khung Voucher:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={emailTemplate.boxTitle}
+                                  onChange={(e) => setEmailTemplate({ ...emailTemplate, boxTitle: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block font-semibold text-gray-700 mb-1">
+                                  Chân thư:
+                                </label>
+                                <input
+                                  type="text"
+                                  value={emailTemplate.footerNote}
+                                  onChange={(e) => setEmailTemplate({ ...emailTemplate, footerNote: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 focus:border-amber-500 rounded-lg outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingPreviewTemplate(false)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Hoàn tất sửa & Xem kết quả</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right: Live Preview reflecting edits */}
+                      <div className="xl:col-span-6 space-y-3">
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                            <Eye className="w-4 h-4 text-blue-600" />
+                            <span>Mô phỏng hiển thị thời gian thực ({previewChannelTab})</span>
+                          </div>
+                          <span className="text-[11px] text-gray-500">Tự động cập nhật theo nội dung bên trái</span>
+                        </div>
+                        {renderSimulator()}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Viewing Mode: Full Simulator with Edit Invitation Card */
+                    <div className="space-y-5">
+                      <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span className="text-xs text-amber-900">
+                            Đang xem trước nội dung gửi thực tế qua kênh <strong>{previewChannelTab}</strong>. Nhấn nút <strong>Sửa</strong> để thay đổi lời văn hoặc tiêu đề mẫu.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingPreviewTemplate(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        >
+                          <SquarePen className="w-3.5 h-3.5" />
+                          <span>Sửa nội dung {previewChannelTab}</span>
+                        </button>
+                      </div>
+
+                      {renderSimulator()}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Sticky Footer */}
+          <div className="h-16 px-6 bg-white border-t border-gray-200 flex items-center justify-between shrink-0 shadow-xs z-20">
+            <div className="text-xs text-gray-500 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-500" />
+              <span>Nội dung gửi sẽ tự động gắn mã quà tặng và thông tin khách hàng khi đơn người mới hoàn tất thanh toán.</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Nút Sửa ở Footer */}
+              <button
+                type="button"
+                onClick={() => setIsEditingPreviewTemplate(!isEditingPreviewTemplate)}
+                className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                  isEditingPreviewTemplate
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white'
+                }`}
+              >
+                <SquarePen className="w-4 h-4" />
+                <span>{isEditingPreviewTemplate ? 'Hoàn tất sửa & Xem trước' : 'Sửa'}</span>
+              </button>
+
+              {/* Nút Đóng */}
+              <button
+                type="button"
+                onClick={() => setIsPreviewMessageModalOpen(false)}
+                className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
               >
                 Đóng
               </button>
