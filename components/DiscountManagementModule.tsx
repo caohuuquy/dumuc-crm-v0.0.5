@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useFirestoreCollection } from '../firebase';
 import {
   Plus,
   Trash2,
@@ -2434,7 +2435,7 @@ export const DiscountManagementModule: React.FC<DiscountManagementModuleProps> =
   const formVoucherExistingCustomerCount = formVouchersList.filter((v) => v.targetType === 'existing_customer').length;
 
   // Quản lý Lịch sử Giới thiệu State
-  const [referralHistoryList, setReferralHistoryList] = useState<ReferralHistoryItem[]>(INITIAL_REFERRAL_HISTORY);
+  const [referralHistoryList, setReferralHistoryList] = useFirestoreCollection<ReferralHistoryItem>('referral_history', INITIAL_REFERRAL_HISTORY, 'id');
   const [isReferralHistoryModalOpen, setIsReferralHistoryModalOpen] = useState(false);
   const [referralHistorySearch, setReferralHistorySearch] = useState('');
   const [referralRewardStatusFilter, setReferralRewardStatusFilter] = useState<'all' | 'Đã thưởng' | 'Chờ trả thưởng'>('all');

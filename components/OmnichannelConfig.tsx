@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, Save, Trash2, Link as LinkIcon, History, Plus, UploadCloud, FileText, X, CheckCircle } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 
 interface OmnichannelConfigProps {
   onBack: () => void;
@@ -53,7 +54,7 @@ export const OmnichannelConfig: React.FC<OmnichannelConfigProps> = ({ onBack }) 
   const [productTypeFilter, setProductTypeFilter] = useState('Tất cả');
   const [showDescModal, setShowDescModal] = useState<number | null>(null);
 
-  const [products, setProducts] = useState<ProductRow[]>([
+  const [products, setProducts] = useFirestoreCollection<ProductRow>('omnichannel_products', [
     {
       id: 1,
       businessStatus: 'Đang bán',
@@ -72,7 +73,7 @@ export const OmnichannelConfig: React.FC<OmnichannelConfigProps> = ({ onBack }) 
       price: '500,000',
       link: 'https://shopee.vn/product/123',
     }
-  ]);
+  ], 'id');
 
   const formatNumber = (value: string) => {
     const numbers = value.replace(/\D/g, '');

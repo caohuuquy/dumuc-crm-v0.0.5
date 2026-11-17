@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, Clock, ChevronDown, Car, MessageCircle, ShoppingCart, Check, AlertCircle, Trash2, Minus, Plus, Camera, Image as ImageIcon, CheckSquare, Mic, Send, Heart, Reply, Pin, CheckCheck, History, Filter, Printer, RotateCcw, Calendar, Home, Star, Upload, ArrowLeftRight } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 import { useOrderContext } from '../context/OrderContext';
 import { MOCK_PRODUCTS as PRODUCTS, MOCK_SUPPLIERS as SUPPLIERS } from '../constants';
 import { ProductReviews } from './ProductReviews';
@@ -581,11 +582,11 @@ const ReviewPopup: React.FC<{
 };
 
 const OrderHistoryView: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [orders, setOrders] = useState(MOCK_ORDER_HISTORY.map(order => ({
+  const [orders, setOrders] = useFirestoreCollection('online_orders', () => MOCK_ORDER_HISTORY.map(order => ({
     ...order,
     isReviewed: false,
     reviewData: null as any
-  })));
+  })), 'id');
   
   const [reviewPopupOpen, setReviewPopupOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Download, Upload, Trash2, Search, LayoutTemplate, Trash, X, Check, Edit2 } from 'lucide-react';
+import { useFirestoreCollection } from '../../firebase';
 
 export const APPLIED_TARGET_OPTIONS = [
   'Người lao động',
@@ -73,7 +74,7 @@ export const MOCK_CONTRACT_TYPES: ContractTypeItem[] = [
 export const ContractTypeList: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedCodes, setSelectedCodes] = React.useState<string[]>([]);
-  const [contractTypes, setContractTypes] = React.useState<ContractTypeItem[]>(MOCK_CONTRACT_TYPES);
+  const [contractTypes, setContractTypes] = useFirestoreCollection<ContractTypeItem>('contract_types', MOCK_CONTRACT_TYPES, 'code');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = React.useState(false);

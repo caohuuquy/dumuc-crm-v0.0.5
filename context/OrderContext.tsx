@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useContext } from 'react';
+import { useFirestoreCollection } from '../firebase';
 
 export const MOCK_CS_DATA = [
   {
@@ -177,9 +178,9 @@ export const MOCK_PO_DATA = [
 export const OrderContext = createContext<any>(null);
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [commercialSales, setCommercialSales] = useState(MOCK_CS_DATA);
-  const [purchaseOrders, setPurchaseOrders] = useState(MOCK_PO_DATA);
-  const [cart, setCart] = useState<{ productId: number; quantity: number }[]>([]);
+  const [commercialSales, setCommercialSales] = useFirestoreCollection('commercial_sales', MOCK_CS_DATA, 'id');
+  const [purchaseOrders, setPurchaseOrders] = useFirestoreCollection('purchase_orders', MOCK_PO_DATA, 'id');
+  const [cart, setCart] = useFirestoreCollection<{ productId: number; quantity: number }>('shopping_cart', [], 'productId');
 
   const addCommercialSale = (sale: any) => {
     setCommercialSales(prev => [sale, ...prev]);

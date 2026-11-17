@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Filter, X, FileSearch, Inbox, Calendar, HelpCircle, ChevronDown, Settings, Download, Mail, User, Paperclip, MessageSquarePlus, Phone, Building2, Wrench, MessageCircle, Hourglass } from 'lucide-react';
+import { useFirestoreCollection, useFirestoreRecord } from '../firebase';
 import { EventSettings } from './EventSettings';
 
 export interface EventItem {
@@ -687,7 +688,7 @@ const MOCK_EVENTS: EventItem[] = [
 ];
 
 export const EventsModule: React.FC = () => {
-  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [events, setEvents] = useFirestoreCollection('events', MOCK_EVENTS, 'id');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [filterSearch, setFilterSearch] = useState('');
   const [filterCode, setFilterCode] = useState('');
@@ -708,10 +709,10 @@ export const EventsModule: React.FC = () => {
   const [guestProfileModalOpen, setGuestProfileModalOpen] = useState(false);
   const [selectedGuestRecord, setSelectedGuestRecord] = useState<EventItem | null>(null);
   const [activeTab, setActiveTab] = useState<'activity_history' | 'history' | 'tasks'>('activity_history');
-  const [guestHistory, setGuestHistory] = useState<Record<string, HistoryItem[]>>({});
-  const [guestActivityHistory, setGuestActivityHistory] = useState<Record<string, ActivityItem[]>>({});
+  const [guestHistory, setGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'events_guest_history', {});
+  const [guestActivityHistory, setGuestActivityHistory] = useFirestoreRecord<Record<string, ActivityItem[]>>('crm_state_maps', 'events_guest_activity_history', {});
   const [noteContent, setNoteContent] = useState('');
-  const [guestTasks, setGuestTasks] = useState<Record<string, TaskItem[]>>({});
+  const [guestTasks, setGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'events_guest_tasks', {});
   const [taskContent, setTaskContent] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskContent, setEditTaskContent] = useState('');

@@ -31,6 +31,7 @@ import {
   Hourglass,
   BookOpen,
 } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 import { INITIAL_DISCOUNTS } from './DiscountManagementModule';
 
 export type BookingSourceType =
@@ -617,9 +618,9 @@ export const CustomerBookingsModule: React.FC<CustomerBookingsModuleProps> = ({
   const [deletingSingleId, setDeletingSingleId] = useState<string | null>(null);
 
   // Customer directory & Full-screen "Thêm mới" state
-  const [customerProfiles, setCustomerProfiles] = useState<
-    BookingCustomerProfile[]
-  >(INITIAL_BOOKING_CUSTOMER_PROFILES);
+  const [customerProfiles, setCustomerProfiles] = useFirestoreCollection<
+    BookingCustomerProfile
+  >( 'booking_customer_profiles', INITIAL_BOOKING_CUSTOMER_PROFILES, 'id');
 
   // Khu vực "Khách hàng gọi"
   const [selectedCaller, setSelectedCaller] =

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Save, Trash2, Link as LinkIcon, History, Plus, FileText, X } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 
 const PLATFORMS = [
   { name: 'Shopee', color: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200' },
@@ -42,7 +43,7 @@ export const MarketplaceManagement: React.FC = () => {
   const [showDescModal, setShowDescModal] = useState<number | null>(null);
   const [newlyAddedRowId, setNewlyAddedRowId] = useState<number | null>(null);
 
-  const [products, setProducts] = useState<ProductRow[]>([
+  const [products, setProducts] = useFirestoreCollection<ProductRow>('marketplace_products', [
     {
       id: 1,
       businessStatus: 'Đang bán',
