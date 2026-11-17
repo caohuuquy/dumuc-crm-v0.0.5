@@ -148,6 +148,91 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Employee record in HRM module",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the creator/owner"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Full name of the employee"
+        },
+        "gender": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20,
+          "description": "Gender of the employee"
+        },
+        "dob": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20,
+          "description": "Date of birth (DD/MM/YYYY)"
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Phone number of the employee"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 150,
+          "description": "Email address of the employee"
+        },
+        "cccd": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20,
+          "description": "Citizen identification number (CCCD)"
+        },
+        "nationality": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100,
+          "description": "Nationality of the employee"
+        },
+        "address": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "description": "Current residential address"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "gender",
+        "dob",
+        "phone",
+        "email",
+        "cccd",
+        "nationality",
+        "address",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -158,6 +243,10 @@
     "/proactive_reminders/{reminderId}": {
       "schema": "ProactiveReminder",
       "description": "Stores CRM proactive reminder records owned by the user"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Stores HRM employee records owned by the user"
     }
   }
 }
