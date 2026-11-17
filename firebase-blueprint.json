@@ -1,252 +1,170 @@
 {
   "entities": {
-    "CustomerSegment": {
-      "title": "CustomerSegment",
-      "description": "Customer segment configuration record in CRM",
+    "GenericRecord": {
+      "title": "GenericRecord",
+      "description": "Synchronized application entity record stored in Cloud Firestore",
       "type": "object",
       "properties": {
-        "ownerId": {
+        "id": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$",
-          "description": "UID of the creator/owner"
+          "description": "Primary identifier of the record"
         },
-        "segmentName": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 200,
-          "description": "Name of the customer segment"
-        },
-        "segmentPurpose": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 300,
-          "description": "Purpose of the customer segment"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "Mới",
-            "Đang theo dõi",
-            "Khách hàng đã đặt lịch",
-            "Khách hàng từ chối"
-          ],
-          "minLength": 1,
-          "maxLength": 50,
-          "description": "Current segment status"
-        },
-        "totalFilterCriteria": {
+        "_order": {
           "type": "number",
-          "description": "Total number of filter criteria configured"
-        },
-        "roFilterScope": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 120,
-          "description": "RO date filter scope description"
-        },
-        "createdBy": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100,
-          "description": "Creator display name"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp"
+          "description": "Display order index"
         }
-      },
-      "required": [
-        "ownerId",
-        "segmentName",
-        "segmentPurpose",
-        "status",
-        "totalFilterCriteria",
-        "roFilterScope",
-        "createdBy",
-        "createdAt",
-        "updatedAt"
-      ]
+      }
     },
-    "ProactiveReminder": {
-      "title": "ProactiveReminder",
-      "description": "Proactive reminder record in CRM",
+    "CrmStateMap": {
+      "title": "CrmStateMap",
+      "description": "State map payload for CRM history, tasks, activities, notes, and counts",
       "type": "object",
       "properties": {
-        "ownerId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$",
-          "description": "UID of the creator/owner"
-        },
-        "customerName": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 150,
-          "description": "Customer full name"
-        },
-        "licensePlate": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 30,
-          "description": "Vehicle license plate"
-        },
-        "originalRoCode": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 50,
-          "description": "Original RO code"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "Mới",
-            "Đang theo dõi",
-            "Khách hàng đã đặt lịch",
-            "Khách hàng từ chối"
-          ],
-          "minLength": 1,
-          "maxLength": 50,
-          "description": "Reminder status"
-        },
-        "callStatus": {
-          "type": "string",
-          "enum": [
-            "Chưa gọi",
-            "Đã gọi"
-          ],
-          "minLength": 1,
-          "maxLength": 30,
-          "description": "Call status"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp"
+        "payload": {
+          "type": "object",
+          "description": "Record map data"
         },
         "updatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Server update timestamp"
+          "description": "Last update ISO timestamp"
         }
       },
-      "required": [
-        "ownerId",
-        "customerName",
-        "licensePlate",
-        "originalRoCode",
-        "status",
-        "callStatus",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Employee": {
-      "title": "Employee",
-      "description": "Employee record in HRM module",
-      "type": "object",
-      "properties": {
-        "ownerId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$",
-          "description": "UID of the creator/owner"
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 150,
-          "description": "Full name of the employee"
-        },
-        "gender": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 20,
-          "description": "Gender of the employee"
-        },
-        "dob": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 20,
-          "description": "Date of birth (DD/MM/YYYY)"
-        },
-        "phone": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 30,
-          "description": "Phone number of the employee"
-        },
-        "email": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 150,
-          "description": "Email address of the employee"
-        },
-        "cccd": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 20,
-          "description": "Citizen identification number (CCCD)"
-        },
-        "nationality": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 100,
-          "description": "Nationality of the employee"
-        },
-        "address": {
-          "type": "string",
-          "minLength": 0,
-          "maxLength": 300,
-          "description": "Current residential address"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp"
-        }
-      },
-      "required": [
-        "ownerId",
-        "name",
-        "gender",
-        "dob",
-        "phone",
-        "email",
-        "cccd",
-        "nationality",
-        "address",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["payload", "updatedAt"]
     }
   },
   "firestore": {
-    "/customer_segments/{segmentId}": {
-      "schema": "CustomerSegment",
-      "description": "Stores CRM customer segment configurations owned by the user"
+    "/potential_customers/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM potential customers collection"
     },
-    "/proactive_reminders/{reminderId}": {
-      "schema": "ProactiveReminder",
-      "description": "Stores CRM proactive reminder records owned by the user"
+    "/proactive_reminders/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM proactive reminders collection"
     },
-    "/employees/{employeeId}": {
-      "schema": "Employee",
-      "description": "Stores HRM employee records owned by the user"
+    "/customer_segments/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM customer segments collection"
+    },
+    "/customer_bookings/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM customer bookings collection"
+    },
+    "/proactive_customer_bookings/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM proactive customer bookings collection"
+    },
+    "/segment_customer_bookings/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM segment customer bookings collection"
+    },
+    "/crm_state_maps/{docId}": {
+      "schema": "CrmStateMap",
+      "description": "CRM state maps for guest/booking history, tasks, notes, and counts"
+    },
+    "/discounts/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Discount and promotion programs collection"
+    },
+    "/referral_history/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Referral code usage history collection"
+    },
+    "/customers/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Master customers directory collection"
+    },
+    "/booking_customer_profiles/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Booking caller and visitor customer profiles collection"
+    },
+    "/events/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM events and campaigns collection"
+    },
+    "/registration_approvals/{docId}": {
+      "schema": "GenericRecord",
+      "description": "App Du Muc registration approvals collection"
+    },
+    "/commercial_sales/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Commercial sales orders collection"
+    },
+    "/purchase_orders/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Purchase orders collection"
+    },
+    "/shopping_cart/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Online ordering shopping cart items collection"
+    },
+    "/online_orders/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Online ordering product catalog collection"
+    },
+    "/omnichannel_products/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Omnichannel product configuration collection"
+    },
+    "/marketplace_products/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Du Muc marketplace product management collection"
+    },
+    "/repair_orders/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Repair service orders (RO) collection"
+    },
+    "/employees/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM employee records collection"
+    },
+    "/laborers/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM labor contract records collection"
+    },
+    "/departments/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM organizational departments collection"
+    },
+    "/positions/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM job positions collection"
+    },
+    "/salary_grades/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM salary grades collection"
+    },
+    "/contract_types/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM contract types collection"
+    },
+    "/salary_rule_groups/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM salary rule groups collection"
+    },
+    "/salary_structures/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM salary structures collection"
+    },
+    "/social_insurance_versions/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM social insurance parameter versions collection"
+    },
+    "/pit_versions/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM personal income tax parameter versions collection"
+    },
+    "/family_deduction_versions/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM family deduction parameter versions collection"
+    },
+    "/payroll_periods/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM payroll periods collection"
+    },
+    "/payroll_tables/{docId}": {
+      "schema": "GenericRecord",
+      "description": "HRM payroll calculation tables collection"
     }
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Filter, X, ChevronDown, MoreHorizontal, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 import { RepairOrderForm } from './RepairOrderForm';
 
 interface RepairOrder {
@@ -43,6 +44,7 @@ const getPaymentStatusColor = (status: string) => {
 };
 
 export const RepairService: React.FC = () => {
+  const [repairOrders] = useFirestoreCollection<RepairOrder>('repair_orders', MOCK_DATA, 'id');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
 
@@ -57,10 +59,10 @@ export const RepairService: React.FC = () => {
   };
 
   const toggleAll = () => {
-    if (selectedRows.size === MOCK_DATA.length) {
+    if (selectedRows.size === repairOrders.length) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(MOCK_DATA.map(d => d.id)));
+      setSelectedRows(new Set(repairOrders.map(d => d.id)));
     }
   };
 
@@ -149,7 +151,7 @@ export const RepairService: React.FC = () => {
                   <input 
                     type="checkbox" 
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    checked={selectedRows.size === MOCK_DATA.length && MOCK_DATA.length > 0}
+                    checked={selectedRows.size === repairOrders.length && repairOrders.length > 0}
                     onChange={toggleAll}
                   />
                 </th>
@@ -176,7 +178,7 @@ export const RepairService: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {MOCK_DATA.map((row) => (
+              {repairOrders.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 border-r border-gray-200">
                     <input 

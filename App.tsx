@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFirestoreCollection, useFirestoreRecord } from './firebase';
 import { COLORS } from './constants';
 import { Header } from './components/Header';
 import { ProductTypeSelector } from './components/ProductTypeSelector';
@@ -60,33 +61,35 @@ const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
   const [currentView, setCurrentView] = useState<'categories' | 'spare_parts' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
-  const [potentialCustomers, setPotentialCustomers] = useState<
-    PotentialCustomerItem[]
-  >(MOCK_POTENTIAL_CUSTOMERS);
-  const [guestHistory, setGuestHistory] = useState<Record<string, HistoryItem[]>>({});
-  const [guestTasks, setGuestTasks] = useState<Record<string, TaskItem[]>>({});
-  const [guestActivityHistory, setGuestActivityHistory] = useState<
+  const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
+    PotentialCustomerItem
+  >('potential_customers', MOCK_POTENTIAL_CUSTOMERS, 'id');
+  const [guestHistory, setGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'guest_history', {});
+  const [guestTasks, setGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'guest_tasks', {});
+  const [guestActivityHistory, setGuestActivityHistory] = useFirestoreRecord<
     Record<string, ActivityItem[]>
-  >({});
-  const [customerBookings, setCustomerBookings] = useState<CustomerBookingRecord[]>(
-    INITIAL_CUSTOMER_BOOKINGS
+  >('crm_state_maps', 'guest_activity_history', {});
+  const [customerBookings, setCustomerBookings] = useFirestoreCollection<CustomerBookingRecord>(
+    'customer_bookings',
+    INITIAL_CUSTOMER_BOOKINGS,
+    'id'
   );
-  const [bookingInternalNotes, setBookingInternalNotes] = useState<
+  const [bookingInternalNotes, setBookingInternalNotes] = useFirestoreRecord<
     Record<string, BookingNoteItem[]>
-  >(INITIAL_BOOKING_INTERNAL_NOTES);
-  const [bookingTasks, setBookingTasks] = useState<
+  >('crm_state_maps', 'booking_internal_notes', INITIAL_BOOKING_INTERNAL_NOTES);
+  const [bookingTasks, setBookingTasks] = useFirestoreRecord<
     Record<string, BookingTaskItem[]>
-  >(INITIAL_BOOKING_TASKS);
-  const [bookingActivities, setBookingActivities] = useState<
+  >('crm_state_maps', 'booking_tasks', INITIAL_BOOKING_TASKS);
+  const [bookingActivities, setBookingActivities] = useFirestoreRecord<
     Record<string, BookingActivityItem[]>
-  >({});
-  const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
-  const [discounts, setDiscounts] = useState<DiscountRecord[]>(INITIAL_DISCOUNTS);
+  >('crm_state_maps', 'booking_activities', {});
+  const [bookingCounts, setBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'booking_counts', {});
+  const [discounts, setDiscounts] = useFirestoreCollection<DiscountRecord>('discounts', INITIAL_DISCOUNTS, 'id');
 
   // Isolated & independent states for "Lịch nhắc chủ động" (proactive_reminders)
-  const [proactiveReminders, setProactiveReminders] = useState<
-    PotentialCustomerItem[]
-  >(() => {
+  const [proactiveReminders, setProactiveReminders] = useFirestoreCollection<
+    PotentialCustomerItem
+  >('proactive_reminders', () => {
     const cloned: PotentialCustomerItem[] = JSON.parse(JSON.stringify(MOCK_POTENTIAL_CUSTOMERS));
     const proactiveStatuses: PotentialCustomerItem['status'][] = [
       'Mới',
@@ -104,31 +107,33 @@ const App: React.FC = () => {
       ...item,
       status: proactiveStatuses[idx % proactiveStatuses.length],
     }));
-  });
-  const [proactiveGuestHistory, setProactiveGuestHistory] = useState<Record<string, HistoryItem[]>>({});
-  const [proactiveGuestTasks, setProactiveGuestTasks] = useState<Record<string, TaskItem[]>>({});
-  const [proactiveGuestActivityHistory, setProactiveGuestActivityHistory] = useState<
+  }, 'id');
+  const [proactiveGuestHistory, setProactiveGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'proactive_guest_history', {});
+  const [proactiveGuestTasks, setProactiveGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'proactive_guest_tasks', {});
+  const [proactiveGuestActivityHistory, setProactiveGuestActivityHistory] = useFirestoreRecord<
     Record<string, ActivityItem[]>
-  >({});
-  const [proactiveCustomerBookings, setProactiveCustomerBookings] = useState<CustomerBookingRecord[]>(
-    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS))
+  >('crm_state_maps', 'proactive_guest_activity_history', {});
+  const [proactiveCustomerBookings, setProactiveCustomerBookings] = useFirestoreCollection<CustomerBookingRecord>(
+    'proactive_customer_bookings',
+    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS)),
+    'id'
   );
-  const [proactiveBookingInternalNotes, setProactiveBookingInternalNotes] = useState<
+  const [proactiveBookingInternalNotes, setProactiveBookingInternalNotes] = useFirestoreRecord<
     Record<string, BookingNoteItem[]>
-  >(() => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
-  const [proactiveBookingTasks, setProactiveBookingTasks] = useState<
+  >('crm_state_maps', 'proactive_booking_internal_notes', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
+  const [proactiveBookingTasks, setProactiveBookingTasks] = useFirestoreRecord<
     Record<string, BookingTaskItem[]>
-  >(() => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
-  const [proactiveBookingActivities, setProactiveBookingActivities] = useState<
+  >('crm_state_maps', 'proactive_booking_tasks', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
+  const [proactiveBookingActivities, setProactiveBookingActivities] = useFirestoreRecord<
     Record<string, BookingActivityItem[]>
-  >({});
-  const [proactiveBookingCounts, setProactiveBookingCounts] = useState<Record<string, number>>({});
+  >('crm_state_maps', 'proactive_booking_activities', {});
+  const [proactiveBookingCounts, setProactiveBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'proactive_booking_counts', {});
   const [proactiveDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
 
   // Isolated & independent states for "Phân khúc khách hàng" (customer_segments)
-  const [customerSegments, setCustomerSegments] = useState<
-    PotentialCustomerItem[]
-  >(() => {
+  const [customerSegments, setCustomerSegments] = useFirestoreCollection<
+    PotentialCustomerItem
+  >('customer_segments', () => {
     const cloned: PotentialCustomerItem[] = JSON.parse(JSON.stringify(MOCK_POTENTIAL_CUSTOMERS));
     const segmentStatuses: PotentialCustomerItem['status'][] = [
       'Mới',
@@ -216,34 +221,36 @@ const App: React.FC = () => {
         roFilterScope: segInfo.roFilterScope,
       };
     });
-  });
-  const [segmentGuestHistory, setSegmentGuestHistory] = useState<Record<string, HistoryItem[]>>({});
-  const [segmentGuestTasks, setSegmentGuestTasks] = useState<Record<string, TaskItem[]>>({});
-  const [segmentGuestActivityHistory, setSegmentGuestActivityHistory] = useState<
+  }, 'id');
+  const [segmentGuestHistory, setSegmentGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'segment_guest_history', {});
+  const [segmentGuestTasks, setSegmentGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'segment_guest_tasks', {});
+  const [segmentGuestActivityHistory, setSegmentGuestActivityHistory] = useFirestoreRecord<
     Record<string, ActivityItem[]>
-  >({});
-  const [segmentCustomerBookings, setSegmentCustomerBookings] = useState<CustomerBookingRecord[]>(
-    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS))
+  >('crm_state_maps', 'segment_guest_activity_history', {});
+  const [segmentCustomerBookings, setSegmentCustomerBookings] = useFirestoreCollection<CustomerBookingRecord>(
+    'segment_customer_bookings',
+    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS)),
+    'id'
   );
-  const [segmentBookingInternalNotes, setSegmentBookingInternalNotes] = useState<
+  const [segmentBookingInternalNotes, setSegmentBookingInternalNotes] = useFirestoreRecord<
     Record<string, BookingNoteItem[]>
-  >(() => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
-  const [segmentBookingTasks, setSegmentBookingTasks] = useState<
+  >('crm_state_maps', 'segment_booking_internal_notes', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
+  const [segmentBookingTasks, setSegmentBookingTasks] = useFirestoreRecord<
     Record<string, BookingTaskItem[]>
-  >(() => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
-  const [segmentBookingActivities, setSegmentBookingActivities] = useState<
+  >('crm_state_maps', 'segment_booking_tasks', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
+  const [segmentBookingActivities, setSegmentBookingActivities] = useFirestoreRecord<
     Record<string, BookingActivityItem[]>
-  >({});
-  const [segmentBookingCounts, setSegmentBookingCounts] = useState<Record<string, number>>({});
+  >('crm_state_maps', 'segment_booking_activities', {});
+  const [segmentBookingCounts, setSegmentBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'segment_booking_counts', {});
   const [segmentDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
 
   // Shared Salary Structures State between Cấu trúc Lương and Hồ sơ hợp đồng
-  const [salaryStructures, setSalaryStructures] = useState(INITIAL_STRUCTURES);
+  const [salaryStructures, setSalaryStructures] = useFirestoreCollection('salary_structures', INITIAL_STRUCTURES, 'id');
 
   // Shared Payroll States between Kỳ tính lương and Bảng lương
-  const [payrollPeriods, setPayrollPeriods] = useState<PayrollPeriod[]>(INITIAL_PAYROLL_PERIODS);
+  const [payrollPeriods, setPayrollPeriods] = useFirestoreCollection<PayrollPeriod>('payroll_periods', INITIAL_PAYROLL_PERIODS, 'id');
   // Bảng lương: 1 record phù hợp với kỳ tính lương T10/2025 (T10_2025)
-  const [payrollTables, setPayrollTables] = useState<PayrollTableRecord[]>(INITIAL_PAYROLL_TABLES);
+  const [payrollTables, setPayrollTables] = useFirestoreCollection<PayrollTableRecord>('payroll_tables', INITIAL_PAYROLL_TABLES, 'id');
 
   const handleCreateCustomerBooking = (
     bookingData: Omit<CustomerBookingRecord, 'id' | 'bookingCode'> & {

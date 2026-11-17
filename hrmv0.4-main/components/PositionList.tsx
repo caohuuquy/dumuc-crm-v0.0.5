@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Download, Upload, Trash2, Search, LayoutTemplate, Trash } from 'lucide-react';
+import { useFirestoreCollection } from '../../firebase';
 
 const MOCK_POSITIONS = [
   { code: 'GD', name: 'Giám Đốc', description: 'Điều hành, quản lý toàn bộ hoạt động của doanh nghiệp', status: 'Hoạt động' },
@@ -11,6 +12,7 @@ const MOCK_POSITIONS = [
 ];
 
 export const PositionList: React.FC = () => {
+  const [positions, setPositions] = useFirestoreCollection('positions', MOCK_POSITIONS, 'code');
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#F4F6F8] p-4">
       {/* Main white container */}
@@ -66,8 +68,8 @@ export const PositionList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {MOCK_POSITIONS.map((pos, index) => (
-                <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+              {positions.map((pos, index) => (
+                <tr key={pos.code || index} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="p-3 border-r border-gray-200 text-center">
                     <input type="checkbox" className="rounded border-gray-300" />
                   </td>
@@ -84,7 +86,10 @@ export const PositionList: React.FC = () => {
                       <button className="text-gray-500 hover:text-blue-600 transition-colors">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                       </button>
-                      <button className="text-gray-500 hover:text-red-600 transition-colors">
+                      <button
+                        onClick={() => setPositions((prev) => prev.filter((p) => p.code !== pos.code))}
+                        className="text-gray-500 hover:text-red-600 transition-colors"
+                      >
                         <Trash className="w-4 h-4" />
                       </button>
                     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useFirestoreCollection } from '../firebase';
 import {
   Plus,
   Trash2,
@@ -32,8 +33,10 @@ const CUSTOMER_GROUPS = [
 ];
 
 export const CustomersModule: React.FC = () => {
-  const [customers, setCustomers] = useState<ExistingCustomerRecord[]>(
-    EXISTING_CUSTOMERS_IN_MODULE
+  const [customers, setCustomers] = useFirestoreCollection<ExistingCustomerRecord>(
+    'customers',
+    EXISTING_CUSTOMERS_IN_MODULE,
+    'id'
   );
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 

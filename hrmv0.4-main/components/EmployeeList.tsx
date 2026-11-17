@@ -12,18 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  where,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { db, auth, OperationType, handleFirestoreError } from '../../firebase';
+import { useFirestoreCollection } from '../../firebase';
 import {
   EmployeeDetailModal,
   SkillQualificationRow,
@@ -169,7 +158,12 @@ const syncEmployeesStorage = (list: EmployeeRecord[]) => {
 };
 
 export const EmployeeList: React.FC = () => {
-  const [employees, setEmployees] = useState<EmployeeRecord[]>(() => loadSavedEmployees());
+  const [employees, setEmployees] = useFirestoreCollection<EmployeeRecord>(
+    'employees',
+    loadSavedEmployees,
+    'id',
+    syncEmployeesStorage
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
@@ -181,56 +175,6 @@ export const EmployeeList: React.FC = () => {
   useEffect(() => {
     syncEmployeesStorage(employees);
   }, [employees]);
-
-  // Real-time Firestore listener when user is authenticated
-  useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | null = null;
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-      }
-      if (user && user.emailVerified) {
-        const q = query(collection(db, 'employees'), where('ownerId', '==', user.uid));
-        unsubscribeSnapshot = onSnapshot(
-          q,
-          (snapshot) => {
-            if (!snapshot.empty) {
-              const firestoreDocs: EmployeeRecord[] = snapshot.docs.map((docSnap) => {
-                const d = docSnap.data();
-                return {
-                  id: docSnap.id,
-                  name: String(d.name || ''),
-                  gender: String(d.gender || ''),
-                  dob: String(d.dob || ''),
-                  phone: String(d.phone || ''),
-                  email: String(d.email || ''),
-                  cccd: String(d.cccd || ''),
-                  nationality: String(d.nationality || 'Việt Nam'),
-                  address: String(d.address || ''),
-                };
-              });
-              setEmployees((prev) => {
-                const existingIds = new Set(prev.map((e) => e.id || e.cccd));
-                const newFromCloud = firestoreDocs.filter(
-                  (f) => !existingIds.has(f.id) && (!f.cccd || !prev.some((p) => p.cccd === f.cccd))
-                );
-                if (newFromCloud.length === 0) return prev;
-                return [...newFromCloud, ...prev];
-              });
-            }
-          },
-          (error) => {
-            handleFirestoreError(error, OperationType.LIST, 'employees');
-          }
-        );
-      }
-    });
-    return () => {
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
-      unsubscribeAuth();
-    };
-  }, []);
 
   useEffect(() => {
     if (selectedCccds.length <= 2) {
@@ -277,13 +221,10 @@ export const EmployeeList: React.FC = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedCccds.length === 0) return;
 
     const selectedSet = new Set(selectedCccds);
-    const recordsToDelete = employees.filter((emp, idx) =>
-      selectedSet.has(getRowKey(emp, idx))
-    );
     const remaining = employees.filter(
       (emp, idx) => !selectedSet.has(getRowKey(emp, idx))
     );
@@ -291,55 +232,20 @@ export const EmployeeList: React.FC = () => {
     setEmployees(remaining);
     syncEmployeesStorage(remaining);
     setSelectedCccds([]);
-
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.emailVerified) {
-      for (const emp of recordsToDelete) {
-        if (emp.id) {
-          const rawId = emp.id.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
-          const path = `employees/${rawId}`;
-          try {
-            await deleteDoc(doc(db, 'employees', rawId));
-          } catch (error) {
-            handleFirestoreError(error, OperationType.DELETE, path);
-          }
-        }
-      }
-    }
   };
 
-  const handleSaveEmployee = async (newEmployee: EmployeeRecord) => {
-    const updated = [newEmployee, ...employees];
+  const handleSaveEmployee = (newEmployee: EmployeeRecord) => {
+    const empWithId: EmployeeRecord = {
+      ...newEmployee,
+      id: newEmployee.id || `emp-${Date.now()}`,
+    };
+    const updated = [empWithId, ...employees];
     setEmployees(updated);
     syncEmployeesStorage(updated);
     setSaveSuccessMessage(`Đã lưu nhân sự "${newEmployee.name}" thành công!`);
     setTimeout(() => {
       setSaveSuccessMessage(null);
     }, 3500);
-
-    // Persist to Firestore if authenticated
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.emailVerified) {
-      const rawId = (newEmployee.id || `emp-${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
-      const path = `employees/${rawId}`;
-      try {
-        await setDoc(doc(db, 'employees', rawId), {
-          ownerId: currentUser.uid,
-          name: newEmployee.name.slice(0, 150),
-          gender: (newEmployee.gender || '').slice(0, 20),
-          dob: (newEmployee.dob || '').slice(0, 20),
-          phone: newEmployee.phone.slice(0, 30),
-          email: (newEmployee.email || '').slice(0, 150),
-          cccd: (newEmployee.cccd || '').slice(0, 20),
-          nationality: (newEmployee.nationality || 'Việt Nam').slice(0, 100),
-          address: (newEmployee.address || '').slice(0, 300),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, path);
-      }
-    }
   };
 
   return (

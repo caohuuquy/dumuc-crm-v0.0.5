@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Download, Upload, Trash2, Search, Filter, RefreshCcw, LayoutTemplate, UserCheck, FileText, CheckCircle2, GitCommit } from 'lucide-react';
+import { useFirestoreCollection } from '../../firebase';
 import { LaborDetailModal, Laborer } from './LaborDetailModal';
 import { LaborLifecycleModal } from './LaborLifecycleModal';
 
@@ -115,8 +116,12 @@ interface LaborListProps {
   salaryStructures?: any[];
 }
 
+const syncMockLaborers = (items: Laborer[]) => {
+  MOCK_LABORERS.splice(0, MOCK_LABORERS.length, ...items);
+};
+
 export const LaborList: React.FC<LaborListProps> = ({ salaryStructures }) => {
-  const [laborers, setLaborers] = useState<Laborer[]>(MOCK_LABORERS);
+  const [laborers, setLaborers] = useFirestoreCollection<Laborer>('laborers', MOCK_LABORERS, 'id', syncMockLaborers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLifecycleOpen, setIsLifecycleOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);

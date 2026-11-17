@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Download, Upload, Trash2, Search, LayoutTemplate, Trash, Calculator } from 'lucide-react';
+import { useFirestoreCollection } from '../../firebase';
 import { SalaryGradeForm } from './SalaryGradeForm';
 import { PersonnelCostEstimation } from './PersonnelCostEstimation';
 
@@ -53,7 +54,12 @@ export const MOCK_GRADES = [
   ] },
 ];
 
+const syncMockGrades = (items: typeof MOCK_GRADES) => {
+  MOCK_GRADES.splice(0, MOCK_GRADES.length, ...items);
+};
+
 export const SalaryGradeList: React.FC = () => {
+  const [grades] = useFirestoreCollection('salary_grades', MOCK_GRADES, 'code', syncMockGrades);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
   const [selectedGrade, setSelectedGrade] = useState<any>(null);
@@ -125,8 +131,8 @@ export const SalaryGradeList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {MOCK_GRADES.map((grade, index) => (
-                <tr key={index} onClick={() => setSelectedGrade(grade)} className="border-b border-gray-200 hover:bg-blue-50/50 cursor-pointer transition-colors">
+              {grades.map((grade, index) => (
+                <tr key={grade.code || index} onClick={() => setSelectedGrade(grade)} className="border-b border-gray-200 hover:bg-blue-50/50 cursor-pointer transition-colors">
                   <td className="p-3 border-r border-gray-200 text-center" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" className="rounded border-gray-300 cursor-pointer" />
                   </td>

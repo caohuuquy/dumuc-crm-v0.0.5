@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Filter, X, Inbox, CheckCircle, XCircle, Eye, Clock, FileText, Download } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 
 export interface RegistrationHistory {
   id: string;
@@ -92,7 +93,7 @@ const MOCK_REGISTRATIONS: RegistrationItem[] = [
 ];
 
 export const RegistrationApprovalModule: React.FC = () => {
-  const [registrations, setRegistrations] = useState(MOCK_REGISTRATIONS);
+  const [registrations, setRegistrations] = useFirestoreCollection<RegistrationItem>('registration_approvals', MOCK_REGISTRATIONS, 'id');
   
   // Filters
   const [filterTaxCode, setFilterTaxCode] = useState('');

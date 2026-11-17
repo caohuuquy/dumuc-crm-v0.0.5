@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Download, Upload, Trash2, Search, LayoutTemplate, Trash } from 'lucide-react';
+import { useFirestoreCollection, firestoreSetDocument } from '../../firebase';
 import { SalaryRuleGroupForm } from './SalaryRuleGroupForm';
 
 export const INITIAL_MOCK_GROUPS = [
@@ -86,6 +87,15 @@ const getSavedGroups = () => {
 
 export const MOCK_GROUPS = getSavedGroups();
 
+const syncMockGroupsStorage = (items: typeof MOCK_GROUPS) => {
+  MOCK_GROUPS.splice(0, MOCK_GROUPS.length, ...items);
+  try {
+    localStorage.setItem('SALARY_RULE_GROUPS_DATA', JSON.stringify(items));
+  } catch (e) {
+    console.error('Error saving salary rule groups:', e);
+  }
+};
+
 // Thêm khoản mục mới vào nhóm và đồng bộ vào menu Nhóm quy tắc Lương
 export const addSalaryRuleItemToGroup = (
   groupName: string, 
@@ -121,6 +131,7 @@ export const addSalaryRuleItemToGroup = (
     console.error('Error saving salary rule groups:', e);
   }
 
+  firestoreSetDocument('salary_rule_groups', String(group.code), group).catch(() => {});
   window.dispatchEvent(new CustomEvent('SALARY_RULE_GROUPS_UPDATED'));
   return newItem;
 };
@@ -142,7 +153,12 @@ export const getAllRuleItemsWithGroup = () => {
 export const SalaryRuleGroupList: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
-  const [groups, setGroups] = useState<typeof MOCK_GROUPS>(() => [...MOCK_GROUPS]);
+  const [groups, setGroups] = useFirestoreCollection<typeof MOCK_GROUPS[number]>(
+    'salary_rule_groups',
+    getSavedGroups,
+    'code',
+    syncMockGroupsStorage
+  );
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -152,7 +168,7 @@ export const SalaryRuleGroupList: React.FC = () => {
     return () => {
       window.removeEventListener('SALARY_RULE_GROUPS_UPDATED', handleUpdate);
     };
-  }, []);
+  }, [setGroups]);
 
   const handleSaveGroup = (savedData: any, isEdit: boolean = false) => {
     if (isEdit && selectedGroup) {

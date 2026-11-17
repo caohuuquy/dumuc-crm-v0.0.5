@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFirestoreCollection } from '../../firebase';
 import { 
   Plus, 
   Trash2, 
@@ -92,7 +93,7 @@ export const InsuranceTaxParams: React.FC = () => {
   const [isDeductionOpen, setIsDeductionOpen] = useState<boolean>(true);
 
   // Danh sách phiên bản BHXH
-  const [socialInsList, setSocialInsList] = useState<SocialInsuranceVersion[]>([
+  const [socialInsList, setSocialInsList] = useFirestoreCollection<SocialInsuranceVersion>('social_insurance_versions', [
     {
       id: 'si_1',
       versionName: 'Quy chuẩn BHXH 2024 - 2026 (Nghị định 58 & 143)',
@@ -125,10 +126,10 @@ export const InsuranceTaxParams: React.FC = () => {
       isDefault: false,
       fileName: 'Nghi_quyet_68_NQ_CP.pdf'
     }
-  ]);
+  ], 'id');
 
   // Danh sách phiên bản Thuế TNCN
-  const [pitList, setPitList] = useState<PitVersion[]>([
+  const [pitList, setPitList] = useFirestoreCollection<PitVersion>('pit_versions', [
     {
       id: 'pit_1',
       versionName: 'Biểu thuế lũy tiến từng phần 7 bậc (Thông tư 111/2013/TT-BTC)',
@@ -155,10 +156,10 @@ export const InsuranceTaxParams: React.FC = () => {
         { id: 'b5_5', level: 5, fromAmount: 100000000, toAmount: null, taxRate: 35, quickDeduction: 12000000 },
       ]
     }
-  ]);
+  ], 'id');
 
   // Danh sách phiên bản Giảm trừ gia cảnh (GTGC)
-  const [deductionList, setDeductionList] = useState<FamilyDeductionVersion[]>([
+  const [deductionList, setDeductionList] = useFirestoreCollection<FamilyDeductionVersion>('family_deduction_versions', [
     {
       id: 'gtgc_1',
       versionName: 'Nghị quyết 954/2020/UBTVQH14',
@@ -192,7 +193,7 @@ export const InsuranceTaxParams: React.FC = () => {
       isApplied: false,
       fileName: 'Nghi_quyet_01_2012_UBTVQH13.pdf'
     }
-  ]);
+  ], 'id');
 
   // Modal Thiết lập biểu thuế lũy tiến
   const [editingPitVersion, setEditingPitVersion] = useState<PitVersion | null>(null);

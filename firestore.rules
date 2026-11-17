@@ -2,12 +2,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Pillar 1 & Phase 4.1: Global Safety Net (Default-Deny Catch-All)
+    // Default-Deny Catch-All for unmapped paths
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Phase 3: Hardened Global Primitives
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid is string && request.auth.uid.size() >= 1;
+    }
+
     function isValidId(id) {
       return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -16,293 +19,246 @@ service cloud.firestore {
       return request.resource.data;
     }
 
-    function existing() {
-      return resource.data;
+    function isValidPayload(data) {
+      return data is map && data.keys().size() >= 1 && data.keys().size() <= 200;
     }
 
-    function isSignedIn() {
-      return request.auth != null && request.auth.token.email_verified == true;
+    match /test/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Pillar 2: Validation Blueprint for CustomerSegment
-    function isValidCustomerSegment(data) {
-      return data.keys().hasAll([
-          'ownerId',
-          'segmentName',
-          'segmentPurpose',
-          'status',
-          'totalFilterCriteria',
-          'roFilterScope',
-          'createdBy',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.keys().hasOnly([
-          'ownerId',
-          'segmentName',
-          'segmentPurpose',
-          'status',
-          'totalFilterCriteria',
-          'roFilterScope',
-          'createdBy',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.ownerId is string
-        && data.ownerId.size() >= 1
-        && data.ownerId.size() <= 128
-        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
-        && data.ownerId == request.auth.uid
-        && data.segmentName is string
-        && data.segmentName.size() >= 1
-        && data.segmentName.size() <= 200
-        && data.segmentPurpose is string
-        && data.segmentPurpose.size() >= 1
-        && data.segmentPurpose.size() <= 300
-        && data.status is string
-        && data.status.size() >= 1
-        && data.status.size() <= 50
-        && data.status in ['Mới', 'Đang theo dõi', 'Khách hàng đã đặt lịch', 'Khách hàng từ chối']
-        && data.totalFilterCriteria is number
-        && data.totalFilterCriteria >= 0
-        && data.totalFilterCriteria <= 50
-        && data.roFilterScope is string
-        && data.roFilterScope.size() >= 1
-        && data.roFilterScope.size() <= 120
-        && data.createdBy is string
-        && data.createdBy.size() >= 1
-        && data.createdBy.size() <= 100
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+    match /potential_customers/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Pillar 2: Validation Blueprint for ProactiveReminder
-    function isValidProactiveReminder(data) {
-      return data.keys().hasAll([
-          'ownerId',
-          'customerName',
-          'licensePlate',
-          'originalRoCode',
-          'status',
-          'callStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.keys().hasOnly([
-          'ownerId',
-          'customerName',
-          'licensePlate',
-          'originalRoCode',
-          'status',
-          'callStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.ownerId is string
-        && data.ownerId.size() >= 1
-        && data.ownerId.size() <= 128
-        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
-        && data.ownerId == request.auth.uid
-        && data.customerName is string
-        && data.customerName.size() >= 1
-        && data.customerName.size() <= 150
-        && data.licensePlate is string
-        && data.licensePlate.size() >= 1
-        && data.licensePlate.size() <= 30
-        && data.originalRoCode is string
-        && data.originalRoCode.size() >= 1
-        && data.originalRoCode.size() <= 50
-        && data.status is string
-        && data.status.size() >= 1
-        && data.status.size() <= 50
-        && data.status in ['Mới', 'Đang theo dõi', 'Khách hàng đã đặt lịch', 'Khách hàng từ chối']
-        && data.callStatus is string
-        && data.callStatus.size() >= 1
-        && data.callStatus.size() <= 30
-        && data.callStatus in ['Chưa gọi', 'Đã gọi']
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+    match /proactive_reminders/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Pillar 2: Validation Blueprint for Employee
-    function isValidEmployee(data) {
-      return data.keys().hasAll([
-          'ownerId',
-          'name',
-          'gender',
-          'dob',
-          'phone',
-          'email',
-          'cccd',
-          'nationality',
-          'address',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.keys().hasOnly([
-          'ownerId',
-          'name',
-          'gender',
-          'dob',
-          'phone',
-          'email',
-          'cccd',
-          'nationality',
-          'address',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.ownerId is string
-        && data.ownerId.size() >= 1
-        && data.ownerId.size() <= 128
-        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
-        && data.ownerId == request.auth.uid
-        && data.name is string
-        && data.name.size() >= 1
-        && data.name.size() <= 150
-        && data.gender is string
-        && data.gender.size() <= 20
-        && data.dob is string
-        && data.dob.size() <= 20
-        && data.phone is string
-        && data.phone.size() >= 1
-        && data.phone.size() <= 30
-        && data.email is string
-        && data.email.size() <= 150
-        && data.cccd is string
-        && data.cccd.size() <= 20
-        && data.nationality is string
-        && data.nationality.size() <= 100
-        && data.address is string
-        && data.address.size() <= 300
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+    match /customer_segments/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Collection: /customer_segments/{segmentId}
-    match /customer_segments/{segmentId} {
-      allow get: if isSignedIn()
-        && isValidId(segmentId)
-        && existing().ownerId == request.auth.uid;
-
-      allow list: if isSignedIn()
-        && existing().ownerId == request.auth.uid;
-
-      allow create: if isSignedIn()
-        && isValidId(segmentId)
-        && isValidCustomerSegment(incoming())
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
-
-      allow update: if isSignedIn()
-        && isValidCustomerSegment(incoming())
-        && isValidId(segmentId)
-        && existing().ownerId == request.auth.uid
-        && incoming().ownerId == existing().ownerId
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time
-        && existing().status != 'Khách hàng từ chối'
-        && (
-          incoming().diff(existing()).affectedKeys().hasOnly([
-            'segmentName',
-            'segmentPurpose',
-            'status',
-            'totalFilterCriteria',
-            'roFilterScope',
-            'updatedAt'
-          ])
-          || incoming().diff(existing()).affectedKeys().hasOnly([
-            'status',
-            'updatedAt'
-          ])
-        );
-
-      allow delete: if isSignedIn()
-        && isValidId(segmentId)
-        && existing().ownerId == request.auth.uid;
+    match /customer_bookings/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Collection: /proactive_reminders/{reminderId}
-    match /proactive_reminders/{reminderId} {
-      allow get: if isSignedIn()
-        && isValidId(reminderId)
-        && existing().ownerId == request.auth.uid;
-
-      allow list: if isSignedIn()
-        && existing().ownerId == request.auth.uid;
-
-      allow create: if isSignedIn()
-        && isValidId(reminderId)
-        && isValidProactiveReminder(incoming())
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
-
-      allow update: if isSignedIn()
-        && isValidProactiveReminder(incoming())
-        && isValidId(reminderId)
-        && existing().ownerId == request.auth.uid
-        && incoming().ownerId == existing().ownerId
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time
-        && existing().status != 'Khách hàng từ chối'
-        && (
-          incoming().diff(existing()).affectedKeys().hasOnly([
-            'customerName',
-            'licensePlate',
-            'originalRoCode',
-            'status',
-            'callStatus',
-            'updatedAt'
-          ])
-          || incoming().diff(existing()).affectedKeys().hasOnly([
-            'status',
-            'callStatus',
-            'updatedAt'
-          ])
-        );
-
-      allow delete: if isSignedIn()
-        && isValidId(reminderId)
-        && existing().ownerId == request.auth.uid;
+    match /proactive_customer_bookings/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
 
-    // Collection: /employees/{employeeId}
-    match /employees/{employeeId} {
-      allow get: if isSignedIn()
-        && isValidId(employeeId)
-        && existing().ownerId == request.auth.uid;
+    match /segment_customer_bookings/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
 
-      allow list: if isSignedIn()
-        && existing().ownerId == request.auth.uid;
+    match /crm_state_maps/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
 
-      allow create: if isSignedIn()
-        && isValidId(employeeId)
-        && isValidEmployee(incoming())
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
+    match /discounts/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
 
-      allow update: if isSignedIn()
-        && isValidEmployee(incoming())
-        && isValidId(employeeId)
-        && existing().ownerId == request.auth.uid
-        && incoming().ownerId == existing().ownerId
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time
-        && incoming().diff(existing()).affectedKeys().hasOnly([
-          'name',
-          'gender',
-          'dob',
-          'phone',
-          'email',
-          'cccd',
-          'nationality',
-          'address',
-          'updatedAt'
-        ]);
+    match /referral_history/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
 
-      allow delete: if isSignedIn()
-        && isValidId(employeeId)
-        && existing().ownerId == request.auth.uid;
+    match /customers/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /booking_customer_profiles/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /events/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /registration_approvals/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /commercial_sales/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /purchase_orders/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /shopping_cart/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /online_orders/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /omnichannel_products/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /marketplace_products/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /repair_orders/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /employees/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /laborers/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /departments/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /positions/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /salary_grades/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /contract_types/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /salary_rule_groups/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /salary_structures/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /social_insurance_versions/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /pit_versions/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /family_deduction_versions/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /payroll_periods/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /payroll_tables/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
     }
   }
 }
