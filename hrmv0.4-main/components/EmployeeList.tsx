@@ -16,6 +16,7 @@ import {
   collection,
   doc,
   setDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -146,7 +147,7 @@ const loadSavedEmployees = (): EmployeeRecord[] => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -276,6 +277,37 @@ export const EmployeeList: React.FC = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedCccds.length === 0) return;
+
+    const selectedSet = new Set(selectedCccds);
+    const recordsToDelete = employees.filter((emp, idx) =>
+      selectedSet.has(getRowKey(emp, idx))
+    );
+    const remaining = employees.filter(
+      (emp, idx) => !selectedSet.has(getRowKey(emp, idx))
+    );
+
+    setEmployees(remaining);
+    syncEmployeesStorage(remaining);
+    setSelectedCccds([]);
+
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.emailVerified) {
+      for (const emp of recordsToDelete) {
+        if (emp.id) {
+          const rawId = emp.id.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+          const path = `employees/${rawId}`;
+          try {
+            await deleteDoc(doc(db, 'employees', rawId));
+          } catch (error) {
+            handleFirestoreError(error, OperationType.DELETE, path);
+          }
+        }
+      }
+    }
+  };
+
   const handleSaveEmployee = async (newEmployee: EmployeeRecord) => {
     const updated = [newEmployee, ...employees];
     setEmployees(updated);
@@ -345,7 +377,16 @@ export const EmployeeList: React.FC = () => {
             <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-[13px] flex items-center gap-1.5 hover:bg-gray-50 transition-colors">
               <Download className="w-4 h-4" /> Xuất excel
             </button>
-            <button className="bg-[#F3F4F6] border border-gray-200 text-gray-400 px-3 py-1.5 rounded text-[13px] flex items-center gap-1.5 cursor-not-allowed">
+            <button
+              type="button"
+              disabled={selectedCccds.length === 0}
+              onClick={handleDeleteSelected}
+              className={`border px-3 py-1.5 rounded text-[13px] flex items-center gap-1.5 transition-colors ${
+                selectedCccds.length > 0
+                  ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+                  : 'bg-[#F3F4F6] border-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
               <Trash2 className="w-4 h-4" /> Xóa
             </button>
             <div ref={mergeTooltipRef} className="relative inline-flex items-center">
