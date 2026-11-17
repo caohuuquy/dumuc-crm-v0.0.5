@@ -225,26 +225,5 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
     );
   }
 
-  return (
-    <>
-      {children}
-      <div className="fixed bottom-3 right-3 z-[9999] flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-900 text-white px-2.5 py-1.5 rounded-full shadow-lg border border-slate-700/80 backdrop-blur-sm text-xs transition">
-        <span
-          className="max-w-[140px] truncate text-slate-300 font-medium hidden sm:inline"
-          title={user.email || user.displayName || 'Đã đăng nhập'}
-        >
-          {user.email || user.displayName || 'Tài khoản'}
-        </span>
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Đăng xuất"
-          className="inline-flex items-center gap-1 text-red-400 hover:text-red-300 font-semibold px-1.5 py-0.5 rounded hover:bg-white/10 transition cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Đăng xuất</span>
-        </button>
-      </div>
-    </>
-  );
+  return <>{children}</>;
 };

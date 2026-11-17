@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Search, List, ChevronDown, Bell, User, Users, Store, Wrench, Tag } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, List, ChevronDown, Bell, User, Users, Store, Wrench, Tag, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,6 +38,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
   ];
   const isHrmActive = hrmViews.includes(currentView);
   const [isHrmOpen, setIsHrmOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 text-gray-800 font-sans">
@@ -454,14 +468,34 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
               <Bell className="w-5 h-5" />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <div className="flex items-center space-x-3 cursor-pointer">
-              <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                <User className="w-5 h-5" />
+            <div className="relative" ref={userMenuRef}>
+              <div
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                className="flex items-center space-x-3 cursor-pointer select-none"
+              >
+                <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                  <User className="w-5 h-5" />
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold text-gray-800">Chủ xưởng</div>
+                  <div className="text-xs text-gray-500">Chào buổi chiều</div>
+                </div>
               </div>
-              <div className="text-sm">
-                <div className="font-semibold text-gray-800">Chủ xưởng</div>
-                <div className="text-xs text-gray-500">Chào buổi chiều</div>
-              </div>
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      signOut(auth);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
