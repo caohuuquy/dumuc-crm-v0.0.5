@@ -1,0 +1,163 @@
+{
+  "entities": {
+    "CustomerSegment": {
+      "title": "CustomerSegment",
+      "description": "Customer segment configuration record in CRM",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the creator/owner"
+        },
+        "segmentName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the customer segment"
+        },
+        "segmentPurpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Purpose of the customer segment"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Mới",
+            "Đang theo dõi",
+            "Khách hàng đã đặt lịch",
+            "Khách hàng từ chối"
+          ],
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Current segment status"
+        },
+        "totalFilterCriteria": {
+          "type": "number",
+          "description": "Total number of filter criteria configured"
+        },
+        "roFilterScope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "RO date filter scope description"
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Creator display name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "ownerId",
+        "segmentName",
+        "segmentPurpose",
+        "status",
+        "totalFilterCriteria",
+        "roFilterScope",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProactiveReminder": {
+      "title": "ProactiveReminder",
+      "description": "Proactive reminder record in CRM",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the creator/owner"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Customer full name"
+        },
+        "licensePlate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Vehicle license plate"
+        },
+        "originalRoCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Original RO code"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Mới",
+            "Đang theo dõi",
+            "Khách hàng đã đặt lịch",
+            "Khách hàng từ chối"
+          ],
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Reminder status"
+        },
+        "callStatus": {
+          "type": "string",
+          "enum": [
+            "Chưa gọi",
+            "Đã gọi"
+          ],
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Call status"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "ownerId",
+        "customerName",
+        "licensePlate",
+        "originalRoCode",
+        "status",
+        "callStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/customer_segments/{segmentId}": {
+      "schema": "CustomerSegment",
+      "description": "Stores CRM customer segment configurations owned by the user"
+    },
+    "/proactive_reminders/{reminderId}": {
+      "schema": "ProactiveReminder",
+      "description": "Stores CRM proactive reminder records owned by the user"
+    }
+  }
+}

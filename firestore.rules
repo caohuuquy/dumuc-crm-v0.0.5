@@ -1,0 +1,214 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1 & Phase 4.1: Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Pillar 2: Validation Blueprint for CustomerSegment
+    function isValidCustomerSegment(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'segmentName',
+          'segmentPurpose',
+          'status',
+          'totalFilterCriteria',
+          'roFilterScope',
+          'createdBy',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'segmentName',
+          'segmentPurpose',
+          'status',
+          'totalFilterCriteria',
+          'roFilterScope',
+          'createdBy',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.segmentName is string
+        && data.segmentName.size() >= 1
+        && data.segmentName.size() <= 200
+        && data.segmentPurpose is string
+        && data.segmentPurpose.size() >= 1
+        && data.segmentPurpose.size() <= 300
+        && data.status is string
+        && data.status.size() >= 1
+        && data.status.size() <= 50
+        && data.status in ['Mới', 'Đang theo dõi', 'Khách hàng đã đặt lịch', 'Khách hàng từ chối']
+        && data.totalFilterCriteria is number
+        && data.totalFilterCriteria >= 0
+        && data.totalFilterCriteria <= 50
+        && data.roFilterScope is string
+        && data.roFilterScope.size() >= 1
+        && data.roFilterScope.size() <= 120
+        && data.createdBy is string
+        && data.createdBy.size() >= 1
+        && data.createdBy.size() <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Pillar 2: Validation Blueprint for ProactiveReminder
+    function isValidProactiveReminder(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'customerName',
+          'licensePlate',
+          'originalRoCode',
+          'status',
+          'callStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'customerName',
+          'licensePlate',
+          'originalRoCode',
+          'status',
+          'callStatus',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == request.auth.uid
+        && data.customerName is string
+        && data.customerName.size() >= 1
+        && data.customerName.size() <= 150
+        && data.licensePlate is string
+        && data.licensePlate.size() >= 1
+        && data.licensePlate.size() <= 30
+        && data.originalRoCode is string
+        && data.originalRoCode.size() >= 1
+        && data.originalRoCode.size() <= 50
+        && data.status is string
+        && data.status.size() >= 1
+        && data.status.size() <= 50
+        && data.status in ['Mới', 'Đang theo dõi', 'Khách hàng đã đặt lịch', 'Khách hàng từ chối']
+        && data.callStatus is string
+        && data.callStatus.size() >= 1
+        && data.callStatus.size() <= 30
+        && data.callStatus in ['Chưa gọi', 'Đã gọi']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Collection: /customer_segments/{segmentId}
+    match /customer_segments/{segmentId} {
+      allow get: if isSignedIn()
+        && isValidId(segmentId)
+        && existing().ownerId == request.auth.uid;
+
+      allow list: if isSignedIn()
+        && existing().ownerId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isValidId(segmentId)
+        && isValidCustomerSegment(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidCustomerSegment(incoming())
+        && isValidId(segmentId)
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && existing().status != 'Khách hàng từ chối'
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'segmentName',
+            'segmentPurpose',
+            'status',
+            'totalFilterCriteria',
+            'roFilterScope',
+            'updatedAt'
+          ])
+          || incoming().diff(existing()).affectedKeys().hasOnly([
+            'status',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if isSignedIn()
+        && isValidId(segmentId)
+        && existing().ownerId == request.auth.uid;
+    }
+
+    // Collection: /proactive_reminders/{reminderId}
+    match /proactive_reminders/{reminderId} {
+      allow get: if isSignedIn()
+        && isValidId(reminderId)
+        && existing().ownerId == request.auth.uid;
+
+      allow list: if isSignedIn()
+        && existing().ownerId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isValidId(reminderId)
+        && isValidProactiveReminder(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidProactiveReminder(incoming())
+        && isValidId(reminderId)
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && existing().status != 'Khách hàng từ chối'
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'customerName',
+            'licensePlate',
+            'originalRoCode',
+            'status',
+            'callStatus',
+            'updatedAt'
+          ])
+          || incoming().diff(existing()).affectedKeys().hasOnly([
+            'status',
+            'callStatus',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if isSignedIn()
+        && isValidId(reminderId)
+        && existing().ownerId == request.auth.uid;
+    }
+  }
+}
