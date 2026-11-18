@@ -9,6 +9,7 @@ import { ActionFooter } from './components/ActionFooter';
 import { ProductType } from './types';
 import { Layout } from './components/Layout';
 import { CategoryList } from './components/CategoryList';
+import { SparePartsList } from './components/SparePartsList';
 import { OmnichannelConfig } from './components/OmnichannelConfig';
 import { MarketplaceManagement } from './components/MarketplaceManagement';
 import { OnlineOrdering } from './components/OnlineOrdering';
@@ -308,6 +309,8 @@ const App: React.FC = () => {
             onSelectSpareParts={() => setCurrentView('spare_parts')} 
             onSelectOmnichannel={() => setCurrentView('omnichannel')}
           />
+        ) : currentView === 'spare_parts' ? (
+          <SparePartsList />
         ) : currentView === 'omnichannel' ? (
           <OmnichannelConfig onBack={() => setCurrentView('categories')} />
         ) : currentView === 'online_ordering' ? (

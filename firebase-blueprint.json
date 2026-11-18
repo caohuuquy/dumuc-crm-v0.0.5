@@ -165,6 +165,10 @@
     "/payroll_tables/{docId}": {
       "schema": "GenericRecord",
       "description": "HRM payroll calculation tables collection"
+    },
+    "/spare_parts_items/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Spare parts and goods catalog collection"
     }
   }
 }
