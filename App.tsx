@@ -10,6 +10,8 @@ import { ProductType } from './types';
 import { Layout } from './components/Layout';
 import { CategoryList } from './components/CategoryList';
 import { SparePartsList } from './components/SparePartsList';
+import { VehiclesList } from './components/VehiclesList';
+import { TaxCategoryList } from './components/TaxCategoryList';
 import { OmnichannelConfig } from './components/OmnichannelConfig';
 import { MarketplaceManagement } from './components/MarketplaceManagement';
 import { OnlineOrdering } from './components/OnlineOrdering';
@@ -60,7 +62,7 @@ import { OrderProvider } from './context/OrderContext';
 
 const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
-  const [currentView, setCurrentView] = useState<'categories' | 'spare_parts' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
+  const [currentView, setCurrentView] = useState<'categories' | 'spare_parts' | 'vehicles' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
     PotentialCustomerItem
@@ -307,10 +309,16 @@ const App: React.FC = () => {
         {currentView === 'categories' ? (
           <CategoryList 
             onSelectSpareParts={() => setCurrentView('spare_parts')} 
+            onSelectVehicles={() => setCurrentView('vehicles')}
+            onSelectTaxCategories={() => setCurrentView('tax_categories')}
             onSelectOmnichannel={() => setCurrentView('omnichannel')}
           />
         ) : currentView === 'spare_parts' ? (
           <SparePartsList />
+        ) : currentView === 'vehicles' ? (
+          <VehiclesList />
+        ) : currentView === 'tax_categories' ? (
+          <TaxCategoryList />
         ) : currentView === 'omnichannel' ? (
           <OmnichannelConfig onBack={() => setCurrentView('categories')} />
         ) : currentView === 'online_ordering' ? (

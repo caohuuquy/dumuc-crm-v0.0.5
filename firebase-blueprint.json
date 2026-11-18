@@ -169,6 +169,14 @@
     "/spare_parts_items/{docId}": {
       "schema": "GenericRecord",
       "description": "Spare parts and goods catalog collection"
+    },
+    "/vehicles_items/{docId}": {
+      "schema": "GenericRecord",
+      "description": "Garage vehicles directory collection"
+    },
+    "/tax_categories_items/{docId}": {
+      "schema": "GenericRecord",
+      "description": "System tax categories directory collection"
     }
   }
 }

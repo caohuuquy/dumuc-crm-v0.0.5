@@ -875,9 +875,10 @@ export const MOCK_QUOTATIONS_FOR_REMINDERS: QuotationRecord[] = [
 
 const SEGMENT_FILTER_CRITERIA_LIST = [
   'Ngày đăng kiễm hết hạn',
-  'Ngày bảo hiểm hết hạn',
-  'ODO',
-  'Thời gian bảo hành của sản phẩm bán',
+  'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)',
+  'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn',
+  'ODO và Ngày xuất xưởng gần nhất',
+  'Hạn bảo hành Vật tư / phụ tùng',
   'Ngày nhận xe (của RO)',
   'Ngày giao xe (của RO)',
   'Đánh giá chất lượng dịch vụ (của RO)',
@@ -910,8 +911,12 @@ interface SegmentCriterionGroup {
 const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
   {
     id: 'grp-periodic',
-    groupName: 'Định kỳ',
-    criteria: ['Ngày đăng kiễm hết hạn', 'Ngày bảo hiểm hết hạn'],
+    groupName: 'Hết hạn',
+    criteria: [
+      'Ngày đăng kiễm hết hạn',
+      'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)',
+      'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn',
+    ],
     containerClass: 'bg-sky-50/60 border-sky-200',
     headerBadgeClass: 'bg-sky-600 text-white',
     headerTextClass: 'text-sky-900',
@@ -921,8 +926,8 @@ const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
   },
   {
     id: 'grp-odo',
-    groupName: 'Số KM',
-    criteria: ['ODO'],
+    groupName: 'Bảo dưỡng định kỳ',
+    criteria: ['ODO và Ngày xuất xưởng gần nhất'],
     containerClass: 'bg-cyan-50/60 border-cyan-200',
     headerBadgeClass: 'bg-cyan-600 text-white',
     headerTextClass: 'text-cyan-900',
@@ -933,7 +938,7 @@ const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
   {
     id: 'grp-warranty',
     groupName: 'Bảo hành',
-    criteria: ['Thời gian bảo hành của sản phẩm bán'],
+    criteria: ['Hạn bảo hành Vật tư / phụ tùng'],
     containerClass: 'bg-teal-50/60 border-teal-200',
     headerBadgeClass: 'bg-teal-600 text-white',
     headerTextClass: 'text-teal-900',
@@ -987,12 +992,80 @@ const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
   },
 ];
 
+interface WarrantyPartTimeItem {
+  id: string;
+  partName: string;
+  upcomingMode: 'days_before' | 'date_range';
+  upcomingDays: string;
+  upcomingDateFrom: string;
+  upcomingDateTo: string;
+  overdueMode: 'overdue_days' | 'overdue_date_range';
+  overdueCondition: string;
+  overdueDays: string;
+  overdueDaysMax: string;
+  overdueDateFrom: string;
+  overdueDateTo: string;
+}
+
+const WARRANTY_PART_SUGGESTIONS: string[] = [
+  'Bình ắc quy 12V',
+  'Má phanh trước / sau',
+  'Giảm xóc (Phuộc nhún)',
+  'Lốp xe (Vỏ xe)',
+  'Bơm xăng điện tử',
+  'Máy phát điện / Củ đề',
+  'Lốc lạnh điều hòa',
+  'Rô-tuyn lái / Càng A',
+  'Cảm biến ABS / Cảm biến Oxy',
+  'Bộ ly hợp (Lá côn / Mâm ép)',
+];
+
+const createDefaultWarrantyPartItem = (partName = ''): WarrantyPartTimeItem => ({
+  id: `wp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  partName,
+  upcomingMode: 'days_before',
+  upcomingDays: '30',
+  upcomingDateFrom: '',
+  upcomingDateTo: '',
+  overdueMode: 'overdue_days',
+  overdueCondition: 'Đã quá hạn tối thiểu (>= số ngày)',
+  overdueDays: '15',
+  overdueDaysMax: '60',
+  overdueDateFrom: '',
+  overdueDateTo: '',
+});
+
+interface RegistrationExpiryCustomConfig {
+  upcomingMode?: 'days_before' | 'date_range';
+  upcomingDays?: string;
+  upcomingDateFrom?: string;
+  upcomingDateTo?: string;
+  upcomingVehicleScope?: string;
+  overdueMode?: 'overdue_days' | 'overdue_date_range';
+  overdueCondition?: string;
+  overdueDays?: string;
+  overdueDaysMax?: string;
+  overdueDateFrom?: string;
+  overdueDateTo?: string;
+  overduePriority?: string;
+  missingDataType?: string;
+  missingRoTimeframe?: string;
+  missingContactFilter?: string;
+  missingActionNote?: string;
+  warrantyApplyMode?: 'all' | 'specific_list';
+  warrantyPartItems?: WarrantyPartTimeItem[];
+}
+
 interface SegmentDetailRow {
   id: string;
   criterion: SegmentCriterionName;
   purpose: string;
   operator: string;
   value: string;
+  maintenanceCycleKm?: string;
+  maintenanceCycleMonths?: string;
+  maintenanceRecentRoCount?: string;
+  regExpiryCustomConfig?: RegistrationExpiryCustomConfig;
 }
 
 interface SavedCustomerSegmentPreset {
@@ -1038,8 +1111,25 @@ const REGISTRATION_EXPIRY_PURPOSE_OPTIONS = [
   'Không có dữ liệu đăng kiễm',
 ] as const;
 
+const VOLUNTARY_INSURANCE_EXPIRY_PURPOSE_OPTIONS = [
+  'Sắp hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+  'Đã quá hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+  'Không có dữ liệu bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+] as const;
+
+const COMPULSORY_INSURANCE_EXPIRY_PURPOSE_OPTIONS = [
+  'Sắp hết hạn bảo hiểm bắt buộc TNDS',
+  'Đã quá hạn bảo hiểm bắt buộc TNDS',
+  'Không có dữ liệu bảo hiểm bắt buộc TNDS',
+] as const;
+
+const WARRANTY_EXPIRY_PURPOSE_OPTIONS = [
+  'Sắp hết hạn bảo hành Vật tư / phụ tùng',
+  'Đã quá hạn bảo hành Vật tư / phụ tùng',
+] as const;
+
 const REGISTRATION_EXPIRY_OPERATOR_OPTIONS = [
-  'Mẫu của Du Mục',
+  'Bộ lọc mẫu',
   'Tự thiết lập',
 ] as const;
 
@@ -1048,29 +1138,85 @@ const REGISTRATION_EXPIRY_VALUE_OPTIONS = [
   'Trước 15 ngày hết hạn đăng kiễm',
 ] as const;
 
+const VOLUNTARY_INSURANCE_EXPIRY_VALUE_OPTIONS = [
+  'Trước 30 ngày hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+  'Trước 15 ngày hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+] as const;
+
+const COMPULSORY_INSURANCE_EXPIRY_VALUE_OPTIONS = [
+  'Trước 30 ngày hết hạn bảo hiểm bắt buộc TNDS',
+  'Trước 15 ngày hết hạn bảo hiểm bắt buộc TNDS',
+] as const;
+
+const WARRANTY_EXPIRY_VALUE_OPTIONS = [
+  'Trước 30 ngày hết hạn bảo hành Vật tư / phụ tùng',
+  'Trước 15 ngày hết hạn bảo hành Vật tư / phụ tùng',
+] as const;
+
+const getPeriodicExpiryPurposeOptions = (criterion: SegmentCriterionName): readonly string[] => {
+  if (criterion === 'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)') {
+    return VOLUNTARY_INSURANCE_EXPIRY_PURPOSE_OPTIONS;
+  }
+  if (criterion === 'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn') {
+    return COMPULSORY_INSURANCE_EXPIRY_PURPOSE_OPTIONS;
+  }
+  if (criterion === 'Hạn bảo hành Vật tư / phụ tùng') {
+    return WARRANTY_EXPIRY_PURPOSE_OPTIONS;
+  }
+  return REGISTRATION_EXPIRY_PURPOSE_OPTIONS;
+};
+
+const getPeriodicExpiryValueOptions = (criterion: SegmentCriterionName): readonly string[] => {
+  if (criterion === 'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)') {
+    return VOLUNTARY_INSURANCE_EXPIRY_VALUE_OPTIONS;
+  }
+  if (criterion === 'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn') {
+    return COMPULSORY_INSURANCE_EXPIRY_VALUE_OPTIONS;
+  }
+  if (criterion === 'Hạn bảo hành Vật tư / phụ tùng') {
+    return WARRANTY_EXPIRY_VALUE_OPTIONS;
+  }
+  return REGISTRATION_EXPIRY_VALUE_OPTIONS;
+};
+
+const ODO_MAINTENANCE_PURPOSE_OPTIONS = [
+  'Theo mốc bảo dưỡng Hãng xe',
+  'Theo mốc bảo dưỡng của Phụ tùng/Vật tư',
+] as const;
+
+const ODO_MAINTENANCE_OPERATOR_OPTIONS = [
+  'Khuyến cáo của Hãng',
+  'Tự thiết lập',
+] as const;
+
 const DEFAULT_CRITERION_CONFIG: Record<
   SegmentCriterionName,
   { purpose: string; operator: string; value: string }
 > = {
   'Ngày đăng kiễm hết hạn': {
     purpose: 'Sắp hết hạn đăng kiểm',
-    operator: 'Mẫu của Du Mục',
+    operator: 'Bộ lọc mẫu',
     value: 'Trước 30 ngày hết hạn đăng kiễm',
   },
-  'Ngày bảo hiểm hết hạn': {
-    purpose: 'Tư vấn tái tục bảo hiểm vật chất / TNDS',
-    operator: 'Sắp hết hạn trong vòng (<= ngày)',
-    value: '30 ngày tới',
+  'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)': {
+    purpose: 'Sắp hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+    operator: 'Bộ lọc mẫu',
+    value: 'Trước 30 ngày hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
   },
-  ODO: {
-    purpose: 'Xác định xe chạm mốc bảo dưỡng định kỳ',
-    operator: 'Lớn hơn hoặc bằng (>=)',
-    value: '10.000 km',
+  'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn': {
+    purpose: 'Sắp hết hạn bảo hiểm bắt buộc TNDS',
+    operator: 'Bộ lọc mẫu',
+    value: 'Trước 30 ngày hết hạn bảo hiểm bắt buộc TNDS',
   },
-  'Thời gian bảo hành của sản phẩm bán': {
-    purpose: 'Chăm sóc & kiểm tra trước khi hết hạn bảo hành',
-    operator: 'Còn hiệu lực trong khoảng',
-    value: '15 - 30 ngày',
+  'ODO và Ngày xuất xưởng gần nhất': {
+    purpose: 'Theo mốc bảo dưỡng Hãng xe',
+    operator: 'Khuyến cáo của Hãng',
+    value: '',
+  },
+  'Hạn bảo hành Vật tư / phụ tùng': {
+    purpose: 'Sắp hết hạn bảo hành Vật tư / phụ tùng',
+    operator: 'Bộ lọc mẫu',
+    value: 'Trước 30 ngày hết hạn bảo hành Vật tư / phụ tùng',
   },
   'Ngày nhận xe (của RO)': {
     purpose: 'Lọc theo thời điểm khách mang xe vào xưởng',
@@ -1112,14 +1258,14 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
       {
         criterion: 'Ngày đăng kiễm hết hạn',
         purpose: 'Sắp hết hạn đăng kiểm',
-        operator: 'Mẫu của Du Mục',
+        operator: 'Bộ lọc mẫu',
         value: 'Trước 30 ngày hết hạn đăng kiễm',
       },
       {
-        criterion: 'Ngày bảo hiểm hết hạn',
-        purpose: 'Tư vấn tái tục bảo hiểm vật chất / TNDS',
-        operator: 'Sắp hết hạn trong vòng (<= ngày)',
-        value: '30 ngày tới',
+        criterion: 'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)',
+        purpose: 'Sắp hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
+        operator: 'Bộ lọc mẫu',
+        value: 'Trước 30 ngày hết hạn bảo hiểm tự nguyện (Bảo hiểm thân vỏ)',
       },
     ],
   },
@@ -1133,10 +1279,10 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
     roTypes: ['RO - Dịch vụ sửa chữa'],
     detailRows: [
       {
-        criterion: 'ODO',
-        purpose: 'Xác định xe chạm mốc bảo dưỡng định kỳ',
-        operator: 'Lớn hơn hoặc bằng (>=)',
-        value: '10.000 km',
+        criterion: 'ODO và Ngày xuất xưởng gần nhất',
+        purpose: 'Theo mốc bảo dưỡng Hãng xe',
+        operator: 'Khuyến cáo của Hãng',
+        value: '',
       },
       {
         criterion: 'Ngày nhận xe (của RO)',
@@ -1174,10 +1320,10 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
         value: '5 sao (Rất hài lòng)',
       },
       {
-        criterion: 'Thời gian bảo hành của sản phẩm bán',
-        purpose: 'Kiểm tra định kỳ phụ tùng giá trị cao',
-        operator: 'Còn hiệu lực trong khoảng',
-        value: '30 - 90 ngày',
+        criterion: 'Hạn bảo hành Vật tư / phụ tùng',
+        purpose: 'Sắp hết hạn bảo hành Vật tư / phụ tùng',
+        operator: 'Bộ lọc mẫu',
+        value: 'Trước 30 ngày hết hạn bảo hành Vật tư / phụ tùng',
       },
     ],
   },
@@ -1196,7 +1342,7 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
         value: '5.000.000 đ',
       },
       {
-        criterion: 'Thời gian bảo hành của sản phẩm bán',
+        criterion: 'Hạn bảo hành Vật tư / phụ tùng',
         purpose: 'Kiểm tra thời hạn bảo hành sản phẩm đã xuất',
         operator: 'Còn hiệu lực trong khoảng',
         value: 'Còn hạn bảo hành',
@@ -1346,6 +1492,31 @@ export const PotentialCustomersModule: React.FC<PotentialCustomersModuleProps> =
   );
   const [segmentSelectedRoTypes, setSegmentSelectedRoTypes] = useState<SegmentRoTypeName[]>([]);
   const [segmentDetailRows, setSegmentDetailRows] = useState<SegmentDetailRow[]>([]);
+  const [odoSetupModalRowId, setOdoSetupModalRowId] = useState<string | null>(null);
+  const [odoCycleKmInput, setOdoCycleKmInput] = useState('');
+  const [odoCycleMonthsInput, setOdoCycleMonthsInput] = useState('');
+  const [odoRecentRoCountInput, setOdoRecentRoCountInput] = useState('3');
+  const [regExpirySetupModalRowId, setRegExpirySetupModalRowId] = useState<string | null>(null);
+  const [regUpcomingMode, setRegUpcomingMode] = useState<'days_before' | 'date_range'>('days_before');
+  const [regUpcomingDays, setRegUpcomingDays] = useState('30');
+  const [regUpcomingDateFrom, setRegUpcomingDateFrom] = useState('');
+  const [regUpcomingDateTo, setRegUpcomingDateTo] = useState('');
+  const [regUpcomingVehicleScope, setRegUpcomingVehicleScope] = useState('Tất cả loại xe');
+  const [regOverdueMode, setRegOverdueMode] = useState<'overdue_days' | 'overdue_date_range'>('overdue_days');
+  const [regOverdueCondition, setRegOverdueCondition] = useState('Đã quá hạn tối thiểu (>= số ngày)');
+  const [regOverdueDays, setRegOverdueDays] = useState('15');
+  const [regOverdueDaysMax, setRegOverdueDaysMax] = useState('60');
+  const [regOverdueDateFrom, setRegOverdueDateFrom] = useState('');
+  const [regOverdueDateTo, setRegOverdueDateTo] = useState('');
+  const [regOverduePriority, setRegOverduePriority] = useState('Tất cả mức độ quá hạn');
+  const [regMissingDataType, setRegMissingDataType] = useState('Trống trường Ngày đăng kiểm hết hạn trong hồ sơ xe');
+  const [regMissingRoTimeframe, setRegMissingRoTimeframe] = useState('Xe có vào xưởng trong 6 tháng gần nhất');
+  const [regMissingContactFilter, setRegMissingContactFilter] = useState('Có số điện thoại hợp lệ để CSKH liên hệ bổ sung');
+  const [regMissingActionNote, setRegMissingActionNote] = useState('');
+  const [regWarrantyApplyMode, setRegWarrantyApplyMode] = useState<'all' | 'specific_list'>('all');
+  const [regWarrantyPartItems, setRegWarrantyPartItems] = useState<WarrantyPartTimeItem[]>([
+    createDefaultWarrantyPartItem(),
+  ]);
   const [isCreating, setIsCreating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -7254,7 +7425,12 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                   id: `seg-row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                   criterion,
                   purpose:
-                    criterion === 'Ngày đăng kiễm hết hạn'
+                    criterion === 'Ngày đăng kiễm hết hạn' ||
+                    criterion ===
+                      'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)' ||
+                    criterion === 'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn' ||
+                    criterion === 'Hạn bảo hành Vật tư / phụ tùng' ||
+                    criterion === 'ODO và Ngày xuất xưởng gần nhất'
                       ? defaultCfg.purpose
                       : segmentPurpose.trim() || defaultCfg.purpose,
                   operator: defaultCfg.operator,
@@ -7676,7 +7852,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                     </span>
                   </div>
                   <span className="text-xs text-slate-500 italic">
-                    * Sắp xếp theo dòng chảy của tiền (Định kỳ → Số KM → Bảo hành → Thời gian trong RO → Chất lượng dịch vụ → Doanh thu → Công nợ)
+                    * Sắp xếp theo dòng chảy của tiền (Hết hạn → Bảo dưỡng định kỳ → Bảo hành → Thời gian trong RO → Chất lượng dịch vụ → Doanh thu → Công nợ)
                   </span>
                 </div>
 
@@ -7761,9 +7937,26 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                       ) : (
                         segmentDetailRows.map((detailRow, idx) => {
                           const isRegistrationExpiry =
-                            detailRow.criterion === 'Ngày đăng kiễm hết hạn';
+                            detailRow.criterion === 'Ngày đăng kiễm hết hạn' ||
+                            detailRow.criterion ===
+                              'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)' ||
+                            detailRow.criterion ===
+                              'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn' ||
+                            detailRow.criterion === 'Hạn bảo hành Vật tư / phụ tùng';
+                          const isOdoMaintenance =
+                            detailRow.criterion === 'ODO và Ngày xuất xưởng gần nhất';
                           const isCustomSetup =
-                            isRegistrationExpiry && detailRow.operator === 'Tự thiết lập';
+                            (isRegistrationExpiry || isOdoMaintenance) &&
+                            detailRow.operator === 'Tự thiết lập';
+                          const isNoDataPurpose =
+                            isRegistrationExpiry &&
+                            detailRow.purpose.startsWith('Không có dữ liệu');
+                          const periodicPurposeOptions = isRegistrationExpiry
+                            ? getPeriodicExpiryPurposeOptions(detailRow.criterion)
+                            : [];
+                          const periodicValueOptions = isRegistrationExpiry
+                            ? getPeriodicExpiryValueOptions(detailRow.criterion)
+                            : [];
 
                           return (
                             <tr key={detailRow.id} className="hover:bg-blue-50/30 transition-colors">
@@ -7779,12 +7972,57 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                 {isRegistrationExpiry ? (
                                   <select
                                     value={detailRow.purpose}
+                                    onChange={(e) => {
+                                      const nextPurpose = e.target.value;
+                                      const nextIsNoData =
+                                        nextPurpose.startsWith('Không có dữ liệu');
+                                      setSegmentDetailRows((prev) =>
+                                        prev.map((r) => {
+                                          if (r.id !== detailRow.id) return r;
+                                          if (nextIsNoData) {
+                                            return {
+                                              ...r,
+                                              purpose: nextPurpose,
+                                              operator: '',
+                                              value: '',
+                                            };
+                                          }
+                                          const valOpts = getPeriodicExpiryValueOptions(
+                                            r.criterion
+                                          );
+                                          const restoredOperator =
+                                            r.operator || 'Bộ lọc mẫu';
+                                          const restoredValue =
+                                            restoredOperator === 'Bộ lọc mẫu' &&
+                                            !valOpts.includes(r.value)
+                                              ? valOpts[0]
+                                              : r.value;
+                                          return {
+                                            ...r,
+                                            purpose: nextPurpose,
+                                            operator: restoredOperator,
+                                            value: restoredValue,
+                                          };
+                                        })
+                                      );
+                                    }}
+                                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                  >
+                                    {periodicPurposeOptions.map((opt) => (
+                                      <option key={opt} value={opt}>
+                                        {opt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : isOdoMaintenance ? (
+                                  <select
+                                    value={detailRow.purpose}
                                     onChange={(e) =>
                                       handleUpdateDetailRow(detailRow.id, 'purpose', e.target.value)
                                     }
                                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
                                   >
-                                    {REGISTRATION_EXPIRY_PURPOSE_OPTIONS.map((opt) => (
+                                    {ODO_MAINTENANCE_PURPOSE_OPTIONS.map((opt) => (
                                       <option key={opt} value={opt}>
                                         {opt}
                                       </option>
@@ -7805,18 +8043,20 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                               <td className="px-4 py-3">
                                 {isRegistrationExpiry ? (
                                   <select
-                                    value={detailRow.operator}
+                                    disabled={isNoDataPurpose}
+                                    value={isNoDataPurpose ? '' : detailRow.operator}
                                     onChange={(e) => {
                                       const nextOperator = e.target.value;
                                       setSegmentDetailRows((prev) =>
                                         prev.map((r) => {
                                           if (r.id !== detailRow.id) return r;
+                                          const valOpts = getPeriodicExpiryValueOptions(
+                                            r.criterion
+                                          );
                                           const nextValue =
-                                            nextOperator === 'Mẫu của Du Mục' &&
-                                            !(
-                                              REGISTRATION_EXPIRY_VALUE_OPTIONS as readonly string[]
-                                            ).includes(r.value)
-                                              ? REGISTRATION_EXPIRY_VALUE_OPTIONS[0]
+                                            nextOperator === 'Bộ lọc mẫu' &&
+                                            !valOpts.includes(r.value)
+                                              ? valOpts[0]
                                               : r.value;
                                           return {
                                             ...r,
@@ -7826,9 +8066,50 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                         })
                                       );
                                     }}
+                                    className={`w-full px-3 py-1.5 border rounded-md text-sm transition-colors ${
+                                      isNoDataPurpose
+                                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                        : 'bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer'
+                                    }`}
+                                  >
+                                    {isNoDataPurpose && <option value=""></option>}
+                                    {REGISTRATION_EXPIRY_OPERATOR_OPTIONS.map((op) => (
+                                      <option key={op} value={op}>
+                                        {op}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : isOdoMaintenance ? (
+                                  <select
+                                    value={detailRow.operator}
+                                    onChange={(e) => {
+                                      const nextOp = e.target.value;
+                                      setSegmentDetailRows((prev) =>
+                                        prev.map((r) =>
+                                          r.id === detailRow.id
+                                            ? {
+                                                ...r,
+                                                operator: nextOp,
+                                                maintenanceCycleKm:
+                                                  nextOp === 'Khuyến cáo của Hãng'
+                                                    ? ''
+                                                    : r.maintenanceCycleKm,
+                                                maintenanceCycleMonths:
+                                                  nextOp === 'Khuyến cáo của Hãng'
+                                                    ? ''
+                                                    : r.maintenanceCycleMonths,
+                                                value:
+                                                  nextOp === 'Khuyến cáo của Hãng'
+                                                    ? ''
+                                                    : r.value,
+                                              }
+                                            : r
+                                        )
+                                      );
+                                    }}
                                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
                                   >
-                                    {REGISTRATION_EXPIRY_OPERATOR_OPTIONS.map((op) => (
+                                    {ODO_MAINTENANCE_OPERATOR_OPTIONS.map((op) => (
                                       <option key={op} value={op}>
                                         {op}
                                       </option>
@@ -7852,24 +8133,45 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                               </td>
                               <td className="px-4 py-3">
                                 {isRegistrationExpiry ? (
-                                  <select
-                                    disabled={isCustomSetup}
-                                    value={detailRow.value}
-                                    onChange={(e) =>
-                                      handleUpdateDetailRow(detailRow.id, 'value', e.target.value)
-                                    }
-                                    className={`w-full px-3 py-1.5 border rounded-md text-sm transition-colors ${
-                                      isCustomSetup
-                                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                                        : 'bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer'
-                                    }`}
-                                  >
-                                    {REGISTRATION_EXPIRY_VALUE_OPTIONS.map((valOpt) => (
-                                      <option key={valOpt} value={valOpt}>
-                                        {valOpt}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  isNoDataPurpose ? (
+                                    <input
+                                      type="text"
+                                      value=""
+                                      disabled
+                                      readOnly
+                                      className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-400 cursor-not-allowed focus:outline-none"
+                                    />
+                                  ) : isCustomSetup ? (
+                                    <input
+                                      type="text"
+                                      value={detailRow.value}
+                                      readOnly
+                                      placeholder="Nhấn Thiết lập để cấu hình tùy biến..."
+                                      className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-600 cursor-not-allowed focus:outline-none"
+                                    />
+                                  ) : (
+                                    <select
+                                      value={detailRow.value}
+                                      onChange={(e) =>
+                                        handleUpdateDetailRow(detailRow.id, 'value', e.target.value)
+                                      }
+                                      className="w-full px-3 py-1.5 border rounded-md text-sm transition-colors bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                    >
+                                      {periodicValueOptions.map((valOpt) => (
+                                        <option key={valOpt} value={valOpt}>
+                                          {valOpt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )
+                                ) : isOdoMaintenance &&
+                                  detailRow.operator === 'Khuyến cáo của Hãng' ? (
+                                  <input
+                                    type="text"
+                                    value=""
+                                    readOnly
+                                    className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-500 cursor-not-allowed focus:outline-none"
+                                  />
                                 ) : (
                                   <input
                                     type="text"
@@ -7884,10 +8186,78 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <div className="inline-flex items-center justify-center gap-2">
-                                  {isCustomSetup && (
+                                  {(isCustomSetup || isOdoMaintenance) && (
                                     <button
                                       type="button"
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 text-[#1A73E8] hover:bg-blue-100 border border-blue-200 text-xs font-semibold transition-colors cursor-pointer"
+                                      disabled={isNoDataPurpose}
+                                      onClick={() => {
+                                        if (isNoDataPurpose) return;
+                                        if (isOdoMaintenance) {
+                                          const isManufacturerRec =
+                                            detailRow.operator === 'Khuyến cáo của Hãng';
+                                          setOdoSetupModalRowId(detailRow.id);
+                                          setOdoCycleKmInput(
+                                            isManufacturerRec
+                                              ? ''
+                                              : detailRow.maintenanceCycleKm ?? ''
+                                          );
+                                          setOdoCycleMonthsInput(
+                                            isManufacturerRec
+                                              ? ''
+                                              : detailRow.maintenanceCycleMonths ?? ''
+                                          );
+                                          setOdoRecentRoCountInput(
+                                            detailRow.maintenanceRecentRoCount ?? '3'
+                                          );
+                                        } else if (isRegistrationExpiry) {
+                                          const cfg = detailRow.regExpiryCustomConfig || {};
+                                          setRegUpcomingMode(cfg.upcomingMode || 'days_before');
+                                          setRegUpcomingDays(cfg.upcomingDays ?? '30');
+                                          setRegUpcomingDateFrom(cfg.upcomingDateFrom ?? '');
+                                          setRegUpcomingDateTo(cfg.upcomingDateTo ?? '');
+                                          setRegUpcomingVehicleScope(
+                                            cfg.upcomingVehicleScope || 'Tất cả loại xe'
+                                          );
+                                          setRegOverdueMode(cfg.overdueMode || 'overdue_days');
+                                          setRegOverdueCondition(
+                                            cfg.overdueCondition ||
+                                              'Đã quá hạn tối thiểu (>= số ngày)'
+                                          );
+                                          setRegOverdueDays(cfg.overdueDays ?? '15');
+                                          setRegOverdueDaysMax(cfg.overdueDaysMax ?? '60');
+                                          setRegOverdueDateFrom(cfg.overdueDateFrom ?? '');
+                                          setRegOverdueDateTo(cfg.overdueDateTo ?? '');
+                                          setRegOverduePriority(
+                                            cfg.overduePriority || 'Tất cả mức độ quá hạn'
+                                          );
+                                          setRegMissingDataType(
+                                            cfg.missingDataType ||
+                                              'Trống trường Ngày đăng kiểm hết hạn trong hồ sơ xe'
+                                          );
+                                          setRegMissingRoTimeframe(
+                                            cfg.missingRoTimeframe ||
+                                              'Xe có vào xưởng trong 6 tháng gần nhất'
+                                          );
+                                          setRegMissingContactFilter(
+                                            cfg.missingContactFilter ||
+                                              'Có số điện thoại hợp lệ để CSKH liên hệ bổ sung'
+                                          );
+                                          setRegMissingActionNote(cfg.missingActionNote ?? '');
+                                          setRegWarrantyApplyMode(cfg.warrantyApplyMode || 'all');
+                                          setRegWarrantyPartItems(
+                                            cfg.warrantyPartItems &&
+                                              cfg.warrantyPartItems.length > 0
+                                              ? cfg.warrantyPartItems
+                                              : [createDefaultWarrantyPartItem()]
+                                          );
+                                          setRegExpirySetupModalRowId(detailRow.id);
+                                        }
+                                      }}
+                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs font-semibold transition-colors ${
+                                        isNoDataPurpose
+                                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                                          : 'bg-blue-50 text-[#1A73E8] hover:bg-blue-100 border-blue-200 cursor-pointer'
+                                      }`}
                                     >
                                       <Settings className="w-3.5 h-3.5" />
                                       Thiết lập
@@ -7912,6 +8282,1658 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                 </div>
               </div>
             </div>
+
+            {odoSetupModalRowId && (() => {
+              const activeOdoRow = segmentDetailRows.find(
+                (r) => r.id === odoSetupModalRowId
+              );
+              const isManufacturerRecommendation =
+                activeOdoRow?.operator === 'Khuyến cáo của Hãng';
+
+              const parsedRoCount = Math.max(
+                1,
+                Math.min(12, parseInt(odoRecentRoCountInput.trim(), 10) || 3)
+              );
+
+              // Tạo danh sách RO động dựa trên số RO gần nhất (mặc định N = 3 khớp chính xác ví dụ: 5.000 -> 7.000 -> 15.000 km, cách 100 ngày)
+              const formatDateFromOffsetDays = (offsetDays: number): string => {
+                const d = new Date(Date.UTC(2026, 0, 1 + offsetDays));
+                const dd = String(d.getUTCDate()).padStart(2, '0');
+                const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const yyyy = d.getUTCFullYear();
+                return `${dd}/${mm}/${yyyy}`;
+              };
+
+              const roList: {
+                code: string;
+                km: number;
+                daysFromFirst: number;
+                releaseDate: string;
+                isLatest: boolean;
+              }[] = [];
+              const firstRoKm = 5000;
+              const latestRoKm =
+                parsedRoCount === 1 ? 5000 : firstRoKm + (parsedRoCount - 1) * 5000;
+              const totalDaysBetween =
+                parsedRoCount === 1 ? 50 : (parsedRoCount - 1) * 50;
+
+              for (let i = 1; i <= parsedRoCount; i++) {
+                const code = `RO ${String(i).padStart(2, '0')}`;
+                let daysFromFirst = 0;
+                let km = firstRoKm;
+                if (i === parsedRoCount) {
+                  daysFromFirst = parsedRoCount === 1 ? 0 : totalDaysBetween;
+                  km = latestRoKm;
+                } else if (i > 1) {
+                  if (parsedRoCount === 3 && i === 2) {
+                    daysFromFirst = 20;
+                    km = 7000;
+                  } else {
+                    daysFromFirst = (i - 1) * 50;
+                    km = firstRoKm + daysFromFirst * 100;
+                  }
+                }
+                roList.push({
+                  code,
+                  km,
+                  daysFromFirst,
+                  releaseDate: formatDateFromOffsetDays(daysFromFirst),
+                  isLatest: i === parsedRoCount,
+                });
+              }
+
+              const distanceTraveledKm =
+                parsedRoCount === 1 ? 5000 : latestRoKm - firstRoKm;
+              const avgKmPerDay = Math.round(distanceTraveledKm / totalDaysBetween);
+              const daysSinceLatestRo = 10;
+              const forecastedCurrentOdoKm =
+                latestRoKm + daysSinceLatestRo * avgKmPerDay;
+              const firstRoDate = roList[0]?.releaseDate || '01/01/2026';
+              const latestRoItem = roList[roList.length - 1];
+              const latestRoCode = latestRoItem?.code || `RO ${String(parsedRoCount).padStart(2, '0')}`;
+              const latestRoDate = latestRoItem?.releaseDate || '11/04/2026';
+              const todayDateStr = formatDateFromOffsetDays(
+                (parsedRoCount === 1 ? 0 : totalDaysBetween) + daysSinceLatestRo
+              );
+
+              // Quy đổi tương ứng cho mô hình theo Tháng
+              const monthsSinceLatestRoNum = daysSinceLatestRo / 30;
+              const monthsSinceLatestRoStr = monthsSinceLatestRoNum
+                .toFixed(2)
+                .replace(/\.?0+$/, '')
+                .replace('.', ',');
+              const parsedCycleMonths = isManufacturerRecommendation
+                ? 6
+                : Math.max(
+                    0.5,
+                    parseFloat(odoCycleMonthsInput.trim().replace(',', '.')) || 6
+                  );
+              const cycleMonthsStr = String(parsedCycleMonths).replace('.', ',');
+              const cycleMonthsInDays = Math.round(parsedCycleMonths * 30);
+              const diffDaysFromCycle = cycleMonthsInDays - daysSinceLatestRo;
+              const diffMonthsFromCycleStr = (Math.abs(diffDaysFromCycle) / 30)
+                .toFixed(2)
+                .replace(/\.?0+$/, '')
+                .replace('.', ',');
+
+              const fmtKm = (val: number) => val.toLocaleString('vi-VN');
+
+              return (
+                <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center">
+                  <div className="bg-white w-screen h-screen flex flex-col overflow-hidden">
+                    {/* Modal Header */}
+                    <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-[#1A73E8]" />
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Thiết lập ODO và Ngày xuất xưởng gần nhất
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOdoSetupModalRowId(null)}
+                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
+                      {/* Hàng nhập liệu cố định trên cùng 1 dòng */}
+                      <div className="grid grid-cols-3 gap-3 shrink-0">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5 truncate">
+                            Chu kỳ chung về bảo dưỡng (theo Km)
+                          </label>
+                          <div className="relative h-9">
+                            <input
+                              type="text"
+                              value={isManufacturerRecommendation ? '' : odoCycleKmInput}
+                              readOnly={isManufacturerRecommendation}
+                              onChange={(e) => {
+                                if (!isManufacturerRecommendation) {
+                                  setOdoCycleKmInput(e.target.value);
+                                }
+                              }}
+                              placeholder={
+                                isManufacturerRecommendation
+                                  ? ''
+                                  : 'Nhập số Km (VD: 5.000)...'
+                              }
+                              className={`w-full h-9 pl-3 pr-10 border rounded-lg text-xs focus:outline-none ${
+                                isManufacturerRecommendation
+                                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                  : 'bg-white border-slate-300 text-slate-800 focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]'
+                              }`}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400 pointer-events-none">
+                              Km
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5 truncate">
+                            Chu kỳ chung về bảo dưỡng (theo Tháng)
+                          </label>
+                          <div className="relative h-9">
+                            <input
+                              type="text"
+                              value={isManufacturerRecommendation ? '' : odoCycleMonthsInput}
+                              readOnly={isManufacturerRecommendation}
+                              onChange={(e) => {
+                                if (!isManufacturerRecommendation) {
+                                  setOdoCycleMonthsInput(e.target.value);
+                                }
+                              }}
+                              placeholder={
+                                isManufacturerRecommendation
+                                  ? ''
+                                  : 'Nhập số tháng (VD: 6)...'
+                              }
+                              className={`w-full h-9 pl-3 pr-14 border rounded-lg text-xs focus:outline-none ${
+                                isManufacturerRecommendation
+                                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                  : 'bg-white border-slate-300 text-slate-800 focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]'
+                              }`}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400 pointer-events-none">
+                              Tháng
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5 truncate">
+                            Cơ sở tính KM trung bình
+                          </label>
+                          <div className="relative h-9">
+                            <input
+                              type="number"
+                              min="1"
+                              max="12"
+                              value={odoRecentRoCountInput}
+                              onChange={(e) => setOdoRecentRoCountInput(e.target.value)}
+                              placeholder="Nhập số RO..."
+                              className="w-full h-9 pl-3 pr-24 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-[#1A73E8] focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                            />
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 pointer-events-none">
+                              (RO gần nhất)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2 Khu vực Mô hình dự báo nằm cố định trên cùng 1 dòng */}
+                      <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+                        {/* Khu vực 1: Mô hình dự báo về ODO (theo KM) */}
+                        <div className="border border-blue-200 bg-blue-50/30 rounded-xl p-3.5 flex flex-col min-h-0">
+                          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-blue-200/80 shrink-0">
+                            <h5 className="text-xs font-bold text-[#1A73E8] uppercase tracking-wide">
+                              Mô hình dự báo về ODO (theo KM)
+                            </h5>
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-[#1A73E8] text-[11px] font-semibold">
+                              {parsedRoCount} RO gần nhất
+                            </span>
+                          </div>
+
+                          <div className="space-y-3 overflow-y-auto flex-1 pr-1 text-xs text-slate-700">
+                            <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
+                              <div className="font-bold text-slate-800">
+                                Bước 1: Tính số KM chạy mỗi ngày
+                              </div>
+                              <div className="space-y-1.5 pl-1 text-slate-600">
+                                {roList.map((ro, rIdx) => (
+                                  <div
+                                    key={ro.code}
+                                    className="flex items-center justify-between gap-2 py-1 px-2 rounded bg-slate-50 border border-slate-100"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="font-bold text-slate-800 shrink-0">
+                                        {ro.code}
+                                        {ro.isLatest ? ' (Gần nhất)' : ''}:
+                                      </span>
+                                      <span className="font-bold text-[#1A73E8] shrink-0">
+                                        {fmtKm(ro.km)} km
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-[11px] font-medium text-slate-700 shrink-0">
+                                        Ngày xuất xưởng: <strong>{ro.releaseDate}</strong>
+                                      </span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 shrink-0 text-right">
+                                      {rIdx === 0 ? (
+                                        <span>(Mốc gốc)</span>
+                                      ) : ro.isLatest && parsedRoCount > 1 ? (
+                                        <span className="font-medium text-slate-700">
+                                          (Cách RO 01 [{firstRoDate}] đúng {totalDaysBetween} ngày)
+                                        </span>
+                                      ) : (
+                                        <span>
+                                          (+{ro.daysFromFirst} ngày | +{fmtKm(ro.km - firstRoKm)} km)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="pt-1.5 border-t border-slate-100 font-semibold text-[#1A73E8]">
+                                ➔ Quãng đường đi được: ({fmtKm(latestRoKm)} - {fmtKm(firstRoKm)}) ={' '}
+                                {fmtKm(distanceTraveledKm)} km / {totalDaysBetween} ngày ={' '}
+                                {fmtKm(avgKmPerDay)} km/ngày
+                              </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-1.5">
+                              <div className="font-bold text-slate-800">
+                                Bước 2: Dự báo ODO ở thời điểm hiện tại
+                              </div>
+                              <div className="text-slate-600 pl-1">
+                                Ngày xuất xưởng{' '}
+                                <strong className="text-slate-800">
+                                  {latestRoCode} ({latestRoDate})
+                                </strong>{' '}
+                                cách hôm nay{' '}
+                                <strong className="text-slate-800">({todayDateStr})</strong>:{' '}
+                                <span className="font-semibold text-slate-900">
+                                  {daysSinceLatestRo} ngày
+                                </span>
+                              </div>
+                              <div className="pt-1.5 border-t border-slate-100 font-bold text-emerald-700">
+                                ➔ ODO hiện tại ({todayDateStr}) = {fmtKm(latestRoKm)} km + (
+                                {daysSinceLatestRo} ngày x {fmtKm(avgKmPerDay)} km) ={' '}
+                                {fmtKm(forecastedCurrentOdoKm)} km
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Khu vực 2: Mô hình dự báo về ODO (theo Tháng) */}
+                        <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-3.5 flex flex-col min-h-0">
+                          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-indigo-200/80 shrink-0">
+                            <h5 className="text-xs font-bold text-indigo-700 uppercase tracking-wide">
+                              Mô hình dự báo về ODO (theo Tháng)
+                            </h5>
+                            <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
+                              RO cuối cùng: {latestRoCode}
+                            </span>
+                          </div>
+
+                          <div className="space-y-3 overflow-y-auto flex-1 pr-1 text-xs text-slate-700">
+                            <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
+                              <div className="font-bold text-slate-800">
+                                Bước 1: Xác định thời gian bảo dưỡng lần cuối
+                              </div>
+                              <div className="pl-1">
+                                <div className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded bg-slate-50 border border-slate-100">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-bold text-slate-800 shrink-0">
+                                      {latestRoCode} (Cuối cùng):
+                                    </span>
+                                    <span className="font-bold text-indigo-700 shrink-0">
+                                      {fmtKm(latestRoKm)} km
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-[11px] font-medium text-slate-700 shrink-0">
+                                      Ngày xuất xưởng: <strong>{latestRoDate}</strong>
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] font-medium text-slate-500 shrink-0">
+                                    (RO cuối cùng)
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="pt-1.5 border-t border-slate-100 font-semibold text-indigo-700">
+                                ➔ Ngày hiện tại ({todayDateStr}) - Ngày xuất xưởng (cuối cùng) (
+                                {latestRoDate}) = {daysSinceLatestRo} ngày = {monthsSinceLatestRoStr}{' '}
+                                tháng
+                              </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
+                              <div className="font-bold text-slate-800">
+                                Bước 2: Đối chiếu với Chu kỳ chung về Bảo dưỡng (theo tháng)
+                              </div>
+                              <div className="space-y-1 pl-1 text-slate-600">
+                                <div>
+                                  • Thời gian từ lần bảo dưỡng cuối:{' '}
+                                  <strong className="text-slate-900">
+                                    {monthsSinceLatestRoStr} tháng ({daysSinceLatestRo} ngày)
+                                  </strong>
+                                </div>
+                                <div>
+                                  • Chu kỳ chung về Bảo dưỡng (theo tháng):{' '}
+                                  <strong className="text-slate-900">
+                                    {isManufacturerRecommendation
+                                      ? `${cycleMonthsStr} tháng (${cycleMonthsInDays} ngày - Theo khuyến cáo của Hãng)`
+                                      : odoCycleMonthsInput.trim()
+                                      ? `${cycleMonthsStr} tháng (${cycleMonthsInDays} ngày)`
+                                      : `${cycleMonthsStr} tháng (${cycleMonthsInDays} ngày - Mặc định)`}
+                                  </strong>
+                                </div>
+                              </div>
+                              <div
+                                className={`pt-1.5 border-t border-slate-100 font-bold ${
+                                  diffDaysFromCycle <= 0
+                                    ? 'text-amber-700'
+                                    : 'text-emerald-700'
+                                }`}
+                              >
+                                ➔ Kết quả:{' '}
+                                {diffDaysFromCycle > 0
+                                  ? `Chưa đến hạn bảo dưỡng (${monthsSinceLatestRoStr} tháng < ${cycleMonthsStr} tháng) — Còn ${diffMonthsFromCycleStr} tháng (${diffDaysFromCycle} ngày) nữa đến kỳ bảo dưỡng tiếp theo`
+                                  : diffDaysFromCycle === 0
+                                  ? `Chạm đúng mốc chu kỳ bảo dưỡng định kỳ (${cycleMonthsStr} tháng = ${cycleMonthsInDays} ngày)`
+                                  : `Đã quá hạn bảo dưỡng định kỳ (${monthsSinceLatestRoStr} tháng > ${cycleMonthsStr} tháng) — Quá hạn ${diffMonthsFromCycleStr} tháng (${Math.abs(
+                                      diffDaysFromCycle
+                                    )} ngày)`}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setOdoSetupModalRowId(null)}
+                        className="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const kmTrim = isManufacturerRecommendation
+                            ? ''
+                            : odoCycleKmInput.trim();
+                          const monthsTrim = isManufacturerRecommendation
+                            ? ''
+                            : odoCycleMonthsInput.trim();
+                          const roCountTrim = String(parsedRoCount);
+                          const summaryParts: string[] = [];
+                          if (kmTrim) summaryParts.push(`${kmTrim} Km`);
+                          if (monthsTrim) summaryParts.push(`${monthsTrim} Tháng`);
+                          summaryParts.push(
+                            `Cơ sở ${roCountTrim} RO gần nhất (ODO dự báo: ${fmtKm(
+                              forecastedCurrentOdoKm
+                            )} km)`
+                          );
+                          setSegmentDetailRows((prev) =>
+                            prev.map((r) =>
+                              r.id === odoSetupModalRowId
+                                ? {
+                                    ...r,
+                                    maintenanceCycleKm: kmTrim,
+                                    maintenanceCycleMonths: monthsTrim,
+                                    maintenanceRecentRoCount: roCountTrim,
+                                    value: isManufacturerRecommendation
+                                      ? ''
+                                      : summaryParts.join(' / '),
+                                  }
+                                : r
+                            )
+                          );
+                          setOdoSetupModalRowId(null);
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-[#1A73E8] hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Lưu
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {regExpirySetupModalRowId && (() => {
+              const activeRegRow = segmentDetailRows.find(
+                (r) => r.id === regExpirySetupModalRowId
+              );
+              if (!activeRegRow) return null;
+              const currentPurpose = activeRegRow.purpose;
+              const isUpcomingPurpose = currentPurpose.startsWith('Sắp hết hạn');
+              const isOverduePurpose = currentPurpose.startsWith('Đã quá hạn');
+              const isWarrantyCriterion =
+                activeRegRow.criterion === 'Hạn bảo hành Vật tư / phụ tùng';
+
+              const handleUpdateWarrantyPartItem = <K extends keyof WarrantyPartTimeItem>(
+                itemId: string,
+                field: K,
+                val: WarrantyPartTimeItem[K]
+              ) => {
+                setRegWarrantyPartItems((prev) =>
+                  prev.map((item) => (item.id === itemId ? { ...item, [field]: val } : item))
+                );
+              };
+
+              const handleAddWarrantyPartItem = () => {
+                setRegWarrantyPartItems((prev) => [...prev, createDefaultWarrantyPartItem()]);
+              };
+
+              const handleRemoveWarrantyPartItem = (itemId: string) => {
+                setRegWarrantyPartItems((prev) =>
+                  prev.length > 1 ? prev.filter((item) => item.id !== itemId) : prev
+                );
+              };
+
+              return (
+                <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-4">
+                  <div
+                    className={`bg-white rounded-xl border border-slate-200 shadow-xl w-full ${
+                      isWarrantyCriterion
+                        ? 'max-w-[980px] h-[540px]'
+                        : 'max-w-lg max-h-[90vh]'
+                    } flex flex-col overflow-hidden`}
+                  >
+                    {/* Modal Header */}
+                    <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-[#1A73E8]" />
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Thiết lập lọc tùy biến: {activeRegRow.criterion}
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRegExpirySetupModalRowId(null)}
+                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-5 space-y-4 overflow-y-auto flex-1">
+                      {/* Purpose Context Banner */}
+                      <div
+                        className={`px-3.5 py-2.5 rounded-lg border flex items-center justify-between shrink-0 ${
+                          isUpcomingPurpose
+                            ? 'bg-sky-50 border-sky-200 text-sky-900'
+                            : isOverduePurpose
+                            ? 'bg-amber-50 border-amber-200 text-amber-900'
+                            : 'bg-teal-50 border-teal-200 text-teal-900'
+                        }`}
+                      >
+                        <span className="text-xs font-medium">Mục đích lọc đang chọn:</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                            isUpcomingPurpose
+                              ? 'bg-sky-600 text-white'
+                              : isOverduePurpose
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-teal-600 text-white'
+                          }`}
+                        >
+                          {currentPurpose}
+                        </span>
+                      </div>
+
+                      {/* Phạm vi áp dụng Vật tư / Phụ tùng (chỉ hiển thị cho Hạn bảo hành Vật tư / phụ tùng) */}
+                      {isWarrantyCriterion && (
+                        <div className="space-y-2 shrink-0">
+                          <label className="block text-xs font-semibold text-slate-700">
+                            Phạm vi áp dụng Vật tư / Phụ tùng
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <label
+                              onClick={() => setRegWarrantyApplyMode('all')}
+                              className={`flex items-center gap-2.5 px-3.5 h-[56px] rounded-lg border text-xs cursor-pointer select-none ${
+                                regWarrantyApplyMode === 'all'
+                                  ? 'bg-blue-50/80 border-[#1A73E8] text-[#1A73E8]'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={regWarrantyApplyMode === 'all'}
+                                onChange={() => setRegWarrantyApplyMode('all')}
+                                className="h-4 w-4 shrink-0 rounded border-slate-300 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold truncate">
+                                  Áp dụng cho tất cả các vật tư
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-normal truncate mt-0.5">
+                                  Căn cứ theo thời gian để áp dụng chung cho tất cả vật tư / phụ tùng
+                                </div>
+                              </div>
+                            </label>
+
+                            <label
+                              onClick={() => setRegWarrantyApplyMode('specific_list')}
+                              className={`flex items-center gap-2.5 px-3.5 h-[56px] rounded-lg border text-xs cursor-pointer select-none ${
+                                regWarrantyApplyMode === 'specific_list'
+                                  ? 'bg-blue-50/80 border-[#1A73E8] text-[#1A73E8]'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={regWarrantyApplyMode === 'specific_list'}
+                                onChange={() => setRegWarrantyApplyMode('specific_list')}
+                                className="h-4 w-4 shrink-0 rounded border-slate-300 text-[#1A73E8] focus:ring-[#1A73E8] cursor-pointer"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold truncate">
+                                  Chỉ định danh sách vật tư / phụ tùng
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-normal truncate mt-0.5">
+                                  Thiết lập thời gian tìm kiếm riêng cho từng vật tư / phụ tùng
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Giao diện cố định cho Hạn bảo hành Vật tư / phụ tùng */}
+                      {isWarrantyCriterion ? (
+                        regWarrantyApplyMode === 'specific_list' ? (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between h-8">
+                              <span className="text-xs font-semibold text-slate-700">
+                                Danh sách vật tư / phụ tùng và thời gian cần tìm kiếm ({regWarrantyPartItems.length} dòng)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleAddWarrantyPartItem}
+                                className="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#1A73E8] border border-blue-200 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Thêm vật tư / phụ tùng
+                              </button>
+                            </div>
+
+                            <datalist id="warranty-part-suggestions-list">
+                              {WARRANTY_PART_SUGGESTIONS.map((s) => (
+                                <option key={s} value={s} />
+                              ))}
+                            </datalist>
+
+                            <div className="border border-slate-200 rounded-lg overflow-hidden">
+                              <table className="w-full table-fixed text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase h-9">
+                                    <th className="px-2 text-center w-[44px]">STT</th>
+                                    <th className="px-2.5 w-[220px]">Vật tư / Phụ tùng</th>
+                                    <th className="px-2.5 w-[310px]">Kiểu thiết lập thời gian</th>
+                                    <th className="px-2.5">Thời gian cần tìm kiếm</th>
+                                    <th className="px-2 text-center w-[48px]">Xóa</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200 text-xs">
+                                  {regWarrantyPartItems.map((partItem, pIdx) => (
+                                    <tr
+                                      key={partItem.id}
+                                      className="hover:bg-blue-50/20 h-[52px] align-middle transition-colors"
+                                    >
+                                      <td className="px-2 text-center font-semibold text-slate-600">
+                                        {pIdx + 1}
+                                      </td>
+                                      <td className="px-2.5">
+                                        <input
+                                          type="text"
+                                          list="warranty-part-suggestions-list"
+                                          value={partItem.partName}
+                                          onChange={(e) =>
+                                            handleUpdateWarrantyPartItem(
+                                              partItem.id,
+                                              'partName',
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder="Nhập hoặc chọn vật tư..."
+                                          className="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                        />
+                                      </td>
+                                      <td className="px-2.5">
+                                        {isUpcomingPurpose ? (
+                                          <select
+                                            value={partItem.upcomingMode}
+                                            onChange={(e) =>
+                                              handleUpdateWarrantyPartItem(
+                                                partItem.id,
+                                                'upcomingMode',
+                                                e.target.value as 'days_before' | 'date_range'
+                                              )
+                                            }
+                                            className="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                          >
+                                            <option value="days_before">
+                                              Theo số ngày báo trước hạn
+                                            </option>
+                                            <option value="date_range">
+                                              Theo khoảng ngày hết hạn
+                                            </option>
+                                          </select>
+                                        ) : (
+                                          <div className="grid grid-cols-2 gap-1.5 h-9 items-center">
+                                            <select
+                                              value={partItem.overdueMode}
+                                              onChange={(e) =>
+                                                handleUpdateWarrantyPartItem(
+                                                  partItem.id,
+                                                  'overdueMode',
+                                                  e.target.value as
+                                                    | 'overdue_days'
+                                                    | 'overdue_date_range'
+                                                )
+                                              }
+                                              className="w-full h-9 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer truncate"
+                                            >
+                                              <option value="overdue_days">
+                                                Theo số ngày quá hạn
+                                              </option>
+                                              <option value="overdue_date_range">
+                                                Theo mốc ngày hết hạn
+                                              </option>
+                                            </select>
+
+                                            <select
+                                              disabled={partItem.overdueMode !== 'overdue_days'}
+                                              value={partItem.overdueCondition}
+                                              onChange={(e) =>
+                                                handleUpdateWarrantyPartItem(
+                                                  partItem.id,
+                                                  'overdueCondition',
+                                                  e.target.value
+                                                )
+                                              }
+                                              className={`w-full h-9 px-2 border rounded-md text-xs truncate ${
+                                                partItem.overdueMode !== 'overdue_days'
+                                                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                                  : 'bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer'
+                                              }`}
+                                            >
+                                              <option value="Đã quá hạn tối thiểu (>= số ngày)">
+                                                Tối thiểu (&gt;= ngày)
+                                              </option>
+                                              <option value="Đã quá hạn trong vòng (<= số ngày)">
+                                                Trong vòng (&lt;= ngày)
+                                              </option>
+                                              <option value="Đã quá hạn trong khoảng (Từ - Đến ngày)">
+                                                Khoảng (Từ - Đến ngày)
+                                              </option>
+                                            </select>
+                                          </div>
+                                        )}
+                                      </td>
+                                      <td className="px-2.5">
+                                        {isUpcomingPurpose ? (
+                                          partItem.upcomingMode === 'days_before' ? (
+                                            <div className="flex items-center gap-1.5 h-9">
+                                              <div className="relative flex-1">
+                                                <input
+                                                  type="number"
+                                                  min="1"
+                                                  value={partItem.upcomingDays}
+                                                  onChange={(e) =>
+                                                    handleUpdateWarrantyPartItem(
+                                                      partItem.id,
+                                                      'upcomingDays',
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  placeholder="VD: 30"
+                                                  className="w-full h-9 pl-2.5 pr-12 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                                />
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 pointer-events-none">
+                                                  ngày
+                                                </span>
+                                              </div>
+                                              <select
+                                                value={
+                                                  ['7', '15', '30', '45', '60', '90'].includes(
+                                                    partItem.upcomingDays
+                                                  )
+                                                    ? partItem.upcomingDays
+                                                    : ''
+                                                }
+                                                onChange={(e) => {
+                                                  if (e.target.value) {
+                                                    handleUpdateWarrantyPartItem(
+                                                      partItem.id,
+                                                      'upcomingDays',
+                                                      e.target.value
+                                                    );
+                                                  }
+                                                }}
+                                                className="h-9 w-[118px] shrink-0 px-2 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] cursor-pointer"
+                                              >
+                                                <option value="">Chọn nhanh...</option>
+                                                {['7', '15', '30', '45', '60', '90'].map((d) => (
+                                                  <option key={d} value={d}>
+                                                    Trước {d} ngày
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-1.5 h-9">
+                                              <input
+                                                type="date"
+                                                value={partItem.upcomingDateFrom}
+                                                onChange={(e) =>
+                                                  handleUpdateWarrantyPartItem(
+                                                    partItem.id,
+                                                    'upcomingDateFrom',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full flex-1 h-9 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                              />
+                                              <span className="text-slate-400 font-semibold shrink-0">
+                                                -
+                                              </span>
+                                              <input
+                                                type="date"
+                                                value={partItem.upcomingDateTo}
+                                                onChange={(e) =>
+                                                  handleUpdateWarrantyPartItem(
+                                                    partItem.id,
+                                                    'upcomingDateTo',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full flex-1 h-9 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                              />
+                                            </div>
+                                          )
+                                        ) : partItem.overdueMode === 'overdue_days' ? (
+                                          partItem.overdueCondition ===
+                                          'Đã quá hạn trong khoảng (Từ - Đến ngày)' ? (
+                                            <div className="flex items-center gap-1.5 h-9">
+                                              <input
+                                                type="number"
+                                                min="1"
+                                                value={partItem.overdueDays}
+                                                onChange={(e) =>
+                                                  handleUpdateWarrantyPartItem(
+                                                    partItem.id,
+                                                    'overdueDays',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                placeholder="Từ ngày..."
+                                                className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                              />
+                                              <span className="text-slate-400 font-semibold shrink-0">
+                                                -
+                                              </span>
+                                              <input
+                                                type="number"
+                                                min="1"
+                                                value={partItem.overdueDaysMax}
+                                                onChange={(e) =>
+                                                  handleUpdateWarrantyPartItem(
+                                                    partItem.id,
+                                                    'overdueDaysMax',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                placeholder="Đến ngày..."
+                                                className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-1.5 h-9">
+                                              <div className="relative flex-1">
+                                                <input
+                                                  type="number"
+                                                  min="1"
+                                                  value={partItem.overdueDays}
+                                                  onChange={(e) =>
+                                                    handleUpdateWarrantyPartItem(
+                                                      partItem.id,
+                                                      'overdueDays',
+                                                      e.target.value
+                                                    )
+                                                  }
+                                                  placeholder="VD: 15"
+                                                  className="w-full h-9 pl-2.5 pr-12 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                                />
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 pointer-events-none">
+                                                  ngày
+                                                </span>
+                                              </div>
+                                              <select
+                                                value={
+                                                  ['7', '15', '30', '60', '90'].includes(
+                                                    partItem.overdueDays
+                                                  )
+                                                    ? partItem.overdueDays
+                                                    : ''
+                                                }
+                                                onChange={(e) => {
+                                                  if (e.target.value) {
+                                                    handleUpdateWarrantyPartItem(
+                                                      partItem.id,
+                                                      'overdueDays',
+                                                      e.target.value
+                                                    );
+                                                  }
+                                                }}
+                                                className="h-9 w-[118px] shrink-0 px-2 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] cursor-pointer"
+                                              >
+                                                <option value="">Chọn nhanh...</option>
+                                                {['7', '15', '30', '60', '90'].map((d) => (
+                                                  <option key={d} value={d}>
+                                                    {d} ngày
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          )
+                                        ) : (
+                                          <div className="flex items-center gap-1.5 h-9">
+                                            <input
+                                              type="date"
+                                              value={partItem.overdueDateFrom}
+                                              onChange={(e) =>
+                                                handleUpdateWarrantyPartItem(
+                                                  partItem.id,
+                                                  'overdueDateFrom',
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full flex-1 h-9 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                            />
+                                            <span className="text-slate-400 font-semibold shrink-0">
+                                              -
+                                            </span>
+                                            <input
+                                              type="date"
+                                              value={partItem.overdueDateTo}
+                                              onChange={(e) =>
+                                                handleUpdateWarrantyPartItem(
+                                                  partItem.id,
+                                                  'overdueDateTo',
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full flex-1 h-9 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                            />
+                                          </div>
+                                        )}
+                                      </td>
+                                      <td className="px-2 text-center">
+                                        <button
+                                          type="button"
+                                          disabled={regWarrantyPartItems.length <= 1}
+                                          onClick={() => handleRemoveWarrantyPartItem(partItem.id)}
+                                          title="Xóa dòng vật tư / phụ tùng"
+                                          className={`inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors ${
+                                            regWarrantyPartItems.length <= 1
+                                              ? 'text-slate-300 cursor-not-allowed'
+                                              : 'text-red-600 hover:bg-red-50 cursor-pointer'
+                                          }`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Giao diện cố định 1 dòng cho "Áp dụng cho tất cả các vật tư" */
+                          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/40 space-y-3">
+                            <div className="text-xs font-semibold text-slate-700">
+                              Thiết lập thời gian áp dụng chung cho tất cả vật tư / phụ tùng
+                            </div>
+                            {isUpcomingPurpose ? (
+                              <div className="grid grid-cols-12 gap-3 items-center">
+                                <div className="col-span-5">
+                                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                    Kiểu thiết lập thời gian
+                                  </label>
+                                  <select
+                                    value={regUpcomingMode}
+                                    onChange={(e) =>
+                                      setRegUpcomingMode(
+                                        e.target.value as 'days_before' | 'date_range'
+                                      )
+                                    }
+                                    className="w-full h-9 px-3 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                  >
+                                    <option value="days_before">Theo số ngày báo trước hạn</option>
+                                    <option value="date_range">Theo khoảng ngày hết hạn</option>
+                                  </select>
+                                </div>
+                                <div className="col-span-7">
+                                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                    Thời gian cần tìm kiếm
+                                  </label>
+                                  {regUpcomingMode === 'days_before' ? (
+                                    <div className="flex items-center gap-2 h-9">
+                                      <div className="relative flex-1">
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          value={regUpcomingDays}
+                                          onChange={(e) => setRegUpcomingDays(e.target.value)}
+                                          placeholder="Nhập số ngày trước khi hết hạn (VD: 30)..."
+                                          className="w-full h-9 pl-3 pr-16 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                        />
+                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 pointer-events-none">
+                                          ngày tới
+                                        </span>
+                                      </div>
+                                      <select
+                                        value={
+                                          ['7', '15', '30', '45', '60', '90'].includes(
+                                            regUpcomingDays
+                                          )
+                                            ? regUpcomingDays
+                                            : ''
+                                        }
+                                        onChange={(e) => {
+                                          if (e.target.value) setRegUpcomingDays(e.target.value);
+                                        }}
+                                        className="h-9 w-[135px] shrink-0 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] cursor-pointer"
+                                      >
+                                        <option value="">Chọn nhanh...</option>
+                                        {['7', '15', '30', '45', '60', '90'].map((d) => (
+                                          <option key={d} value={d}>
+                                            Trước {d} ngày
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 h-9">
+                                      <input
+                                        type="date"
+                                        value={regUpcomingDateFrom}
+                                        onChange={(e) => setRegUpcomingDateFrom(e.target.value)}
+                                        className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                      />
+                                      <span className="text-slate-400 font-semibold shrink-0">
+                                        -
+                                      </span>
+                                      <input
+                                        type="date"
+                                        value={regUpcomingDateTo}
+                                        onChange={(e) => setRegUpcomingDateTo(e.target.value)}
+                                        className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-12 gap-3 items-center">
+                                <div className="col-span-6">
+                                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                    Kiểu thiết lập thời gian
+                                  </label>
+                                  <div className="grid grid-cols-2 gap-2 h-9 items-center">
+                                    <select
+                                      value={regOverdueMode}
+                                      onChange={(e) =>
+                                        setRegOverdueMode(
+                                          e.target.value as 'overdue_days' | 'overdue_date_range'
+                                        )
+                                      }
+                                      className="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer truncate"
+                                    >
+                                      <option value="overdue_days">Theo số ngày đã quá hạn</option>
+                                      <option value="overdue_date_range">
+                                        Theo mốc ngày đã hết hạn
+                                      </option>
+                                    </select>
+                                    <select
+                                      disabled={regOverdueMode !== 'overdue_days'}
+                                      value={regOverdueCondition}
+                                      onChange={(e) => setRegOverdueCondition(e.target.value)}
+                                      className={`w-full h-9 px-2.5 border rounded-md text-xs truncate ${
+                                        regOverdueMode !== 'overdue_days'
+                                          ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                          : 'bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer'
+                                      }`}
+                                    >
+                                      <option value="Đã quá hạn tối thiểu (>= số ngày)">
+                                        Tối thiểu (&gt;= ngày)
+                                      </option>
+                                      <option value="Đã quá hạn trong vòng (<= số ngày)">
+                                        Trong vòng (&lt;= ngày)
+                                      </option>
+                                      <option value="Đã quá hạn trong khoảng (Từ - Đến ngày)">
+                                        Khoảng (Từ - Đến ngày)
+                                      </option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <div className="col-span-6">
+                                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                    Thời gian cần tìm kiếm
+                                  </label>
+                                  {regOverdueMode === 'overdue_days' ? (
+                                    regOverdueCondition ===
+                                    'Đã quá hạn trong khoảng (Từ - Đến ngày)' ? (
+                                      <div className="flex items-center gap-2 h-9">
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          value={regOverdueDays}
+                                          onChange={(e) => setRegOverdueDays(e.target.value)}
+                                          placeholder="Từ ngày..."
+                                          className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                        />
+                                        <span className="text-slate-400 font-semibold shrink-0">
+                                          -
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          value={regOverdueDaysMax}
+                                          onChange={(e) => setRegOverdueDaysMax(e.target.value)}
+                                          placeholder="Đến ngày..."
+                                          className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 h-9">
+                                        <div className="relative flex-1">
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={regOverdueDays}
+                                            onChange={(e) => setRegOverdueDays(e.target.value)}
+                                            placeholder="Nhập số ngày (VD: 15)..."
+                                            className="w-full h-9 pl-2.5 pr-12 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                          />
+                                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 pointer-events-none">
+                                            ngày
+                                          </span>
+                                        </div>
+                                        <select
+                                          value={
+                                            ['7', '15', '30', '60', '90'].includes(regOverdueDays)
+                                              ? regOverdueDays
+                                              : ''
+                                          }
+                                          onChange={(e) => {
+                                            if (e.target.value) setRegOverdueDays(e.target.value);
+                                          }}
+                                          className="h-9 w-[125px] shrink-0 px-2 bg-white border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] cursor-pointer"
+                                        >
+                                          <option value="">Chọn nhanh...</option>
+                                          {['7', '15', '30', '60', '90'].map((d) => (
+                                            <option key={d} value={d}>
+                                              {d} ngày
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    )
+                                  ) : (
+                                    <div className="flex items-center gap-2 h-9">
+                                      <input
+                                        type="date"
+                                        value={regOverdueDateFrom}
+                                        onChange={(e) => setRegOverdueDateFrom(e.target.value)}
+                                        className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                      />
+                                      <span className="text-slate-400 font-semibold shrink-0">
+                                        -
+                                      </span>
+                                      <input
+                                        type="date"
+                                        value={regOverdueDateTo}
+                                        onChange={(e) => setRegOverdueDateTo(e.target.value)}
+                                        className="w-full flex-1 h-9 px-2.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          {/* 1. GIAO DIỆN KHI MỤC ĐÍCH LỌC = "Sắp hết hạn đăng kiểm" */}
+                          {isUpcomingPurpose && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-2">
+                              Phương thức xác định thời hạn sắp hết hạn đăng kiểm
+                            </label>
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setRegUpcomingMode('days_before')}
+                                className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-all cursor-pointer ${
+                                  regUpcomingMode === 'days_before'
+                                    ? 'bg-blue-50 border-[#1A73E8] text-[#1A73E8]'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                              >
+                                Theo số ngày báo trước hạn
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRegUpcomingMode('date_range')}
+                                className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-all cursor-pointer ${
+                                  regUpcomingMode === 'date_range'
+                                    ? 'bg-blue-50 border-[#1A73E8] text-[#1A73E8]'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                              >
+                                Theo khoảng ngày hết hạn
+                              </button>
+                            </div>
+                          </div>
+
+                          {regUpcomingMode === 'days_before' ? (
+                            <div className="space-y-2.5">
+                              <label className="block text-xs font-semibold text-slate-700">
+                                Số ngày trước khi hết hạn đăng kiểm (đếm ngược)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={regUpcomingDays}
+                                  onChange={(e) => setRegUpcomingDays(e.target.value)}
+                                  placeholder="Nhập số ngày trước khi hết hạn (VD: 30)..."
+                                  className="w-full pl-3 pr-16 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                                  ngày tới
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                <span className="text-[11px] text-slate-500 mr-1">Gợi ý nhanh:</span>
+                                {['7', '15', '30', '45', '60', '90'].map((d) => (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => setRegUpcomingDays(d)}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                                      regUpcomingDays === d
+                                        ? 'bg-[#1A73E8] text-white border-[#1A73E8]'
+                                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50 hover:text-[#1A73E8]'
+                                    }`}
+                                  >
+                                    Trước {d} ngày
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Ngày hết hạn từ
+                                </label>
+                                <input
+                                  type="date"
+                                  value={regUpcomingDateFrom}
+                                  onChange={(e) => setRegUpcomingDateFrom(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Ngày hết hạn đến
+                                </label>
+                                <input
+                                  type="date"
+                                  value={regUpcomingDateTo}
+                                  onChange={(e) => setRegUpcomingDateTo(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {!isWarrantyCriterion && (
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Nhóm phương tiện áp dụng nhắc hạn đăng kiểm
+                              </label>
+                              <select
+                                value={regUpcomingVehicleScope}
+                                onChange={(e) => setRegUpcomingVehicleScope(e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                              >
+                                <option value="Tất cả loại xe">Tất cả loại xe</option>
+                                <option value="Xe cá nhân / Gia đình">Xe cá nhân / Gia đình</option>
+                                <option value="Xe kinh doanh vận tải / Dịch vụ">
+                                  Xe kinh doanh vận tải / Dịch vụ
+                                </option>
+                                <option value="Xe tải / Bán tải">Xe tải / Bán tải</option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 2. GIAO DIỆN KHI MỤC ĐÍCH LỌC = "Đã quá hạn đăng kiểm" */}
+                      {isOverduePurpose && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-2">
+                              Phương thức xác định thời gian đã quá hạn đăng kiểm
+                            </label>
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setRegOverdueMode('overdue_days')}
+                                className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-all cursor-pointer ${
+                                  regOverdueMode === 'overdue_days'
+                                    ? 'bg-amber-50 border-amber-600 text-amber-900'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                              >
+                                Theo số ngày đã quá hạn
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRegOverdueMode('overdue_date_range')}
+                                className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-all cursor-pointer ${
+                                  regOverdueMode === 'overdue_date_range'
+                                    ? 'bg-amber-50 border-amber-600 text-amber-900'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                              >
+                                Theo mốc ngày đã hết hạn
+                              </button>
+                            </div>
+                          </div>
+
+                          {regOverdueMode === 'overdue_days' ? (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Điều kiện lọc số ngày quá hạn
+                                </label>
+                                <select
+                                  value={regOverdueCondition}
+                                  onChange={(e) => setRegOverdueCondition(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                >
+                                  <option value="Đã quá hạn tối thiểu (>= số ngày)">
+                                    Đã quá hạn tối thiểu (&gt;= số ngày)
+                                  </option>
+                                  <option value="Đã quá hạn trong vòng (<= số ngày)">
+                                    Đã quá hạn trong vòng (&lt;= số ngày)
+                                  </option>
+                                  <option value="Đã quá hạn trong khoảng (Từ - Đến ngày)">
+                                    Đã quá hạn trong khoảng (Từ - Đến ngày)
+                                  </option>
+                                </select>
+                              </div>
+
+                              {regOverdueCondition ===
+                              'Đã quá hạn trong khoảng (Từ - Đến ngày)' ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                      Quá hạn từ (ngày)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={regOverdueDays}
+                                      onChange={(e) => setRegOverdueDays(e.target.value)}
+                                      placeholder="Từ số ngày..."
+                                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                      Quá hạn đến (ngày)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={regOverdueDaysMax}
+                                      onChange={(e) => setRegOverdueDaysMax(e.target.value)}
+                                      placeholder="Đến số ngày..."
+                                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <label className="block text-xs font-semibold text-slate-700">
+                                    Số ngày đã quá hạn đăng kiểm
+                                  </label>
+                                  <div className="relative">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={regOverdueDays}
+                                      onChange={(e) => setRegOverdueDays(e.target.value)}
+                                      placeholder="Nhập số ngày đã quá hạn (VD: 15)..."
+                                      className="w-full pl-3 pr-16 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">
+                                      ngày
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                    <span className="text-[11px] text-slate-500 mr-1">
+                                      Chọn nhanh:
+                                    </span>
+                                    {['7', '15', '30', '60', '90'].map((d) => (
+                                      <button
+                                        key={d}
+                                        type="button"
+                                        onClick={() => setRegOverdueDays(d)}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                                          regOverdueDays === d
+                                            ? 'bg-amber-600 text-white border-amber-600'
+                                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-800'
+                                        }`}
+                                      >
+                                        {d} ngày
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Đã hết hạn từ ngày
+                                </label>
+                                <input
+                                  type="date"
+                                  value={regOverdueDateFrom}
+                                  onChange={(e) => setRegOverdueDateFrom(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Đã hết hạn đến ngày
+                                </label>
+                                <input
+                                  type="date"
+                                  value={regOverdueDateTo}
+                                  onChange={(e) => setRegOverdueDateTo(e.target.value)}
+                                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {!isWarrantyCriterion && (
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Mức độ ưu tiên cảnh báo quá hạn
+                              </label>
+                              <select
+                                value={regOverduePriority}
+                                onChange={(e) => setRegOverduePriority(e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                              >
+                                <option value="Tất cả mức độ quá hạn">Tất cả mức độ quá hạn</option>
+                                <option value="Cảnh báo khẩn cấp (Quá hạn > 30 ngày)">
+                                  Cảnh báo khẩn cấp (Quá hạn &gt; 30 ngày)
+                                </option>
+                                <option value="Cảnh báo tiêu chuẩn (Quá hạn 1 - 30 ngày)">
+                                  Cảnh báo tiêu chuẩn (Quá hạn 1 - 30 ngày)
+                                </option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 3. GIAO DIỆN KHI MỤC ĐÍCH LỌC = "Không có dữ liệu đăng kiễm" */}
+                      {!isUpcomingPurpose && !isOverduePurpose && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                              Trạng thái thiếu dữ liệu đăng kiểm cần lọc
+                            </label>
+                            <select
+                              value={regMissingDataType}
+                              onChange={(e) => setRegMissingDataType(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                            >
+                              <option value="Trống trường Ngày đăng kiểm hết hạn trong hồ sơ xe">
+                                Trống trường Ngày đăng kiểm hết hạn trong hồ sơ xe
+                              </option>
+                              <option value="Có biển số xe nhưng chưa cập nhật chu kỳ đăng kiểm">
+                                Có biển số xe nhưng chưa cập nhật chu kỳ đăng kiểm
+                              </option>
+                              <option value="Tất cả hồ sơ xe chưa xác thực hạn đăng kiểm">
+                                Tất cả hồ sơ xe chưa xác thực hạn đăng kiểm
+                              </option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                              Phạm vi xe phát sinh RO để ưu tiên rà soát
+                            </label>
+                            <select
+                              value={regMissingRoTimeframe}
+                              onChange={(e) => setRegMissingRoTimeframe(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                            >
+                              <option value="Tất cả xe trong danh mục">
+                                Tất cả xe trong danh mục
+                              </option>
+                              <option value="Xe có vào xưởng trong 3 tháng gần nhất">
+                                Xe có vào xưởng trong 3 tháng gần nhất
+                              </option>
+                              <option value="Xe có vào xưởng trong 6 tháng gần nhất">
+                                Xe có vào xưởng trong 6 tháng gần nhất
+                              </option>
+                              <option value="Xe có vào xưởng trong 1 năm gần nhất">
+                                Xe có vào xưởng trong 1 năm gần nhất
+                              </option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                              Điều kiện thông tin liên hệ của chủ xe
+                            </label>
+                            <select
+                              value={regMissingContactFilter}
+                              onChange={(e) => setRegMissingContactFilter(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                            >
+                              <option value="Có số điện thoại hợp lệ để CSKH liên hệ bổ sung">
+                                Có số điện thoại hợp lệ để CSKH liên hệ bổ sung
+                              </option>
+                              <option value="Tất cả khách hàng (bao gồm cả thiếu SĐT)">
+                                Tất cả khách hàng (bao gồm cả thiếu SĐT)
+                              </option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                              Ghi chú hướng dẫn thu thập dữ liệu (Tùy chọn)
+                            </label>
+                            <input
+                              type="text"
+                              value={regMissingActionNote}
+                              onChange={(e) => setRegMissingActionNote(e.target.value)}
+                              placeholder="VD: Nhắc CSKH / Cố vấn hỏi hạn đăng kiểm khi gọi điện..."
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setRegExpirySetupModalRowId(null)}
+                        className="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          let summaryText = '';
+                          if (isWarrantyCriterion && regWarrantyApplyMode === 'specific_list') {
+                            const partSummaries = regWarrantyPartItems.map((item, idx) => {
+                              const label = item.partName.trim() || `Vật tư #${idx + 1}`;
+                              if (isUpcomingPurpose) {
+                                if (item.upcomingMode === 'days_before') {
+                                  return `${label}: Trước ${item.upcomingDays.trim() || '30'} ngày`;
+                                }
+                                return `${label}: Hết hạn ${item.upcomingDateFrom || '...'} → ${
+                                  item.upcomingDateTo || '...'
+                                }`;
+                              } else {
+                                if (item.overdueMode === 'overdue_days') {
+                                  if (
+                                    item.overdueCondition ===
+                                    'Đã quá hạn trong khoảng (Từ - Đến ngày)'
+                                  ) {
+                                    return `${label}: Quá hạn ${item.overdueDays || '1'}-${
+                                      item.overdueDaysMax || '60'
+                                    } ngày`;
+                                  }
+                                  if (
+                                    item.overdueCondition ===
+                                    'Đã quá hạn trong vòng (<= số ngày)'
+                                  ) {
+                                    return `${label}: Quá hạn <= ${item.overdueDays || '15'} ngày`;
+                                  }
+                                  return `${label}: Quá hạn >= ${item.overdueDays || '15'} ngày`;
+                                }
+                                return `${label}: Quá hạn ${item.overdueDateFrom || '...'} → ${
+                                  item.overdueDateTo || '...'
+                                }`;
+                              }
+                            });
+                            summaryText = `Chỉ định (${regWarrantyPartItems.length} vật tư): ${partSummaries.join(' | ')}`;
+                          } else if (isUpcomingPurpose) {
+                            if (regUpcomingMode === 'days_before') {
+                              const d = regUpcomingDays.trim() || '30';
+                              summaryText = isWarrantyCriterion
+                                ? `Tất cả vật tư: Trước ${d} ngày hết hạn bảo hành Vật tư / phụ tùng`
+                                : `Trước ${d} ngày hết hạn đăng kiểm (${regUpcomingVehicleScope})`;
+                            } else {
+                              const fromStr = regUpcomingDateFrom || '...';
+                              const toStr = regUpcomingDateTo || '...';
+                              summaryText = isWarrantyCriterion
+                                ? `Tất cả vật tư: Hết hạn từ ${fromStr} đến ${toStr}`
+                                : `Hết hạn từ ${fromStr} đến ${toStr} (${regUpcomingVehicleScope})`;
+                            }
+                          } else if (isOverduePurpose) {
+                            const prioritySuffix = isWarrantyCriterion
+                              ? ''
+                              : ` (${regOverduePriority})`;
+                            const warrantyPrefix = isWarrantyCriterion ? 'Tất cả vật tư: ' : '';
+                            if (regOverdueMode === 'overdue_days') {
+                              if (
+                                regOverdueCondition ===
+                                'Đã quá hạn trong khoảng (Từ - Đến ngày)'
+                              ) {
+                                summaryText = `${warrantyPrefix}Quá hạn từ ${
+                                  regOverdueDays || '1'
+                                } - ${regOverdueDaysMax || '60'} ngày${prioritySuffix}`;
+                              } else if (
+                                regOverdueCondition ===
+                                'Đã quá hạn trong vòng (<= số ngày)'
+                              ) {
+                                summaryText = `${warrantyPrefix}Quá hạn <= ${
+                                  regOverdueDays || '15'
+                                } ngày${prioritySuffix}`;
+                              } else {
+                                summaryText = `${warrantyPrefix}Quá hạn >= ${
+                                  regOverdueDays || '15'
+                                } ngày${prioritySuffix}`;
+                              }
+                            } else {
+                              const fromStr = regOverdueDateFrom || '...';
+                              const toStr = regOverdueDateTo || '...';
+                              summaryText = `${warrantyPrefix}Quá hạn trong khoảng ${fromStr} - ${toStr}`;
+                            }
+                          } else {
+                            summaryText = `${regMissingDataType} • ${regMissingRoTimeframe}${
+                              regMissingActionNote.trim()
+                                ? ` (${regMissingActionNote.trim()})`
+                                : ''
+                            }`;
+                          }
+
+                          setSegmentDetailRows((prev) =>
+                            prev.map((r) =>
+                              r.id === regExpirySetupModalRowId
+                                ? {
+                                    ...r,
+                                    value: summaryText,
+                                    regExpiryCustomConfig: {
+                                      upcomingMode: regUpcomingMode,
+                                      upcomingDays: regUpcomingDays,
+                                      upcomingDateFrom: regUpcomingDateFrom,
+                                      upcomingDateTo: regUpcomingDateTo,
+                                      upcomingVehicleScope: regUpcomingVehicleScope,
+                                      overdueMode: regOverdueMode,
+                                      overdueCondition: regOverdueCondition,
+                                      overdueDays: regOverdueDays,
+                                      overdueDaysMax: regOverdueDaysMax,
+                                      overdueDateFrom: regOverdueDateFrom,
+                                      overdueDateTo: regOverdueDateTo,
+                                      overduePriority: regOverduePriority,
+                                      missingDataType: regMissingDataType,
+                                      missingRoTimeframe: regMissingRoTimeframe,
+                                      missingContactFilter: regMissingContactFilter,
+                                      missingActionNote: regMissingActionNote,
+                                      warrantyApplyMode: regWarrantyApplyMode,
+                                      warrantyPartItems: regWarrantyPartItems,
+                                    },
+                                  }
+                                : r
+                            )
+                          );
+                          setRegExpirySetupModalRowId(null);
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-[#1A73E8] hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Lưu thiết lập
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Modal Footer */}
             <div className="px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
