@@ -315,6 +315,7 @@ const TECHNICAL_CATEGORIES = [
 
 const MODAL_TABS = [
   { id: 'description', label: 'Mô tả' },
+  { id: 'replacement_cycle', label: 'Chu kỳ thay thế' },
   { id: 'compatible_cars', label: 'Xe tương thích' },
   { id: 'equivalent_parts', label: 'Vật tư tương đương' },
   { id: 'upsell_parts', label: 'Vật tư Up-sell' },
@@ -381,6 +382,8 @@ export const SparePartsList: React.FC = () => {
   const [selectedTechCategory, setSelectedTechCategory] = useState<string | null>(null);
   const [activeModalTab, setActiveModalTab] = useState('description');
   const [descriptionText, setDescriptionText] = useState('');
+  const [replacementCycleKm, setReplacementCycleKm] = useState('');
+  const [replacementCycleMonths, setReplacementCycleMonths] = useState('');
   const [compatibleCars, setCompatibleCars] = useState<
     { id: number; brand: string; model: string; year: string }[]
   >([{ id: 1, brand: '', model: '', year: '' }]);
@@ -462,6 +465,8 @@ export const SparePartsList: React.FC = () => {
     setSelectedTechCategory(null);
     setActiveModalTab('description');
     setDescriptionText('');
+    setReplacementCycleKm('');
+    setReplacementCycleMonths('');
     setCompatibleCars([{ id: 1, brand: '', model: '', year: '' }]);
     setRelatedPartTabs(createInitialRelatedPartRows());
   };
@@ -1277,16 +1282,21 @@ export const SparePartsList: React.FC = () => {
             {/* Bottom Tabs Card */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-xs flex flex-col min-h-[360px]">
               {/* Tabs Header */}
-              <div className="px-2 pt-2 border-b border-gray-200 flex items-center gap-1.5">
+              <div className="px-2 pt-2 border-b border-gray-200 flex items-center gap-1.5 flex-wrap">
                 {MODAL_TABS.map((tab) => {
                   const isActive = activeModalTab === tab.id;
+                  const isReplacementTab = tab.id === 'replacement_cycle';
                   return (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveModalTab(tab.id)}
                       className={`px-4 py-2 rounded-t-[6px] text-[13px] transition-colors cursor-pointer ${
-                        isActive
+                        isReplacementTab
+                          ? isActive
+                            ? 'bg-emerald-200/90 border-b-2 border-emerald-600 font-semibold text-emerald-950'
+                            : 'bg-emerald-100/80 hover:bg-emerald-200/60 font-medium text-emerald-800'
+                          : isActive
                           ? 'bg-[#FDE68A]/70 border-b-2 border-[#F59E0B] font-semibold text-gray-900'
                           : 'bg-[#FEF9C3]/40 hover:bg-[#FEF3C7]/60 font-medium text-gray-800'
                       }`}
@@ -1298,7 +1308,37 @@ export const SparePartsList: React.FC = () => {
               </div>
 
               {/* Tab Content */}
-              {activeModalTab === 'compatible_cars' ? (
+              {activeModalTab === 'replacement_cycle' ? (
+                <div className="p-5 flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[640px]">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-gray-800 mb-1.5">
+                        Chu kỳ thay (theo Km):
+                      </label>
+                      <input
+                        type="text"
+                        value={replacementCycleKm}
+                        onChange={(e) => setReplacementCycleKm(e.target.value)}
+                        placeholder="Nhập chu kỳ thay theo Km"
+                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-[6px] px-3 py-2 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[12px] font-semibold text-gray-800 mb-1.5">
+                        Chu kỳ thay (theo Tháng):
+                      </label>
+                      <input
+                        type="text"
+                        value={replacementCycleMonths}
+                        onChange={(e) => setReplacementCycleMonths(e.target.value)}
+                        placeholder="Nhập chu kỳ thay theo Tháng"
+                        className="w-full bg-[#F8FAFC] border border-gray-200 rounded-[6px] px-3 py-2 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : activeModalTab === 'compatible_cars' ? (
                 <div className="p-4 flex-1 flex flex-col">
                   <div className="border border-gray-200 rounded-[6px] overflow-hidden">
                     <table className="w-full border-collapse text-[13px]">

@@ -2,10 +2,12 @@ import React from 'react';
 
 interface CategoryListProps {
   onSelectSpareParts: () => void;
+  onSelectVehicles: () => void;
+  onSelectTaxCategories: () => void;
   onSelectOmnichannel: () => void;
 }
 
-export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, onSelectOmnichannel }) => {
+export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, onSelectVehicles, onSelectTaxCategories, onSelectOmnichannel }) => {
   const categories = [
     {
       title: 'Đối tượng',
@@ -31,7 +33,7 @@ export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, 
     {
       title: 'Gara',
       items: [
-        { name: 'Xe' },
+        { name: 'Xe', onClick: onSelectVehicles },
         { name: 'Tài xế' },
         { name: 'Hiệu xe' },
         { name: 'Loại xe' },
@@ -68,7 +70,7 @@ export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, 
         { name: 'Phương thức thanh toán' },
         { name: 'Cấu hình tài liệu' },
         { name: 'Tài liệu công ty' },
-        { name: 'Danh mục thuế' },
+        { name: 'Danh mục thuế', onClick: onSelectTaxCategories },
         { name: 'Đăng ký sàn', onClick: onSelectOmnichannel },
       ],
     },
