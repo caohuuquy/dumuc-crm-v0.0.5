@@ -7,7 +7,12 @@ interface CategoryListProps {
   onSelectOmnichannel: () => void;
 }
 
-export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, onSelectVehicles, onSelectTaxCategories, onSelectOmnichannel }) => {
+export const CategoryList: React.FC<CategoryListProps> = ({
+  onSelectSpareParts,
+  onSelectVehicles,
+  onSelectTaxCategories,
+  onSelectOmnichannel,
+}) => {
   const categories = [
     {
       title: 'Đối tượng',
@@ -23,11 +28,11 @@ export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, 
       title: 'Vật tư hàng hóa',
       items: [
         { name: 'Vật tư, hàng hóa', onClick: onSelectSpareParts },
-        { name: 'Loại vật tư' },
-        { name: 'Kho' },
         { name: 'Nhóm vật tư, hàng hóa' },
+        { name: 'Kho' },
         { name: 'Đơn vị tính' },
         { name: 'Lô' },
+        { name: 'Loại vật tư' },
       ],
     },
     {
@@ -54,6 +59,18 @@ export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, 
       ],
     },
     {
+      title: 'Hệ thống',
+      items: [
+        { name: 'Người dùng' },
+        { name: 'Nhóm người dùng' },
+        { name: 'Cấu hình tài liệu' },
+        { name: 'Tài liệu công ty' },
+        { name: 'Danh mục thuế', onClick: onSelectTaxCategories },
+        { name: 'Phương thức thanh toán' },
+        { name: 'Đăng ký sàn', onClick: onSelectOmnichannel },
+      ],
+    },
+    {
       title: 'Tài sản',
       items: [
         { name: 'Loại TSCĐ, CCDC' },
@@ -62,41 +79,39 @@ export const CategoryList: React.FC<CategoryListProps> = ({ onSelectSpareParts, 
         { name: 'Hệ số phân bổ khấu hao' },
       ],
     },
-    {
-      title: 'Hệ thống',
-      items: [
-        { name: 'Người dùng' },
-        { name: 'Nhóm người dùng' },
-        { name: 'Phương thức thanh toán' },
-        { name: 'Cấu hình tài liệu' },
-        { name: 'Tài liệu công ty' },
-        { name: 'Danh mục thuế', onClick: onSelectTaxCategories },
-        { name: 'Đăng ký sàn', onClick: onSelectOmnichannel },
-      ],
-    },
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-8">Danh mục</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-12">
+    <div className="min-h-full bg-[#F4F7FA] p-5 sm:p-6 overflow-x-auto">
+      <div className="grid grid-cols-7 gap-4 items-stretch min-w-[1120px]">
         {categories.map((category, index) => (
-          <div key={index} className="flex flex-col">
-            <h2 className="text-base font-bold text-gray-800 mb-4">{category.title}</h2>
-            <ul className="space-y-3">
+          <section
+            key={index}
+            className="bg-white rounded-xl border border-[#E6EAF0] shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col overflow-hidden"
+          >
+            <div className="px-5 py-3.5 border-b border-[#EEF2F6] flex items-center justify-between gap-3">
+              <h2 className="text-[14.5px] font-semibold text-[#1E293B] leading-snug">
+                {category.title}
+              </h2>
+              <span className="text-xs font-medium text-[#94A3B8] tabular-nums shrink-0">
+                {category.items.length}
+              </span>
+            </div>
+
+            <ul className="px-5 py-3.5 space-y-1.5 flex-1">
               {category.items.map((item, itemIndex) => (
                 <li key={itemIndex}>
                   <button
+                    type="button"
                     onClick={item.onClick}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline text-left transition-colors"
+                    className="w-full text-left px-2 py-1.5 -mx-2 rounded-md text-[13.5px] font-normal text-[#334155] hover:bg-[#F4F7FA] hover:text-[#1A4B9F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A73E8]/40 transition-colors cursor-pointer"
                   >
                     {item.name}
                   </button>
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         ))}
       </div>
     </div>

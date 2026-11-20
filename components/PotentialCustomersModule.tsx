@@ -879,11 +879,8 @@ const SEGMENT_FILTER_CRITERIA_LIST = [
   'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn',
   'ODO và Ngày xuất xưởng gần nhất',
   'Hạn bảo hành Vật tư / phụ tùng',
-  'Ngày nhận xe (của RO)',
-  'Ngày giao xe (của RO)',
+  'Ngày xuất xưởng gần nhất',
   'Đánh giá chất lượng dịch vụ (của RO)',
-  'Doanh thu (của RO)',
-  'Công nợ',
 ] as const;
 
 type SegmentCriterionName = (typeof SEGMENT_FILTER_CRITERIA_LIST)[number];
@@ -948,8 +945,8 @@ const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
   },
   {
     id: 'grp-ro-time',
-    groupName: 'Thời gian trong RO',
-    criteria: ['Ngày nhận xe (của RO)', 'Ngày giao xe (của RO)'],
+    groupName: 'Khách hàng chưa quay lại',
+    criteria: ['Ngày xuất xưởng gần nhất'],
     containerClass: 'bg-indigo-50/60 border-indigo-200',
     headerBadgeClass: 'bg-indigo-600 text-white',
     headerTextClass: 'text-indigo-900',
@@ -967,28 +964,6 @@ const SEGMENT_FILTER_CRITERIA_GROUPS: SegmentCriterionGroup[] = [
     itemUncheckedClass: 'bg-white/90 border-amber-200 text-amber-900 hover:bg-amber-100/60',
     itemCheckedClass: 'bg-amber-100 border-amber-600 text-amber-950 font-semibold shadow-2xs',
     checkboxAccentClass: 'text-amber-600 focus:ring-amber-500',
-  },
-  {
-    id: 'grp-revenue',
-    groupName: 'Doanh thu',
-    criteria: ['Doanh thu (của RO)'],
-    containerClass: 'bg-emerald-50/60 border-emerald-200',
-    headerBadgeClass: 'bg-emerald-600 text-white',
-    headerTextClass: 'text-emerald-900',
-    itemUncheckedClass: 'bg-white/90 border-emerald-200 text-emerald-900 hover:bg-emerald-100/60',
-    itemCheckedClass: 'bg-emerald-100 border-emerald-600 text-emerald-950 font-semibold shadow-2xs',
-    checkboxAccentClass: 'text-emerald-600 focus:ring-emerald-500',
-  },
-  {
-    id: 'grp-debt',
-    groupName: 'Công nợ',
-    criteria: ['Công nợ'],
-    containerClass: 'bg-rose-50/60 border-rose-200',
-    headerBadgeClass: 'bg-rose-600 text-white',
-    headerTextClass: 'text-rose-900',
-    itemUncheckedClass: 'bg-white/90 border-rose-200 text-rose-900 hover:bg-rose-100/60',
-    itemCheckedClass: 'bg-rose-100 border-rose-600 text-rose-950 font-semibold shadow-2xs',
-    checkboxAccentClass: 'text-rose-600 focus:ring-rose-500',
   },
 ];
 
@@ -1056,6 +1031,13 @@ interface RegistrationExpiryCustomConfig {
   warrantyPartItems?: WarrantyPartTimeItem[];
 }
 
+interface LastExitDateCustomConfig {
+  condition: 'range' | 'gte' | 'lte';
+  fromValue: string;
+  toValue: string;
+  unit: 'ngày' | 'tháng' | 'năm';
+}
+
 interface SegmentDetailRow {
   id: string;
   criterion: SegmentCriterionName;
@@ -1066,6 +1048,7 @@ interface SegmentDetailRow {
   maintenanceCycleMonths?: string;
   maintenanceRecentRoCount?: string;
   regExpiryCustomConfig?: RegistrationExpiryCustomConfig;
+  lastExitDateCustomConfig?: LastExitDateCustomConfig;
 }
 
 interface SavedCustomerSegmentPreset {
@@ -1189,6 +1172,22 @@ const ODO_MAINTENANCE_OPERATOR_OPTIONS = [
   'Tự thiết lập',
 ] as const;
 
+const LAST_EXIT_DATE_PURPOSE_OPTIONS = [
+  'Khách đang nguội (1 - 2 tháng)',
+  'Khách dần quên (3-4 tháng)',
+  'Nguy cơ mất Khách (5 - 6 tháng)',
+  'Khách đã rời bỏ (6 - 12 tháng)',
+  'Khác',
+] as const;
+
+const LAST_EXIT_DATE_VALUE_BY_PURPOSE: Record<string, string> = {
+  'Khách đang nguội (1 - 2 tháng)': '1 - 2 tháng chưa quay lại',
+  'Khách dần quên (3-4 tháng)': '3 - 4 tháng chưa quay lại',
+  'Nguy cơ mất Khách (5 - 6 tháng)': '5 - 6 tháng chưa quay lại',
+  'Khách đã rời bỏ (6 - 12 tháng)': '6 - 12 tháng chưa quay lại',
+  'Khác': '',
+};
+
 const DEFAULT_CRITERION_CONFIG: Record<
   SegmentCriterionName,
   { purpose: string; operator: string; value: string }
@@ -1218,30 +1217,15 @@ const DEFAULT_CRITERION_CONFIG: Record<
     operator: 'Bộ lọc mẫu',
     value: 'Trước 30 ngày hết hạn bảo hành Vật tư / phụ tùng',
   },
-  'Ngày nhận xe (của RO)': {
-    purpose: 'Lọc theo thời điểm khách mang xe vào xưởng',
-    operator: 'Trong khoảng thời gian',
-    value: '90 ngày gần nhất',
-  },
-  'Ngày giao xe (của RO)': {
-    purpose: 'Theo dõi thời gian sau khi hoàn tất giao xe',
-    operator: 'Đã qua tối thiểu (>=)',
-    value: '60 ngày sau giao xe',
-  },
-  'Doanh thu (của RO)': {
-    purpose: 'Phân loại nhóm khách hàng theo giá trị chi tiêu',
-    operator: 'Lớn hơn hoặc bằng (>=)',
-    value: '10.000.000 đ',
+  'Ngày xuất xưởng gần nhất': {
+    purpose: 'Khách đang nguội (1 - 2 tháng)',
+    operator: '',
+    value: '1 - 2 tháng chưa quay lại',
   },
   'Đánh giá chất lượng dịch vụ (của RO)': {
     purpose: 'Phân loại mức độ hài lòng của khách hàng',
     operator: 'Bằng (=)',
     value: '5 sao (Rất hài lòng)',
-  },
-  'Công nợ': {
-    purpose: 'Theo dõi khách hàng còn số dư công nợ phải thu',
-    operator: 'Lớn hơn (>)',
-    value: '0 đ (Còn công nợ)',
   },
 };
 
@@ -1285,16 +1269,10 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
         value: '',
       },
       {
-        criterion: 'Ngày nhận xe (của RO)',
-        purpose: 'Lọc theo thời điểm khách mang xe vào xưởng',
-        operator: 'Trong khoảng thời gian',
-        value: '3 tháng trở lại',
-      },
-      {
-        criterion: 'Ngày giao xe (của RO)',
-        purpose: 'Theo dõi thời gian sau khi hoàn tất giao xe',
-        operator: 'Đã qua tối thiểu (>=)',
-        value: '90 ngày sau giao xe',
+        criterion: 'Ngày xuất xưởng gần nhất',
+        purpose: 'Khách dần quên (3-4 tháng)',
+        operator: '',
+        value: '3 - 4 tháng chưa quay lại',
       },
     ],
   },
@@ -1307,12 +1285,6 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
     roDateFromOffsetMonths: 12,
     roTypes: ['RO - Bán hàng thương mại'],
     detailRows: [
-      {
-        criterion: 'Doanh thu (của RO)',
-        purpose: 'Phân loại nhóm khách hàng VIP chi tiêu lớn',
-        operator: 'Lớn hơn hoặc bằng (>=)',
-        value: '20.000.000 đ',
-      },
       {
         criterion: 'Đánh giá chất lượng dịch vụ (của RO)',
         purpose: 'Khách hàng hài lòng cao để mời chương trình tri ân',
@@ -1335,12 +1307,6 @@ const INITIAL_SAVED_SEGMENT_PRESETS: SavedCustomerSegmentPreset[] = [
     roActiveChip: null,
     roTypes: ['RO - Bảo hành'],
     detailRows: [
-      {
-        criterion: 'Công nợ',
-        purpose: 'Theo dõi khách hàng còn số dư công nợ phải thu',
-        operator: 'Lớn hơn (>)',
-        value: '5.000.000 đ',
-      },
       {
         criterion: 'Hạn bảo hành Vật tư / phụ tùng',
         purpose: 'Kiểm tra thời hạn bảo hành sản phẩm đã xuất',
@@ -1517,6 +1483,11 @@ export const PotentialCustomersModule: React.FC<PotentialCustomersModuleProps> =
   const [regWarrantyPartItems, setRegWarrantyPartItems] = useState<WarrantyPartTimeItem[]>([
     createDefaultWarrantyPartItem(),
   ]);
+  const [lastExitSetupModalRowId, setLastExitSetupModalRowId] = useState<string | null>(null);
+  const [lastExitCondition, setLastExitCondition] = useState<'range' | 'gte' | 'lte'>('range');
+  const [lastExitFromValue, setLastExitFromValue] = useState('12');
+  const [lastExitToValue, setLastExitToValue] = useState('18');
+  const [lastExitUnit, setLastExitUnit] = useState<'ngày' | 'tháng' | 'năm'>('tháng');
   const [isCreating, setIsCreating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -7430,7 +7401,8 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                       'Giấy chứng nhận bảo hiểm tự nguyện hết hạn (Bảo hiểm thân vỏ)' ||
                     criterion === 'Giấy chứng nhận bảo hiểm bắt buộc TNDS hết hạn' ||
                     criterion === 'Hạn bảo hành Vật tư / phụ tùng' ||
-                    criterion === 'ODO và Ngày xuất xưởng gần nhất'
+                    criterion === 'ODO và Ngày xuất xưởng gần nhất' ||
+                    criterion === 'Ngày xuất xưởng gần nhất'
                       ? defaultCfg.purpose
                       : segmentPurpose.trim() || defaultCfg.purpose,
                   operator: defaultCfg.operator,
@@ -7852,7 +7824,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                     </span>
                   </div>
                   <span className="text-xs text-slate-500 italic">
-                    * Sắp xếp theo dòng chảy của tiền (Hết hạn → Bảo dưỡng định kỳ → Bảo hành → Thời gian trong RO → Chất lượng dịch vụ → Doanh thu → Công nợ)
+                    * Sắp xếp theo dòng chảy của tiền (Hết hạn → Bảo dưỡng định kỳ → Bảo hành → Khách hàng chưa quay lại → Chất lượng dịch vụ)
                   </span>
                 </div>
 
@@ -7945,12 +7917,21 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                             detailRow.criterion === 'Hạn bảo hành Vật tư / phụ tùng';
                           const isOdoMaintenance =
                             detailRow.criterion === 'ODO và Ngày xuất xưởng gần nhất';
+                          const isLastExitDate =
+                            detailRow.criterion === 'Ngày xuất xưởng gần nhất';
+                          const isLastExitDateOther =
+                            isLastExitDate && detailRow.purpose === 'Khác';
+                          const lastExitSingleValue = isLastExitDate
+                            ? LAST_EXIT_DATE_VALUE_BY_PURPOSE[detailRow.purpose] ?? ''
+                            : '';
                           const isCustomSetup =
                             (isRegistrationExpiry || isOdoMaintenance) &&
                             detailRow.operator === 'Tự thiết lập';
                           const isNoDataPurpose =
                             isRegistrationExpiry &&
                             detailRow.purpose.startsWith('Không có dữ liệu');
+                          const isSetupButtonDisabled =
+                            isNoDataPurpose || (isLastExitDate && !isLastExitDateOther);
                           const periodicPurposeOptions = isRegistrationExpiry
                             ? getPeriodicExpiryPurposeOptions(detailRow.criterion)
                             : [];
@@ -8023,6 +8004,34 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
                                   >
                                     {ODO_MAINTENANCE_PURPOSE_OPTIONS.map((opt) => (
+                                      <option key={opt} value={opt}>
+                                        {opt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : isLastExitDate ? (
+                                  <select
+                                    value={detailRow.purpose}
+                                    onChange={(e) => {
+                                      const nextPurpose = e.target.value;
+                                      const mappedValue =
+                                        LAST_EXIT_DATE_VALUE_BY_PURPOSE[nextPurpose] ?? '';
+                                      setSegmentDetailRows((prev) =>
+                                        prev.map((r) =>
+                                          r.id === detailRow.id
+                                            ? {
+                                                ...r,
+                                                purpose: nextPurpose,
+                                                operator: '',
+                                                value: mappedValue,
+                                              }
+                                            : r
+                                        )
+                                      );
+                                    }}
+                                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                  >
+                                    {LAST_EXIT_DATE_PURPOSE_OPTIONS.map((opt) => (
                                       <option key={opt} value={opt}>
                                         {opt}
                                       </option>
@@ -8115,6 +8124,14 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                       </option>
                                     ))}
                                   </select>
+                                ) : isLastExitDate ? (
+                                  <select
+                                    disabled
+                                    value=""
+                                    className="w-full px-3 py-1.5 border rounded-md text-sm transition-colors bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                  >
+                                    <option value=""></option>
+                                  </select>
                                 ) : (
                                   <select
                                     value={detailRow.operator}
@@ -8172,6 +8189,30 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                     readOnly
                                     className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-500 cursor-not-allowed focus:outline-none"
                                   />
+                                ) : isLastExitDate ? (
+                                  isLastExitDateOther ? (
+                                    <input
+                                      type="text"
+                                      value={detailRow.value}
+                                      disabled
+                                      readOnly
+                                      className={`w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm cursor-not-allowed focus:outline-none ${
+                                        detailRow.value ? 'text-slate-700 font-medium' : 'text-slate-400'
+                                      }`}
+                                    />
+                                  ) : (
+                                    <select
+                                      value={lastExitSingleValue}
+                                      onChange={(e) =>
+                                        handleUpdateDetailRow(detailRow.id, 'value', e.target.value)
+                                      }
+                                      className="w-full px-3 py-1.5 border rounded-md text-sm transition-colors bg-white border-slate-300 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                    >
+                                      <option value={lastExitSingleValue}>
+                                        {lastExitSingleValue}
+                                      </option>
+                                    </select>
+                                  )
                                 ) : (
                                   <input
                                     type="text"
@@ -8186,12 +8227,12 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <div className="inline-flex items-center justify-center gap-2">
-                                  {(isCustomSetup || isOdoMaintenance) && (
+                                  {(isCustomSetup || isOdoMaintenance || isLastExitDate) && (
                                     <button
                                       type="button"
-                                      disabled={isNoDataPurpose}
+                                      disabled={isSetupButtonDisabled}
                                       onClick={() => {
-                                        if (isNoDataPurpose) return;
+                                        if (isSetupButtonDisabled) return;
                                         if (isOdoMaintenance) {
                                           const isManufacturerRec =
                                             detailRow.operator === 'Khuyến cáo của Hãng';
@@ -8251,10 +8292,17 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                                               : [createDefaultWarrantyPartItem()]
                                           );
                                           setRegExpirySetupModalRowId(detailRow.id);
+                                        } else if (isLastExitDate && isLastExitDateOther) {
+                                          const cfg = detailRow.lastExitDateCustomConfig;
+                                          setLastExitCondition(cfg?.condition || 'range');
+                                          setLastExitFromValue(cfg?.fromValue ?? '12');
+                                          setLastExitToValue(cfg?.toValue ?? '18');
+                                          setLastExitUnit(cfg?.unit || 'tháng');
+                                          setLastExitSetupModalRowId(detailRow.id);
                                         }
                                       }}
                                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs font-semibold transition-colors ${
-                                        isNoDataPurpose
+                                        isSetupButtonDisabled
                                           ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
                                           : 'bg-blue-50 text-[#1A73E8] hover:bg-blue-100 border-blue-200 cursor-pointer'
                                       }`}
@@ -9926,6 +9974,277 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                           setRegExpirySetupModalRowId(null);
                         }}
                         className="px-4 py-1.5 rounded-lg bg-[#1A73E8] hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Lưu thiết lập
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {lastExitSetupModalRowId && (() => {
+              const activeLastExitRow = segmentDetailRows.find(
+                (r) => r.id === lastExitSetupModalRowId
+              );
+              if (!activeLastExitRow) return null;
+
+              const fromNum = Number(lastExitFromValue);
+              const toNum = Number(lastExitToValue);
+
+              let validationError = '';
+              let previewSummaryText = '';
+
+              if (lastExitCondition === 'range') {
+                if (!lastExitFromValue.trim() || !lastExitToValue.trim()) {
+                  validationError = 'Vui lòng nhập đầy đủ mốc thời gian Từ và Đến.';
+                } else if (
+                  Number.isNaN(fromNum) ||
+                  Number.isNaN(toNum) ||
+                  fromNum < 0 ||
+                  toNum <= 0
+                ) {
+                  validationError = 'Giá trị thời gian phải là số hợp lệ lớn hơn 0.';
+                } else if (fromNum > toNum) {
+                  validationError = 'Mốc "Từ" phải nhỏ hơn hoặc bằng mốc "Đến".';
+                } else {
+                  previewSummaryText = `${lastExitFromValue.trim()} - ${lastExitToValue.trim()} ${lastExitUnit} chưa quay lại`;
+                }
+              } else if (lastExitCondition === 'gte') {
+                if (!lastExitFromValue.trim() || Number.isNaN(fromNum) || fromNum <= 0) {
+                  validationError = 'Vui lòng nhập số thời gian hợp lệ lớn hơn 0.';
+                } else {
+                  previewSummaryText = `Từ ${lastExitFromValue.trim()} ${lastExitUnit} trở lên chưa quay lại`;
+                }
+              } else {
+                if (!lastExitFromValue.trim() || Number.isNaN(fromNum) || fromNum <= 0) {
+                  validationError = 'Vui lòng nhập số thời gian hợp lệ lớn hơn 0.';
+                } else {
+                  previewSummaryText = `Trong vòng ${lastExitFromValue.trim()} ${lastExitUnit} chưa quay lại`;
+                }
+              }
+
+              const quickDurationPresets: {
+                label: string;
+                condition: 'range' | 'gte' | 'lte';
+                from: string;
+                to: string;
+                unit: 'ngày' | 'tháng' | 'năm';
+              }[] = [
+                { label: '30 - 45 ngày', condition: 'range', from: '30', to: '45', unit: 'ngày' },
+                { label: '12 - 18 tháng', condition: 'range', from: '12', to: '18', unit: 'tháng' },
+                { label: '18 - 24 tháng', condition: 'range', from: '18', to: '24', unit: 'tháng' },
+                { label: 'Từ 12 tháng trở lên', condition: 'gte', from: '12', to: '', unit: 'tháng' },
+                { label: 'Từ 2 năm trở lên', condition: 'gte', from: '2', to: '', unit: 'năm' },
+              ];
+
+              return (
+                <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-4">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-xl w-full max-w-2xl flex flex-col overflow-hidden">
+                    {/* Modal Header */}
+                    <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-[#1A73E8]" />
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Thiết lập khung thời gian: {activeLastExitRow.criterion}
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setLastExitSetupModalRowId(null)}
+                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-5 space-y-4">
+                      {/* Context Banner */}
+                      <div className="px-3.5 py-2.5 rounded-lg border bg-indigo-50 border-indigo-200 text-indigo-900 flex items-center justify-between">
+                        <span className="text-xs font-medium">
+                          Mục đích lọc đang chọn (Khách hàng chưa quay lại):
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-600 text-white">
+                          {activeLastExitRow.purpose}
+                        </span>
+                      </div>
+
+                      {/* Configuration Area */}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="space-y-3.5">
+                            <div className="grid grid-cols-12 gap-3 items-end">
+                              <div className="col-span-5">
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Điều kiện thời gian
+                                </label>
+                                <select
+                                  value={lastExitCondition}
+                                  onChange={(e) =>
+                                    setLastExitCondition(
+                                      e.target.value as 'range' | 'gte' | 'lte'
+                                    )
+                                  }
+                                  className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                >
+                                  <option value="range">Trong khoảng (Từ - Đến)</option>
+                                  <option value="gte">Chưa quay lại tối thiểu (&gt;=)</option>
+                                  <option value="lte">Chưa quay lại trong vòng (&lt;=)</option>
+                                </select>
+                              </div>
+
+                              <div className="col-span-2">
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  {lastExitCondition === 'range' ? 'Từ' : 'Số lượng'}
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={lastExitFromValue}
+                                  onChange={(e) => setLastExitFromValue(e.target.value)}
+                                  placeholder="VD: 12"
+                                  className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]"
+                                />
+                              </div>
+
+                              <div className="col-span-2">
+                                <label
+                                  className={`block text-xs font-semibold mb-1.5 ${
+                                    lastExitCondition === 'range'
+                                      ? 'text-slate-700'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  Đến
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  disabled={lastExitCondition !== 'range'}
+                                  value={lastExitCondition === 'range' ? lastExitToValue : ''}
+                                  onChange={(e) => setLastExitToValue(e.target.value)}
+                                  placeholder={lastExitCondition === 'range' ? 'VD: 18' : '—'}
+                                  className={`w-full h-9 px-3 border rounded-lg text-sm focus:outline-none ${
+                                    lastExitCondition === 'range'
+                                      ? 'bg-white border-slate-300 text-slate-800 focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8]'
+                                      : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                  }`}
+                                />
+                              </div>
+
+                              <div className="col-span-3">
+                                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                  Đơn vị
+                                </label>
+                                <select
+                                  value={lastExitUnit}
+                                  onChange={(e) =>
+                                    setLastExitUnit(
+                                      e.target.value as 'ngày' | 'tháng' | 'năm'
+                                    )
+                                  }
+                                  className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1A73E8] focus:border-[#1A73E8] cursor-pointer"
+                                >
+                                  <option value="ngày">Ngày</option>
+                                  <option value="tháng">Tháng</option>
+                                  <option value="năm">Năm</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              <span className="text-[11px] font-medium text-slate-500 mr-1">
+                                Chọn nhanh:
+                              </span>
+                              {quickDurationPresets.map((preset) => {
+                                const isActivePreset =
+                                  lastExitCondition === preset.condition &&
+                                  lastExitFromValue === preset.from &&
+                                  (preset.condition !== 'range' ||
+                                    lastExitToValue === preset.to) &&
+                                  lastExitUnit === preset.unit;
+                                return (
+                                  <button
+                                    key={preset.label}
+                                    type="button"
+                                    onClick={() => {
+                                      setLastExitCondition(preset.condition);
+                                      setLastExitFromValue(preset.from);
+                                      if (preset.condition === 'range') {
+                                        setLastExitToValue(preset.to);
+                                      }
+                                      setLastExitUnit(preset.unit);
+                                    }}
+                                    className={`px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors cursor-pointer ${
+                                      isActivePreset
+                                        ? 'bg-[#1A73E8] text-white border-[#1A73E8]'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-[#1A73E8] hover:border-blue-200'
+                                    }`}
+                                  >
+                                    {preset.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                        </div>
+                      </div>
+
+                      {/* Preview Value Box */}
+                      <div
+                        className={`px-3.5 py-2.5 rounded-lg border text-xs flex items-center justify-between gap-3 ${
+                          validationError
+                            ? 'bg-red-50 border-red-200 text-red-700'
+                            : 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                        }`}
+                      >
+                        <span className="font-medium shrink-0">
+                          {validationError ? 'Lưu ý:' : 'Giá trị thiết lập sẽ áp dụng:'}
+                        </span>
+                        <span className="font-bold text-right">
+                          {validationError || previewSummaryText}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setLastExitSetupModalRowId(null)}
+                        className="px-3.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="button"
+                        disabled={Boolean(validationError)}
+                        onClick={() => {
+                          if (validationError) return;
+                          setSegmentDetailRows((prev) =>
+                            prev.map((r) =>
+                              r.id === lastExitSetupModalRowId
+                                ? {
+                                    ...r,
+                                    operator: '',
+                                    value: previewSummaryText,
+                                    lastExitDateCustomConfig: {
+                                      condition: lastExitCondition,
+                                      fromValue: lastExitFromValue.trim(),
+                                      toValue: lastExitToValue.trim(),
+                                      unit: lastExitUnit,
+                                    },
+                                  }
+                                : r
+                            )
+                          );
+                          setLastExitSetupModalRowId(null);
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                          validationError
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-[#1A73E8] hover:bg-blue-700 text-white cursor-pointer'
+                        }`}
                       >
                         Lưu thiết lập
                       </button>
