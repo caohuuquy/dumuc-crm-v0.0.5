@@ -58,6 +58,14 @@
       "schema": "GenericRecord",
       "description": "CRM segment customer bookings collection"
     },
+    "/service_quality_reviews/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM service quality reviews collection"
+    },
+    "/service_quality_customer_bookings/{docId}": {
+      "schema": "GenericRecord",
+      "description": "CRM service quality customer bookings collection"
+    },
     "/crm_state_maps/{docId}": {
       "schema": "CrmStateMap",
       "description": "CRM state maps for guest/booking history, tasks, notes, and counts"

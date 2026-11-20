@@ -30,6 +30,12 @@ import {
   PotentialCustomerItem,
   MOCK_POTENTIAL_CUSTOMERS,
 } from './components/PotentialCustomersModule';
+import {
+  ServiceQualityModule,
+  ServiceQualityItem,
+  ServiceQualityStatus,
+  ServiceQualityCallResult,
+} from './components/ServiceQualityModule';
 import { CustomersModule } from './components/CustomersModule';
 import {
   CustomerBookingsModule,
@@ -62,7 +68,7 @@ import { OrderProvider } from './context/OrderContext';
 
 const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
-  const [currentView, setCurrentView] = useState<'categories' | 'spare_parts' | 'vehicles' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
+  const [currentView, setCurrentView] = useState<'categories' | 'spare_parts' | 'vehicles' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
     PotentialCustomerItem
@@ -247,6 +253,64 @@ const App: React.FC = () => {
   const [segmentBookingCounts, setSegmentBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'segment_booking_counts', {});
   const [segmentDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
 
+  // Isolated & independent states for "Đánh giá chất lượng dịch vụ" (service_quality)
+  const [serviceQualityReviews, setServiceQualityReviews] = useFirestoreCollection<
+    ServiceQualityItem
+  >('service_quality_reviews', () => {
+    const cloned: ServiceQualityItem[] = JSON.parse(JSON.stringify(MOCK_POTENTIAL_CUSTOMERS));
+    const serviceQualityStatuses: ServiceQualityStatus[] = [
+      'Mới',
+      'Hoàn thành',
+      'Đang thực hiện',
+      'Dừng',
+      'Hoàn thành',
+      'Dừng',
+      'Mới',
+      'Hoàn thành',
+      'Đang thực hiện',
+      'Mới',
+    ];
+    const serviceQualityCallResults: ServiceQualityCallResult[] = [
+      'Gọi lần 1',
+      'Gọi lần 2',
+      'Gọi lần 3',
+      'Từ chối',
+      'Không nghe máy',
+      'Từ chối',
+      'Gọi lần 1',
+      'Gọi lần 2',
+      'Không nghe máy',
+      'Gọi lần 1',
+    ];
+    return cloned.map((item, idx) => ({
+      ...item,
+      id: `sq-${item.id}`,
+      status: serviceQualityStatuses[idx % serviceQualityStatuses.length],
+      callResult: serviceQualityCallResults[idx % serviceQualityCallResults.length],
+    }));
+  }, 'id');
+  const [serviceQualityGuestHistory, setServiceQualityGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'service_quality_guest_history', {});
+  const [serviceQualityGuestTasks, setServiceQualityGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'service_quality_guest_tasks', {});
+  const [serviceQualityGuestActivityHistory, setServiceQualityGuestActivityHistory] = useFirestoreRecord<
+    Record<string, ActivityItem[]>
+  >('crm_state_maps', 'service_quality_guest_activity_history', {});
+  const [serviceQualityCustomerBookings, setServiceQualityCustomerBookings] = useFirestoreCollection<CustomerBookingRecord>(
+    'service_quality_customer_bookings',
+    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS)),
+    'id'
+  );
+  const [serviceQualityBookingInternalNotes, setServiceQualityBookingInternalNotes] = useFirestoreRecord<
+    Record<string, BookingNoteItem[]>
+  >('crm_state_maps', 'service_quality_booking_internal_notes', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
+  const [serviceQualityBookingTasks, setServiceQualityBookingTasks] = useFirestoreRecord<
+    Record<string, BookingTaskItem[]>
+  >('crm_state_maps', 'service_quality_booking_tasks', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
+  const [serviceQualityBookingActivities, setServiceQualityBookingActivities] = useFirestoreRecord<
+    Record<string, BookingActivityItem[]>
+  >('crm_state_maps', 'service_quality_booking_activities', {});
+  const [serviceQualityBookingCounts, setServiceQualityBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'service_quality_booking_counts', {});
+  const [serviceQualityDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
+
   // Shared Salary Structures State between Cấu trúc Lương and Hồ sơ hợp đồng
   const [salaryStructures, setSalaryStructures] = useFirestoreCollection('salary_structures', INITIAL_STRUCTURES, 'id');
 
@@ -297,6 +361,22 @@ const App: React.FC = () => {
       const newRecord: CustomerBookingRecord = {
         ...bookingData,
         id: bookingData.id || `cb-seg-${Date.now()}`,
+        bookingCode: `LH-241027-${nextNum}`,
+      };
+      return [newRecord, ...prev];
+    });
+  };
+
+  const handleCreateServiceQualityBooking = (
+    bookingData: Omit<CustomerBookingRecord, 'id' | 'bookingCode'> & {
+      id?: string;
+    }
+  ) => {
+    setServiceQualityCustomerBookings((prev) => {
+      const nextNum = String(prev.length + 1).padStart(2, '0');
+      const newRecord: CustomerBookingRecord = {
+        ...bookingData,
+        id: bookingData.id || `cb-sq-${Date.now()}`,
         bookingCode: `LH-241027-${nextNum}`,
       };
       return [newRecord, ...prev];
@@ -445,6 +525,31 @@ const App: React.FC = () => {
             setBookingTasks={setSegmentBookingTasks}
             bookingActivities={segmentBookingActivities}
             setBookingActivities={setSegmentBookingActivities}
+          />
+        ) : currentView === 'service_quality' ? (
+          <ServiceQualityModule
+            key="service_quality"
+            hideRegistrationSummary={true}
+            onCreateCustomerBooking={handleCreateServiceQualityBooking}
+            bookingCounts={serviceQualityBookingCounts}
+            setBookingCounts={setServiceQualityBookingCounts}
+            customerBookings={serviceQualityCustomerBookings}
+            setCustomerBookings={setServiceQualityCustomerBookings}
+            discounts={serviceQualityDiscounts}
+            events={serviceQualityReviews}
+            setEvents={setServiceQualityReviews}
+            guestHistory={serviceQualityGuestHistory}
+            setGuestHistory={setServiceQualityGuestHistory}
+            guestTasks={serviceQualityGuestTasks}
+            setGuestTasks={setServiceQualityGuestTasks}
+            guestActivityHistory={serviceQualityGuestActivityHistory}
+            setGuestActivityHistory={setServiceQualityGuestActivityHistory}
+            bookingInternalNotes={serviceQualityBookingInternalNotes}
+            setBookingInternalNotes={setServiceQualityBookingInternalNotes}
+            bookingTasks={serviceQualityBookingTasks}
+            setBookingTasks={setServiceQualityBookingTasks}
+            bookingActivities={serviceQualityBookingActivities}
+            setBookingActivities={setServiceQualityBookingActivities}
           />
         ) : currentView === 'customer_bookings' ? (
           <CustomerBookingsModule

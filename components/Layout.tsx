@@ -16,7 +16,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
     'customer_segments',
     'customer_bookings',
     'customers',
-    'discount_management'
+    'discount_management',
+    'service_quality'
   ];
   const isCrmActive = crmViews.includes(currentView);
   const [isCrmOpen, setIsCrmOpen] = useState(false);
@@ -302,7 +303,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
                   )}
                   <span className="text-sm font-medium">Quản lý chiết khấu</span>
                 </div>
-                <div className="flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors text-gray-600 hover:bg-gray-100">
+                <div 
+                  onClick={() => onNavigate?.('service_quality')}
+                  className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {currentView === 'service_quality' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
+                  )}
                   <span className="text-sm font-medium">Đánh giá chất lượng dịch vụ</span>
                 </div>
               </div>
