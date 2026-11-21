@@ -1,6 +1,10 @@
 import React from 'react';
 
 interface CategoryListProps {
+  onSelectCategoryCustomers?: () => void;
+  onSelectCategorySuppliers?: () => void;
+  onSelectEmployees?: () => void;
+  onSelectCategoryInsurance?: () => void;
   onSelectSpareParts: () => void;
   onSelectVehicles: () => void;
   onSelectTaxCategories: () => void;
@@ -8,6 +12,10 @@ interface CategoryListProps {
 }
 
 export const CategoryList: React.FC<CategoryListProps> = ({
+  onSelectCategoryCustomers,
+  onSelectCategorySuppliers,
+  onSelectEmployees,
+  onSelectCategoryInsurance,
   onSelectSpareParts,
   onSelectVehicles,
   onSelectTaxCategories,
@@ -17,11 +25,10 @@ export const CategoryList: React.FC<CategoryListProps> = ({
     {
       title: 'Đối tượng',
       items: [
-        { name: 'Khách hàng' },
-        { name: 'Nhà cung cấp' },
-        { name: 'Nhóm khách hàng' },
-        { name: 'Đơn vị bảo hiểm' },
-        { name: 'Khách hàng tiềm năng' },
+        { name: 'Khách hàng', onClick: onSelectCategoryCustomers },
+        { name: 'Nhà cung cấp', onClick: onSelectCategorySuppliers },
+        { name: 'Nhân sự', onClick: onSelectEmployees },
+        { name: 'Đơn vị bảo hiểm', onClick: onSelectCategoryInsurance },
       ],
     },
     {
@@ -54,7 +61,7 @@ export const CategoryList: React.FC<CategoryListProps> = ({
     {
       title: 'HRM',
       items: [
-        { name: 'Nhân sự' },
+        { name: 'Nhân sự', onClick: onSelectEmployees },
         { name: 'Phòng ban bộ phận' },
       ],
     },
