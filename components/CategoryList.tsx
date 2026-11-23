@@ -6,7 +6,14 @@ interface CategoryListProps {
   onSelectEmployees?: () => void;
   onSelectCategoryInsurance?: () => void;
   onSelectSpareParts: () => void;
+  onSelectMaterialGroups?: () => void;
+  onSelectWarehouses?: () => void;
+  onSelectUnits?: () => void;
+  onSelectLots?: () => void;
   onSelectVehicles: () => void;
+  onSelectDrivers?: () => void;
+  onSelectVehicleTypes?: () => void;
+  onSelectBankAccounts?: () => void;
   onSelectTaxCategories: () => void;
   onSelectOmnichannel: () => void;
 }
@@ -17,7 +24,14 @@ export const CategoryList: React.FC<CategoryListProps> = ({
   onSelectEmployees,
   onSelectCategoryInsurance,
   onSelectSpareParts,
+  onSelectMaterialGroups,
+  onSelectWarehouses,
+  onSelectUnits,
+  onSelectLots,
   onSelectVehicles,
+  onSelectDrivers,
+  onSelectVehicleTypes,
+  onSelectBankAccounts,
   onSelectTaxCategories,
   onSelectOmnichannel,
 }) => {
@@ -35,27 +49,24 @@ export const CategoryList: React.FC<CategoryListProps> = ({
       title: 'Vật tư hàng hóa',
       items: [
         { name: 'Vật tư, hàng hóa', onClick: onSelectSpareParts },
-        { name: 'Nhóm vật tư, hàng hóa' },
-        { name: 'Kho' },
-        { name: 'Đơn vị tính' },
-        { name: 'Lô' },
-        { name: 'Loại vật tư' },
+        { name: 'Nhóm vật tư, hàng hóa', onClick: onSelectMaterialGroups },
+        { name: 'Danh sách Kho', onClick: onSelectWarehouses },
+        { name: 'Đơn vị tính', onClick: onSelectUnits },
+        { name: 'Lô', onClick: onSelectLots },
       ],
     },
     {
       title: 'Gara',
       items: [
-        { name: 'Xe', onClick: onSelectVehicles },
-        { name: 'Tài xế' },
-        { name: 'Hiệu xe' },
-        { name: 'Loại xe' },
-        { name: 'Dòng xe' },
+        { name: 'Danh sách Xe', onClick: onSelectVehicles },
+        { name: 'Tài xế', onClick: onSelectDrivers },
+        { name: 'Loại xe', onClick: onSelectVehicleTypes },
       ],
     },
     {
       title: 'Tài khoản',
       items: [
-        { name: 'Hệ thống tài khoản' },
+        { name: 'Tài khoản ngân hàng', onClick: onSelectBankAccounts },
       ],
     },
     {

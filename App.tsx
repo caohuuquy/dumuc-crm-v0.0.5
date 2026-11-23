@@ -12,8 +12,15 @@ import { CategoryList } from './components/CategoryList';
 import { CategoryCustomersList } from './components/CategoryCustomersList';
 import { CategorySuppliersList } from './components/CategorySuppliersList';
 import { CategoryInsuranceCompaniesList } from './components/CategoryInsuranceCompaniesList';
+import { CategoryMaterialGroupsList } from './components/CategoryMaterialGroupsList';
+import { CategoryWarehousesList } from './components/CategoryWarehousesList';
+import { CategoryUnitsList } from './components/CategoryUnitsList';
+import { CategoryLotsList } from './components/CategoryLotsList';
 import { SparePartsList } from './components/SparePartsList';
 import { VehiclesList } from './components/VehiclesList';
+import { CategoryDriversList } from './components/CategoryDriversList';
+import { CategoryVehicleTypesList } from './components/CategoryVehicleTypesList';
+import { CategoryBankAccountsList } from './components/CategoryBankAccountsList';
 import { TaxCategoryList } from './components/TaxCategoryList';
 import { OmnichannelConfig } from './components/OmnichannelConfig';
 import { MarketplaceManagement } from './components/MarketplaceManagement';
@@ -71,7 +78,7 @@ import { OrderProvider } from './context/OrderContext';
 
 const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
-  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'spare_parts' | 'vehicles' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
+  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'category_material_groups' | 'category_warehouses' | 'category_units' | 'category_lots' | 'spare_parts' | 'vehicles' | 'category_drivers' | 'category_vehicle_types' | 'category_bank_accounts' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
     PotentialCustomerItem
@@ -396,7 +403,14 @@ const App: React.FC = () => {
             onSelectEmployees={() => setCurrentView('employee_list')}
             onSelectCategoryInsurance={() => setCurrentView('category_insurance')}
             onSelectSpareParts={() => setCurrentView('spare_parts')} 
+            onSelectMaterialGroups={() => setCurrentView('category_material_groups')}
+            onSelectWarehouses={() => setCurrentView('category_warehouses')}
+            onSelectUnits={() => setCurrentView('category_units')}
+            onSelectLots={() => setCurrentView('category_lots')}
             onSelectVehicles={() => setCurrentView('vehicles')}
+            onSelectDrivers={() => setCurrentView('category_drivers')}
+            onSelectVehicleTypes={() => setCurrentView('category_vehicle_types')}
+            onSelectBankAccounts={() => setCurrentView('category_bank_accounts')}
             onSelectTaxCategories={() => setCurrentView('tax_categories')}
             onSelectOmnichannel={() => setCurrentView('omnichannel')}
           />
@@ -406,10 +420,24 @@ const App: React.FC = () => {
           <CategorySuppliersList />
         ) : currentView === 'category_insurance' ? (
           <CategoryInsuranceCompaniesList />
+        ) : currentView === 'category_material_groups' ? (
+          <CategoryMaterialGroupsList />
+        ) : currentView === 'category_warehouses' ? (
+          <CategoryWarehousesList />
+        ) : currentView === 'category_units' ? (
+          <CategoryUnitsList />
+        ) : currentView === 'category_lots' ? (
+          <CategoryLotsList />
         ) : currentView === 'spare_parts' ? (
           <SparePartsList />
         ) : currentView === 'vehicles' ? (
           <VehiclesList />
+        ) : currentView === 'category_drivers' ? (
+          <CategoryDriversList />
+        ) : currentView === 'category_vehicle_types' ? (
+          <CategoryVehicleTypesList />
+        ) : currentView === 'category_bank_accounts' ? (
+          <CategoryBankAccountsList />
         ) : currentView === 'tax_categories' ? (
           <TaxCategoryList />
         ) : currentView === 'omnichannel' ? (

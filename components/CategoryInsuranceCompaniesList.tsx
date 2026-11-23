@@ -15,6 +15,8 @@ import {
   Plus,
   HelpCircle,
   Image as ImageIcon,
+  KeyRound,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface InsuranceTemplateRow {
@@ -310,6 +312,7 @@ export const CategoryInsuranceCompaniesList: React.FC = () => {
   >('templates');
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [addFormError, setAddFormError] = useState('');
+  const [taxCodeError, setTaxCodeError] = useState('');
   const [addForm, setAddForm] = useState({
     code: '',
     name: '',
@@ -559,6 +562,7 @@ export const CategoryInsuranceCompaniesList: React.FC = () => {
     setActiveAddTab('templates');
     setIsDraggingLogo(false);
     setAddFormError('');
+    setTaxCodeError('');
   };
 
   const handleOpenAddModal = () => {
@@ -569,6 +573,15 @@ export const CategoryInsuranceCompaniesList: React.FC = () => {
   const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
     setAddFormError('');
+    setTaxCodeError('');
+  };
+
+  const findDuplicateTaxCode = (
+    value: string
+  ): CategoryInsuranceCompanyRecord | undefined => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    return items.find((item) => item.taxCode?.trim().toLowerCase() === normalized);
   };
 
   const handleReadLogoFile = (file: File | undefined) => {
@@ -830,10 +843,27 @@ export const CategoryInsuranceCompaniesList: React.FC = () => {
 
   const handleAddSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    let hasError = false;
+
     if (!addForm.name.trim()) {
       setAddFormError('Vui lòng nhập Tên đơn vị bảo hiểm.');
-      return;
+      hasError = true;
+    } else {
+      setAddFormError('');
     }
+
+    const dupTaxCode = findDuplicateTaxCode(addForm.taxCode);
+    if (dupTaxCode) {
+      setTaxCodeError(
+        `Mã số thuế đã tồn tại (${dupTaxCode.code} - ${dupTaxCode.name}). Không được trùng.`
+      );
+      hasError = true;
+    } else {
+      setTaxCodeError('');
+    }
+
+    if (hasError) return;
 
     const newItem: CategoryInsuranceCompanyRecord = {
       id: `ins-${Date.now()}`,
@@ -1403,18 +1433,44 @@ export const CategoryInsuranceCompaniesList: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[12px] font-medium text-gray-800 mb-1">
-                      Mã số thuế
+                    <label className="flex items-center gap-1.5 text-[12px] font-medium text-gray-800 mb-1">
+                      <span>Mã số thuế</span>
+                      <span
+                        className="relative group inline-flex items-center text-amber-600 cursor-help"
+                        title="Không được trùng (giá trị duy nhất)"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                          Không được trùng
+                        </span>
+                      </span>
                     </label>
                     <input
                       type="text"
                       value={addForm.taxCode}
-                      onChange={(e) =>
-                        setAddForm({ ...addForm, taxCode: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAddForm({ ...addForm, taxCode: val });
+                        const dup = findDuplicateTaxCode(val);
+                        setTaxCodeError(
+                          dup
+                            ? `Mã số thuế đã tồn tại (${dup.code} - ${dup.name}). Không được trùng.`
+                            : ''
+                        );
+                      }}
                       placeholder="Nhập mã số thuế"
-                      className="w-full bg-white border border-gray-200 rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1677FF]"
+                      className={`w-full bg-white border rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none ${
+                        taxCodeError
+                          ? 'border-red-400 focus:border-red-500'
+                          : 'border-gray-200 focus:border-[#1677FF]'
+                      }`}
                     />
+                    {taxCodeError && (
+                      <p className="mt-1 flex items-start gap-1 text-[11.5px] text-red-500 leading-snug">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{taxCodeError}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 

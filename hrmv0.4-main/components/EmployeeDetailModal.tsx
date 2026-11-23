@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Download, AlertTriangle, Plus, Trash2, Clock, ShieldCheck, Info } from 'lucide-react';
+import { X, Calendar, Download, AlertTriangle, Plus, Trash2, Clock, ShieldCheck, Info, KeyRound } from 'lucide-react';
 import { MOCK_EMPLOYEES, EmployeeRecord } from './EmployeeList';
 
 interface EmployeeDetailModalProps {
@@ -87,6 +87,13 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     isError: false,
     message: '',
   });
+  const [phoneDuplicateError, setPhoneDuplicateError] = useState<{
+    isError: boolean;
+    message: string;
+  }>({
+    isError: false,
+    message: '',
+  });
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string }>({});
 
   React.useEffect(() => {
@@ -105,6 +112,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
       setPermanentAddress('');
       setAddress('');
       setCccdError({ isError: false, message: '' });
+      setPhoneDuplicateError({ isError: false, message: '' });
       setFieldErrors({});
       setCertificates([]);
       setSkillRows(getDefaultSkillRows());
@@ -132,19 +140,46 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, activeTab, onClose]);
 
+  const normalizePhone = (value: string) => value.replace(/[\s.-]+/g, '').trim().toLowerCase();
+  const normalizeCccd = (value: string) => value.replace(/\s+/g, '').trim().toLowerCase();
+
+  const findDuplicatePhone = (value: string): EmployeeRecord | undefined => {
+    const normalized = normalizePhone(value);
+    if (!normalized) return undefined;
+    const listToCheck = existingEmployees || MOCK_EMPLOYEES;
+    return listToCheck.find((emp) => emp.phone && normalizePhone(emp.phone) === normalized);
+  };
+
+  const findDuplicateCccd = (value: string): EmployeeRecord | undefined => {
+    const normalized = normalizeCccd(value);
+    if (!normalized) return undefined;
+    const listToCheck = existingEmployees || MOCK_EMPLOYEES;
+    return listToCheck.find((emp) => emp.cccd && normalizeCccd(emp.cccd) === normalized);
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    if (fieldErrors.phone) {
+      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+    }
+    const duplicate = findDuplicatePhone(value);
+    if (duplicate) {
+      setPhoneDuplicateError({
+        isError: true,
+        message: `Số điện thoại bị trùng với nhân sự: ${duplicate.name}. Không được trùng.`,
+      });
+    } else {
+      setPhoneDuplicateError({ isError: false, message: '' });
+    }
+  };
+
   const handleCccdChange = (value: string) => {
     setCccd(value);
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setCccdError({ isError: false, message: '' });
-      return;
-    }
-    const listToCheck = existingEmployees || MOCK_EMPLOYEES;
-    const duplicate = listToCheck.find((emp) => emp.cccd && emp.cccd.trim() === trimmed);
+    const duplicate = findDuplicateCccd(value);
     if (duplicate) {
       setCccdError({
         isError: true,
-        message: `Số CCCD bị trùng với nhân sự: ${duplicate.name}`,
+        message: `Số CCCD bị trùng với nhân sự: ${duplicate.name}. Không được trùng.`,
       });
     } else {
       setCccdError({ isError: false, message: '' });
@@ -152,23 +187,30 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   };
 
   const handleSaveClick = () => {
-    if (cccdError.isError) {
-      setActiveTab('personal');
-      return;
+    const trimmedCccd = cccd.trim();
+    const dupPhone = findDuplicatePhone(phone);
+    const dupCccd = findDuplicateCccd(trimmedCccd);
+
+    let hasBlockingError = false;
+
+    if (dupPhone) {
+      setPhoneDuplicateError({
+        isError: true,
+        message: `Số điện thoại bị trùng với nhân sự: ${dupPhone.name}. Không được trùng.`,
+      });
+      hasBlockingError = true;
+    } else {
+      setPhoneDuplicateError({ isError: false, message: '' });
     }
 
-    const trimmedCccd = cccd.trim();
-    if (trimmedCccd) {
-      const listToCheck = existingEmployees || MOCK_EMPLOYEES;
-      const duplicate = listToCheck.find((emp) => emp.cccd && emp.cccd.trim() === trimmedCccd);
-      if (duplicate) {
-        setCccdError({
-          isError: true,
-          message: `Số CCCD bị trùng với nhân sự: ${duplicate.name}`,
-        });
-        setActiveTab('personal');
-        return;
-      }
+    if (dupCccd) {
+      setCccdError({
+        isError: true,
+        message: `Số CCCD bị trùng với nhân sự: ${dupCccd.name}. Không được trùng.`,
+      });
+      hasBlockingError = true;
+    } else {
+      setCccdError({ isError: false, message: '' });
     }
 
     const errors: { name?: string; phone?: string } = {};
@@ -181,6 +223,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
     if (errors.name || errors.phone) {
       setFieldErrors(errors);
+      hasBlockingError = true;
+    }
+
+    if (hasBlockingError) {
       setActiveTab('personal');
       return;
     }
@@ -422,29 +468,39 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                   <div>
-                    <label className="block text-gray-700 font-medium mb-1.5">
-                      Điện thoại <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1.5 text-gray-700 font-medium mb-1.5">
+                      <span>
+                        Điện thoại <span className="text-red-500">*</span>
+                      </span>
+                      <span
+                        className="relative group inline-flex items-center text-amber-600 cursor-help"
+                        title="Không được trùng (giá trị duy nhất)"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                          Không được trùng
+                        </span>
+                      </span>
                     </label>
                     <input
                       type="text"
                       placeholder="Nhập số điện thoại"
                       value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        if (fieldErrors.phone) {
-                          setFieldErrors((prev) => ({ ...prev, phone: undefined }));
-                        }
-                      }}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`w-full border ${
-                        fieldErrors.phone
+                        fieldErrors.phone || phoneDuplicateError.isError
                           ? 'border-red-500 focus:border-red-500 bg-red-50/40'
                           : 'border-gray-300 focus:border-blue-500'
                       } rounded px-3 py-2 outline-none transition-colors`}
                     />
-                    {fieldErrors.phone && (
+                    {(phoneDuplicateError.isError || fieldErrors.phone) && (
                       <div className="flex items-center gap-1.5 mt-1.5 text-red-500 text-[13px]">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>{fieldErrors.phone}</span>
+                        <span>
+                          {phoneDuplicateError.isError
+                            ? phoneDuplicateError.message
+                            : fieldErrors.phone}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -468,7 +524,18 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
               <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1.5">Số CCCD</label>
+                  <label className="flex items-center gap-1.5 text-gray-700 font-medium mb-1.5">
+                    <span>Số CCCD</span>
+                    <span
+                      className="relative group inline-flex items-center text-amber-600 cursor-help"
+                      title="Không được trùng (giá trị duy nhất)"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                        Không được trùng
+                      </span>
+                    </span>
+                  </label>
                   <input
                     type="text"
                     placeholder="Nhập số CCCD"
@@ -482,7 +549,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   />
                   {cccdError.isError && (
                     <div className="flex items-center gap-1.5 mt-1.5 text-red-500 text-[13px]">
-                      <AlertTriangle className="w-4 h-4" />
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>{cccdError.message}</span>
                     </div>
                   )}
@@ -969,9 +1036,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </button>
         <button
           onClick={handleSaveClick}
-          disabled={cccdError.isError}
+          disabled={cccdError.isError || phoneDuplicateError.isError}
           className={`px-5 py-2 text-white rounded font-medium transition-colors text-[14px] ${
-            cccdError.isError
+            cccdError.isError || phoneDuplicateError.isError
               ? 'bg-blue-300 cursor-not-allowed'
               : 'bg-[#2563EB] hover:bg-blue-700 shadow-xs cursor-pointer'
           }`}

@@ -16,6 +16,8 @@ import {
   Calendar,
   HelpCircle,
   Plus,
+  KeyRound,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface SupplierDocumentRow {
@@ -431,6 +433,7 @@ export const CategorySuppliersList: React.FC = () => {
     'config' | 'business_license' | 'images' | 'documents'
   >('business_license');
   const [addFormError, setAddFormError] = useState('');
+  const [taxCodeError, setTaxCodeError] = useState('');
   const [addForm, setAddForm] = useState({
     code: '',
     name: '',
@@ -643,6 +646,7 @@ export const CategorySuppliersList: React.FC = () => {
     });
     setActiveAddTab('business_license');
     setAddFormError('');
+    setTaxCodeError('');
     setDossierRowId(null);
   };
 
@@ -654,7 +658,14 @@ export const CategorySuppliersList: React.FC = () => {
   const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
     setAddFormError('');
+    setTaxCodeError('');
     setDossierRowId(null);
+  };
+
+  const findDuplicateTaxCode = (value: string): CategorySupplierRecord | undefined => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    return items.find((item) => item.taxCode?.trim().toLowerCase() === normalized);
   };
 
   const handleSupplierImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -754,10 +765,28 @@ export const CategorySuppliersList: React.FC = () => {
 
   const handleAddSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    let hasError = false;
+
     if (!addForm.name.trim()) {
       setAddFormError('Vui lòng nhập Tên nhà cung cấp.');
-      return;
+      hasError = true;
+    } else {
+      setAddFormError('');
     }
+
+    const dupTaxCode = findDuplicateTaxCode(addForm.taxCode);
+    if (dupTaxCode) {
+      setTaxCodeError(
+        `Mã số thuế đã tồn tại (${dupTaxCode.code} - ${dupTaxCode.name}). Không được trùng.`
+      );
+      setActiveAddTab('business_license');
+      hasError = true;
+    } else {
+      setTaxCodeError('');
+    }
+
+    if (hasError) return;
 
     const generatedCode =
       addForm.code.trim() || `NCC_${String(Date.now()).slice(-6)}`;
@@ -1431,18 +1460,44 @@ export const CategorySuppliersList: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-[12px] font-medium text-gray-800 mb-1">
-                        Mã số thuế
+                      <label className="flex items-center gap-1.5 text-[12px] font-medium text-gray-800 mb-1">
+                        <span>Mã số thuế</span>
+                        <span
+                          className="relative group inline-flex items-center text-amber-600 cursor-help"
+                          title="Không được trùng (giá trị duy nhất)"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                            Không được trùng
+                          </span>
+                        </span>
                       </label>
                       <input
                         type="text"
                         value={addForm.taxCode}
-                        onChange={(e) =>
-                          setAddForm({ ...addForm, taxCode: e.target.value })
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAddForm({ ...addForm, taxCode: val });
+                          const dup = findDuplicateTaxCode(val);
+                          setTaxCodeError(
+                            dup
+                              ? `Mã số thuế đã tồn tại (${dup.code} - ${dup.name}). Không được trùng.`
+                              : ''
+                          );
+                        }}
                         placeholder="Nhập mã số thuế công ty"
-                        className="w-full bg-white border border-gray-200 rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1677FF]"
+                        className={`w-full bg-white border rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none ${
+                          taxCodeError
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-gray-200 focus:border-[#1677FF]'
+                        }`}
                       />
+                      {taxCodeError && (
+                        <p className="mt-1 flex items-start gap-1 text-[11.5px] text-red-500 leading-snug">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <span>{taxCodeError}</span>
+                        </p>
+                      )}
                     </div>
 
                     <div className="md:col-span-2">

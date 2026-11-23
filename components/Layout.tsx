@@ -154,9 +154,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
           </div>
           <div 
             onClick={() => onNavigate?.('categories')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
           >
-            {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
+            {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
             )}
             <List className="w-5 h-5 mr-3" />
@@ -499,13 +499,34 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
             {currentView === 'category_insurance' && (
               <h1 className="text-xl font-bold text-gray-800 mr-8">Đơn vị bảo hiểm</h1>
             )}
+            {currentView === 'category_material_groups' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Nhóm sản phẩm &amp; dịch vụ</h1>
+            )}
+            {currentView === 'category_warehouses' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Danh sách kho</h1>
+            )}
+            {currentView === 'category_units' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Đơn vị tính</h1>
+            )}
+            {currentView === 'category_lots' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Danh mục lô</h1>
+            )}
             {currentView === 'vehicles' && (
               <h1 className="text-xl font-bold text-gray-800 mr-8">Danh sách xe</h1>
+            )}
+            {currentView === 'category_drivers' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Tài xế</h1>
+            )}
+            {currentView === 'category_vehicle_types' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Loại xe</h1>
+            )}
+            {currentView === 'category_bank_accounts' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Tài khoản ngân hàng</h1>
             )}
             {currentView === 'tax_categories' && (
               <h1 className="text-xl font-bold text-gray-800 mr-8">Danh mục thuế</h1>
             )}
-            {['category_customers', 'category_suppliers', 'category_insurance', 'vehicles', 'tax_categories', 'employee_list', 'labor_list', 'department_list', 'position_list', 'salary_grade_list', 'contract_type_list', 'salary_rule_group', 'salary_structure', 'insurance_tax_params', 'payroll_period', 'payroll_table'].includes(currentView) ? (
+            {['category_customers', 'category_suppliers', 'category_insurance', 'category_material_groups', 'category_warehouses', 'category_units', 'category_lots', 'vehicles', 'category_drivers', 'category_vehicle_types', 'category_bank_accounts', 'tax_categories', 'employee_list', 'labor_list', 'department_list', 'position_list', 'salary_grade_list', 'contract_type_list', 'salary_rule_group', 'salary_structure', 'insurance_tax_params', 'payroll_period', 'payroll_table'].includes(currentView) ? (
               <div className="flex-1 flex justify-end gap-3 mr-6 items-center">
                 <button className="bg-[#1A4B9F] text-white px-4 py-1.5 rounded-[4px] text-sm font-medium flex items-center gap-2">
                   <Tag className="w-4 h-4 fill-white" />
