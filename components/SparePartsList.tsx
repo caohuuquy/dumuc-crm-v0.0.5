@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Download,
   Trash2,
@@ -12,6 +12,7 @@ import {
   Pencil,
   Camera,
   Plus,
+  HelpCircle,
 } from 'lucide-react';
 import { useFirestoreCollection } from '../firebase';
 
@@ -33,6 +34,17 @@ export interface SparePartRecord {
   internationalCode: string;
   isService: boolean;
   trackInventory: boolean;
+  materialBom?: MaterialBomRow[];
+}
+
+export interface MaterialBomRow {
+  id: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  quantity: string;
+  costPrice: string;
 }
 
 export const INITIAL_SPARE_PARTS: SparePartRecord[] = [
@@ -316,6 +328,7 @@ const TECHNICAL_CATEGORIES = [
 const MODAL_TABS = [
   { id: 'description', label: 'Mô tả' },
   { id: 'replacement_cycle', label: 'Chu kỳ thay thế' },
+  { id: 'material_bom', label: 'Định mức nguyên vật liệu' },
   { id: 'compatible_cars', label: 'Xe tương thích' },
   { id: 'equivalent_parts', label: 'Vật tư tương đương' },
   { id: 'upsell_parts', label: 'Vật tư Up-sell' },
@@ -323,6 +336,36 @@ const MODAL_TABS = [
   { id: 'consumable_parts', label: 'Vật tư đi kèm / tiêu hao' },
   { id: 'accounting', label: 'Định khoản kế toán' },
 ];
+
+const BOM_UNIT_OPTIONS = [
+  'Cái',
+  'Cuộn',
+  'Bộ',
+  'Hộp',
+  'Lít',
+  'Kg',
+  'Mét',
+  'Chai',
+  'Lon',
+  'Thùng',
+];
+
+const createEmptyMaterialBomRow = (id: number): MaterialBomRow => ({
+  id,
+  materialId: '',
+  materialCode: '',
+  materialName: '',
+  unit: '',
+  quantity: '',
+  costPrice: '',
+});
+
+const parseNumericInput = (raw: string): number => {
+  const cleaned = raw.replace(/,/g, '').replace(/\s+/g, '').trim();
+  if (!cleaned) return 0;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 type RelatedPartRow = {
   id: number;
@@ -390,6 +433,26 @@ export const SparePartsList: React.FC = () => {
   const [relatedPartTabs, setRelatedPartTabs] = useState<
     Record<string, RelatedPartRow[]>
   >(createInitialRelatedPartRows);
+  const [materialBomRows, setMaterialBomRows] = useState<MaterialBomRow[]>([
+    createEmptyMaterialBomRow(1),
+  ]);
+
+  useEffect(() => {
+    if (!isAddModalOpen || activeModalTab !== 'material_bom') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setMaterialBomRows((prev) => [
+          ...prev,
+          createEmptyMaterialBomRow(
+            prev.length > 0 ? Math.max(...prev.map((r) => r.id)) + 1 : 1
+          ),
+        ]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAddModalOpen, activeModalTab]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -469,7 +532,76 @@ export const SparePartsList: React.FC = () => {
     setReplacementCycleMonths('');
     setCompatibleCars([{ id: 1, brand: '', model: '', year: '' }]);
     setRelatedPartTabs(createInitialRelatedPartRows());
+    setMaterialBomRows([createEmptyMaterialBomRow(1)]);
   };
+
+  const handleAddMaterialBomRow = () => {
+    setMaterialBomRows((prev) => [
+      ...prev,
+      createEmptyMaterialBomRow(
+        prev.length > 0 ? Math.max(...prev.map((r) => r.id)) + 1 : 1
+      ),
+    ]);
+  };
+
+  const handleSelectMaterialBomItem = (rowId: number, selectedPartId: string) => {
+    const found = items.find((item) => item.id === selectedPartId);
+    setMaterialBomRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== rowId) return row;
+        if (!found) {
+          return {
+            ...row,
+            materialId: '',
+            materialCode: '',
+            materialName: '',
+            unit: '',
+            costPrice: '',
+          };
+        }
+        return {
+          ...row,
+          materialId: found.id,
+          materialCode: found.code,
+          materialName: found.name,
+          unit: found.unit || row.unit,
+          quantity: row.quantity || '1',
+          costPrice: found.costPrice || '0',
+        };
+      })
+    );
+  };
+
+  const handleUpdateMaterialBomRow = (
+    rowId: number,
+    field: 'unit' | 'quantity' | 'costPrice',
+    value: string
+  ) => {
+    setMaterialBomRows((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const handleRemoveMaterialBomRow = (rowId: number) => {
+    setMaterialBomRows((prev) => prev.filter((row) => row.id !== rowId));
+  };
+
+  const handleClearAllMaterialBomRows = () => {
+    setMaterialBomRows([]);
+  };
+
+  const totalMaterialBomCost = useMemo(() => {
+    return materialBomRows.reduce((sum, row) => {
+      const cost = parseNumericInput(row.costPrice);
+      const qty =
+        row.quantity.trim() === ''
+          ? cost > 0
+            ? 1
+            : 0
+          : parseNumericInput(row.quantity);
+      return sum + qty * cost;
+    }, 0);
+  }, [materialBomRows]);
 
   const handleAddCompatibleCarRow = () => {
     setCompatibleCars((prev) => [
@@ -600,6 +732,7 @@ export const SparePartsList: React.FC = () => {
         internationalCode: hsCode.trim(),
         isService: nature === 'Dịch vụ',
         trackInventory,
+        materialBom: materialBomRows,
       };
       setItems((prev) => [newRecord, ...prev]);
     }
@@ -1336,6 +1469,207 @@ export const SparePartsList: React.FC = () => {
                         className="w-full bg-[#F8FAFC] border border-gray-200 rounded-[6px] px-3 py-2 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                       />
                     </div>
+                  </div>
+                </div>
+              ) : activeModalTab === 'material_bom' ? (
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="border border-gray-200 rounded-[6px] bg-white overflow-hidden flex flex-col">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-[12.5px] min-w-[960px]">
+                        <thead>
+                          <tr className="bg-[#F3F6FB] text-gray-800 font-semibold text-[12.5px] border-b border-gray-200">
+                            <th className="w-[34px] py-2 px-2 border-r border-[#D6E0EE]"></th>
+                            <th className="w-[46px] py-2 px-2 border-r border-[#D6E0EE] text-center">
+                              #
+                            </th>
+                            <th className="w-[155px] py-2 px-2.5 border-r border-[#A5B8D9] text-left whitespace-nowrap">
+                              Nguyên vật liệu <span className="text-red-500">*</span>
+                            </th>
+                            <th className="w-[185px] py-2 px-2.5 border-r border-[#A5B8D9] text-left whitespace-nowrap">
+                              Tên nguyên vật liệu
+                            </th>
+                            <th className="w-[115px] py-2 px-2.5 border-r border-[#A5B8D9] text-left whitespace-nowrap">
+                              ĐVT <span className="text-red-500">*</span>
+                            </th>
+                            <th className="w-[125px] py-2 px-2.5 border-r border-[#A5B8D9] text-left whitespace-nowrap">
+                              Số lượng
+                            </th>
+                            <th className="w-[125px] py-2 px-2.5 border-r border-[#A5B8D9] text-left whitespace-nowrap">
+                              Giá vốn
+                            </th>
+                            <th className="py-2 px-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {materialBomRows.map((row, idx) => {
+                            const unitOptions =
+                              row.unit && !BOM_UNIT_OPTIONS.includes(row.unit)
+                                ? [row.unit, ...BOM_UNIT_OPTIONS]
+                                : BOM_UNIT_OPTIONS;
+                            return (
+                              <tr
+                                key={row.id}
+                                className="group border-b border-gray-200 bg-white hover:bg-gray-50/40"
+                              >
+                                <td className="py-1.5 px-1.5 border-r border-dashed border-gray-200 text-center align-middle">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMaterialBomRow(row.id)}
+                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-0.5 transition-opacity cursor-pointer"
+                                    title="Xóa dòng"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                                <td className="py-1.5 px-2 border-r border-dashed border-gray-200 text-center align-middle text-gray-800 text-[12.5px]">
+                                  {idx + 1}
+                                </td>
+                                <td className="py-1 px-2 border-r border-dashed border-gray-200 align-middle">
+                                  <div className="relative flex items-center">
+                                    <select
+                                      value={row.materialId}
+                                      onChange={(e) =>
+                                        handleSelectMaterialBomItem(row.id, e.target.value)
+                                      }
+                                      className="w-full bg-transparent text-[12.5px] text-gray-800 pr-5 py-1 appearance-none outline-none cursor-pointer"
+                                    >
+                                      <option value=""></option>
+                                      {items.map((part) => (
+                                        <option key={part.id} value={part.id}>
+                                          {part.code} - {part.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <span className="pointer-events-none absolute right-1 text-[10px] text-gray-500 leading-none">
+                                      ▾
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-1 px-2 border-r border-dashed border-gray-200 align-middle bg-[#F2F4F7]">
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={row.materialName}
+                                    className="w-full bg-transparent text-[12.5px] text-gray-700 py-1 outline-none cursor-default"
+                                  />
+                                </td>
+                                <td className="py-1 px-2 border-r border-dashed border-gray-200 align-middle">
+                                  <div className="relative flex items-center">
+                                    <select
+                                      value={row.unit}
+                                      onChange={(e) =>
+                                        handleUpdateMaterialBomRow(
+                                          row.id,
+                                          'unit',
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full bg-transparent text-[12.5px] text-gray-800 pr-5 py-1 appearance-none outline-none cursor-pointer"
+                                    >
+                                      <option value=""></option>
+                                      {unitOptions.map((u) => (
+                                        <option key={u} value={u}>
+                                          {u}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <span className="pointer-events-none absolute right-1 text-[10px] text-gray-500 leading-none">
+                                      ▾
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-1 px-2 border-r border-dashed border-gray-200 align-middle">
+                                  <input
+                                    type="text"
+                                    value={row.quantity}
+                                    onChange={(e) =>
+                                      handleUpdateMaterialBomRow(
+                                        row.id,
+                                        'quantity',
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full bg-transparent text-[12.5px] text-gray-800 py-1 outline-none"
+                                  />
+                                </td>
+                                <td className="py-1 px-2 border-r border-dashed border-gray-200 align-middle">
+                                  <input
+                                    type="text"
+                                    value={row.costPrice}
+                                    onChange={(e) =>
+                                      handleUpdateMaterialBomRow(
+                                        row.id,
+                                        'costPrice',
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full bg-transparent text-[12.5px] text-gray-800 py-1 outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2"></td>
+                              </tr>
+                            );
+                          })}
+                          <tr
+                            onClick={handleAddMaterialBomRow}
+                            className="border-b border-gray-200 bg-white hover:bg-blue-50/30 cursor-pointer transition-colors"
+                          >
+                            <td className="py-2 px-2 border-r border-dashed border-gray-200"></td>
+                            <td className="py-2 px-2 border-r border-dashed border-gray-200"></td>
+                            <td
+                              colSpan={2}
+                              className="py-2 px-2.5 border-r border-dashed border-gray-200 text-[12px] italic text-gray-400 whitespace-nowrap"
+                            >
+                              <span className="inline-flex items-center gap-1.5">
+                                <Plus className="w-3.5 h-3.5 text-gray-400" />
+                                <span>Bấm vào đây để thêm dòng mới</span>
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 border-r border-dashed border-gray-200"></td>
+                            <td className="py-2 px-2 border-r border-dashed border-gray-200"></td>
+                            <td className="py-2 px-2 border-r border-dashed border-gray-200"></td>
+                            <td className="py-2 px-2"></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="px-2.5 py-2 bg-white flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleAddMaterialBomRow}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F8FAFC] hover:bg-gray-100 border border-gray-200 rounded-[6px] text-[12.5px] font-medium text-gray-700 transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-gray-600" />
+                          <span>Thêm dòng (F2)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleClearAllMaterialBomRows}
+                          className="inline-flex items-center gap-1.5 px-2 py-1.5 text-[#DC2626] hover:bg-red-50 rounded-[6px] text-[12.5px] font-medium transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Xóa tất cả</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        title="Nhấn F2 hoặc bấm vào bảng để thêm dòng mới"
+                        className="p-1 text-gray-600 hover:text-gray-900 rounded-full transition-colors cursor-pointer"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 pr-2 flex items-center justify-end gap-3 text-[15px]">
+                    <span className="text-gray-500">Tổng giá vốn</span>
+                    <span className="text-gray-900 font-medium tabular-nums">
+                      {totalMaterialBomCost.toLocaleString('en-US')}
+                    </span>
                   </div>
                 </div>
               ) : activeModalTab === 'compatible_cars' ? (

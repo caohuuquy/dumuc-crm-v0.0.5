@@ -16,6 +16,8 @@ import {
   Calendar,
   HelpCircle,
   Plus,
+  KeyRound,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface CustomerDocumentRow {
@@ -83,15 +85,6 @@ const formatIsoToDisplayDate = (iso: string): string => {
 };
 
 const STORAGE_KEY = 'category_customers_list_v1';
-
-const CUSTOMER_GROUP_OPTIONS = [
-  'Cá nhân',
-  'Tổ chức',
-  'Khách hàng VIP',
-  'Khách hàng doanh nghiệp',
-  'Khách hàng thân thiết',
-  'Khách lẻ',
-];
 
 const PROVINCE_WARD_MAP: Record<string, string[]> = {
   'Thành phố Hồ Chí Minh': [
@@ -436,7 +429,17 @@ export const INITIAL_CATEGORY_CUSTOMERS: CategoryCustomerRecord[] = [
   },
 ];
 
-export const CategoryCustomersList: React.FC = () => {
+interface CategoryCustomersListProps {
+  modalOnly?: boolean;
+  onCloseModal?: () => void;
+  onCustomerAdded?: (customer: CategoryCustomerRecord) => void;
+}
+
+export const CategoryCustomersList: React.FC<CategoryCustomersListProps> = ({
+  modalOnly = false,
+  onCloseModal,
+  onCustomerAdded,
+}) => {
   const [items, setItems] = useState<CategoryCustomerRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -485,9 +488,11 @@ export const CategoryCustomersList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Full-screen Add modal state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(Boolean(modalOnly));
   const [activeAddTab, setActiveAddTab] = useState<'company' | 'documents'>('company');
   const [addFormError, setAddFormError] = useState('');
+  const [cccdError, setCccdError] = useState('');
+  const [taxCodeError, setTaxCodeError] = useState('');
   const [addForm, setAddForm] = useState({
     code: '',
     name: '',
@@ -745,6 +750,8 @@ export const CategoryCustomersList: React.FC = () => {
     });
     setActiveAddTab('company');
     setAddFormError('');
+    setCccdError('');
+    setTaxCodeError('');
   };
 
   const handleOpenAddModal = () => {
@@ -755,6 +762,21 @@ export const CategoryCustomersList: React.FC = () => {
   const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
     setAddFormError('');
+    setCccdError('');
+    setTaxCodeError('');
+    onCloseModal?.();
+  };
+
+  const findDuplicateCccd = (value: string): CategoryCustomerRecord | undefined => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    return items.find((item) => item.cccd?.trim().toLowerCase() === normalized);
+  };
+
+  const findDuplicateTaxCode = (value: string): CategoryCustomerRecord | undefined => {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    return items.find((item) => item.taxCode?.trim().toLowerCase() === normalized);
   };
 
   const handleAddDocumentRow = () => {
@@ -827,10 +849,38 @@ export const CategoryCustomersList: React.FC = () => {
 
   const handleAddSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    let hasError = false;
+
     if (!addForm.name.trim()) {
       setAddFormError('Vui lòng nhập Tên khách hàng.');
-      return;
+      hasError = true;
+    } else {
+      setAddFormError('');
     }
+
+    const dupCccd = findDuplicateCccd(addForm.cccd);
+    if (dupCccd) {
+      setCccdError(
+        `Số CCCD đã tồn tại (${dupCccd.code} - ${dupCccd.name}). Không được trùng.`
+      );
+      hasError = true;
+    } else {
+      setCccdError('');
+    }
+
+    const dupTaxCode = findDuplicateTaxCode(addForm.taxCode);
+    if (dupTaxCode) {
+      setTaxCodeError(
+        `Mã số thuế đã tồn tại (${dupTaxCode.code} - ${dupTaxCode.name}). Không được trùng.`
+      );
+      setActiveAddTab('company');
+      hasError = true;
+    } else {
+      setTaxCodeError('');
+    }
+
+    if (hasError) return;
 
     const generatedCode =
       addForm.code.trim() ||
@@ -870,16 +920,28 @@ export const CategoryCustomersList: React.FC = () => {
       documents: addForm.documents,
     };
 
-    setItems((prev) => [newItem, ...prev]);
+    setItems((prev) => {
+      const updated = [newItem, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore storage write errors
+      }
+      return updated;
+    });
     resetAddForm();
     setIsAddModalOpen(false);
+    onCustomerAdded?.(newItem);
+    onCloseModal?.();
   };
 
   const totalResults = isFiltering ? filteredItems.length : 739 + (items.length - INITIAL_CATEGORY_CUSTOMERS.length);
   const displayEnd = Math.min(Number(rowsPerPage), filteredItems.length);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-[#EEF2F6] text-[13px] text-gray-800 select-none">
+    <>
+      {!modalOnly && (
+        <div className="flex flex-col h-[calc(100vh-64px)] bg-[#EEF2F6] text-[13px] text-gray-800 select-none">
       <input
         ref={fileInputRef}
         type="file"
@@ -1045,7 +1107,7 @@ export const CategoryCustomersList: React.FC = () => {
 
         {/* Table Area */}
         <div className="flex-1 overflow-auto bg-white">
-          <table className="w-full border-collapse text-[12.5px] table-fixed min-w-[1480px]">
+          <table className="w-full border-collapse text-[12.5px] table-fixed min-w-[1120px]">
             <thead className="bg-[#F8FAFC] sticky top-0 z-10">
               <tr className="text-gray-600 font-semibold text-[12px]">
                 <th className="w-[42px] py-2.5 px-2 border-r border-b border-gray-200 text-center">
@@ -1085,15 +1147,6 @@ export const CategoryCustomersList: React.FC = () => {
                 <th className="w-[106px] py-2.5 px-2.5 border-r border-b border-gray-200 text-left">
                   Điện thoại
                 </th>
-                <th className="w-[125px] py-2.5 px-2.5 border-r border-b border-gray-200 text-left">
-                  Xe
-                </th>
-                <th className="w-[118px] py-2.5 px-2.5 border-r border-b border-gray-200 text-left">
-                  Hãng xe
-                </th>
-                <th className="w-[116px] py-2.5 px-2.5 border-r border-b border-gray-200 text-left">
-                  Dòng xe
-                </th>
                 <th className="w-[172px] py-2.5 px-2.5 border-r border-b border-gray-200 text-left">
                   Email
                 </th>
@@ -1118,7 +1171,7 @@ export const CategoryCustomersList: React.FC = () => {
               {filteredItems.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={13}
+                    colSpan={10}
                     className="py-10 text-center text-gray-400 text-[13px]"
                   >
                     Không có dữ liệu phù hợp
@@ -1156,24 +1209,6 @@ export const CategoryCustomersList: React.FC = () => {
                       </td>
                       <td className="py-2 px-2.5 border-r border-gray-200 text-gray-800 truncate align-middle">
                         {row.phone}
-                      </td>
-                      <td
-                        className="py-2 px-2.5 border-r border-gray-200 text-gray-800 break-words leading-snug align-middle"
-                        title={row.vehicle}
-                      >
-                        {row.vehicle}
-                      </td>
-                      <td
-                        className="py-2 px-2.5 border-r border-gray-200 text-gray-800 break-words leading-snug align-middle"
-                        title={row.brand}
-                      >
-                        {row.brand}
-                      </td>
-                      <td
-                        className="py-2 px-2.5 border-r border-gray-200 text-gray-800 truncate align-middle"
-                        title={row.model}
-                      >
-                        {row.model}
                       </td>
                       <td
                         className="py-2 px-2.5 border-r border-gray-200 text-gray-800 truncate align-middle"
@@ -1305,10 +1340,16 @@ export const CategoryCustomersList: React.FC = () => {
           / <strong className="font-semibold text-gray-800">{totalResults}</strong> kết quả
         </div>
       </div>
+        </div>
+      )}
 
       {/* Full-Screen Add Customer Popup */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#EEF2F6] flex flex-col overflow-hidden select-text">
+        <div
+          className={`fixed inset-0 ${
+            modalOnly ? 'z-[60]' : 'z-50'
+          } bg-[#EEF2F6] flex flex-col overflow-hidden select-text`}
+        >
           {/* Popup Top Header */}
           <div className="h-[52px] px-4 bg-white border-b border-gray-200 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-5 flex-wrap">
@@ -1422,31 +1463,6 @@ export const CategoryCustomersList: React.FC = () => {
                     <p className="mt-1 text-[11.5px] text-red-500">{addFormError}</p>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-[12px] font-medium text-gray-800 mb-1">
-                    Nhóm khách
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={addForm.group}
-                      onChange={(e) =>
-                        setAddForm({ ...addForm, group: e.target.value })
-                      }
-                      className={`w-full bg-white border border-gray-200 rounded-[6px] pl-3 pr-8 py-1.5 text-[13px] appearance-none focus:outline-none focus:border-[#1677FF] cursor-pointer ${
-                        addForm.group ? 'text-gray-800' : 'text-gray-400'
-                      }`}
-                    >
-                      <option value="">Chọn nhóm khách hàng</option>
-                      {CUSTOMER_GROUP_OPTIONS.map((grp) => (
-                        <option key={grp} value={grp} className="text-gray-800">
-                          {grp}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
               </div>
 
               {/* Right Card */}
@@ -1483,18 +1499,44 @@ export const CategoryCustomersList: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[12px] font-medium text-gray-800 mb-1">
-                      CCCD
+                    <label className="flex items-center gap-1.5 text-[12px] font-medium text-gray-800 mb-1">
+                      <span>CCCD</span>
+                      <span
+                        className="relative group inline-flex items-center text-amber-600 cursor-help"
+                        title="Không được trùng (giá trị duy nhất)"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                          Không được trùng
+                        </span>
+                      </span>
                     </label>
                     <input
                       type="text"
                       value={addForm.cccd}
-                      onChange={(e) =>
-                        setAddForm({ ...addForm, cccd: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAddForm({ ...addForm, cccd: val });
+                        const dup = findDuplicateCccd(val);
+                        setCccdError(
+                          dup
+                            ? `Số CCCD đã tồn tại (${dup.code} - ${dup.name}). Không được trùng.`
+                            : ''
+                        );
+                      }}
                       placeholder="Nhập số CCCD"
-                      className="w-full bg-white border border-gray-200 rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1677FF]"
+                      className={`w-full bg-white border rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none ${
+                        cccdError
+                          ? 'border-red-400 focus:border-red-500'
+                          : 'border-gray-200 focus:border-[#1677FF]'
+                      }`}
                     />
+                    {cccdError && (
+                      <p className="mt-1 flex items-start gap-1 text-[11.5px] text-red-500 leading-snug">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{cccdError}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1635,18 +1677,44 @@ export const CategoryCustomersList: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-[12px] font-medium text-gray-800 mb-1">
-                        Mã số thuế
+                      <label className="flex items-center gap-1.5 text-[12px] font-medium text-gray-800 mb-1">
+                        <span>Mã số thuế</span>
+                        <span
+                          className="relative group inline-flex items-center text-amber-600 cursor-help"
+                          title="Không được trùng (giá trị duy nhất)"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-[11px] font-normal text-white shadow-sm z-20">
+                            Không được trùng
+                          </span>
+                        </span>
                       </label>
                       <input
                         type="text"
                         value={addForm.taxCode}
-                        onChange={(e) =>
-                          setAddForm({ ...addForm, taxCode: e.target.value })
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAddForm({ ...addForm, taxCode: val });
+                          const dup = findDuplicateTaxCode(val);
+                          setTaxCodeError(
+                            dup
+                              ? `Mã số thuế đã tồn tại (${dup.code} - ${dup.name}). Không được trùng.`
+                              : ''
+                          );
+                        }}
                         placeholder="Nhập mã số thuế công ty"
-                        className="w-full bg-white border border-gray-200 rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1677FF]"
+                        className={`w-full bg-white border rounded-[6px] px-3 py-1.5 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none ${
+                          taxCodeError
+                            ? 'border-red-400 focus:border-red-500'
+                            : 'border-gray-200 focus:border-[#1677FF]'
+                        }`}
                       />
+                      {taxCodeError && (
+                        <p className="mt-1 flex items-start gap-1 text-[11.5px] text-red-500 leading-snug">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <span>{taxCodeError}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1946,6 +2014,6 @@ export const CategoryCustomersList: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
