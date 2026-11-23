@@ -47,6 +47,52 @@ service cloud.firestore {
         && (!('_order' in data) || data._order is number);
     }
 
+    function isValidDocumentStorageCategory(data) {
+      return data is map
+        && data.keys().hasAll(['id', 'groupName', 'note', 'documentTypes'])
+        && data.keys().hasOnly(['id', 'groupName', 'note', 'documentTypes', '_order'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.groupName is string && data.groupName.size() >= 1 && data.groupName.size() <= 200
+        && data.note is string && data.note.size() <= 1000
+        && data.documentTypes is list && data.documentTypes.size() <= 100
+        && (data.documentTypes.size() == 0 || (
+          data.documentTypes[0] is map
+          && data.documentTypes[0].keys().hasAll(['id', 'name', 'note'])
+          && data.documentTypes[0].keys().hasOnly(['id', 'name', 'note'])
+          && data.documentTypes[0].id is string && data.documentTypes[0].id.size() >= 1 && data.documentTypes[0].id.size() <= 128
+          && data.documentTypes[0].name is string && data.documentTypes[0].name.size() >= 1 && data.documentTypes[0].name.size() <= 200
+          && data.documentTypes[0].note is string && data.documentTypes[0].note.size() <= 500
+        ))
+        && (!('_order' in data) || data._order is number);
+    }
+
+    function isValidDocumentCabinet(data) {
+      return data is map
+        && data.keys().hasAll(['id', 'documentGroup', 'documentType', 'storageType', 'location', 'effectiveDate', 'expiryDate', 'isValid', 'files', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'documentGroup', 'documentType', 'storageType', 'location', 'effectiveDate', 'expiryDate', 'isValid', 'files', 'createdAt', 'updatedAt', '_order'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.documentGroup is string && data.documentGroup.size() >= 1 && data.documentGroup.size() <= 200
+        && data.documentType is string && data.documentType.size() <= 200
+        && data.storageType is string && data.storageType.size() <= 100
+        && data.location is string && data.location.size() <= 200
+        && data.effectiveDate is string && data.effectiveDate.size() <= 32
+        && data.expiryDate is string && data.expiryDate.size() <= 32
+        && data.isValid is bool
+        && data.files is list && data.files.size() <= 50
+        && (data.files.size() == 0 || (
+          data.files[0] is map
+          && data.files[0].keys().hasAll(['id', 'description', 'link', 'fileName'])
+          && data.files[0].keys().hasOnly(['id', 'description', 'link', 'fileName'])
+          && data.files[0].id is string && data.files[0].id.size() >= 1 && data.files[0].id.size() <= 128
+          && data.files[0].description is string && data.files[0].description.size() <= 500
+          && data.files[0].link is string && data.files[0].link.size() <= 500
+          && data.files[0].fileName is string && data.files[0].fileName.size() <= 255
+        ))
+        && data.createdAt is string && data.createdAt.size() <= 64
+        && data.updatedAt is string && data.updatedAt.size() <= 64
+        && (!('_order' in data) || data._order is number);
+    }
+
     match /test/{docId} {
       allow get: if isSignedIn() && isValidId(docId);
       allow list: if isSignedIn();
@@ -337,6 +383,26 @@ service cloud.firestore {
       allow update: if isSignedIn() && isValidId(docId) && isValidCategoryBankAccount(incoming())
         && incoming().id == resource.data.id
         && incoming().diff(resource.data).affectedKeys().hasOnly(['bankCode', 'bankName', 'accountNumber', 'accountHolder', 'isReceiptAccount', 'isPaymentAccount', 'isDefault', '_order']);
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /document_storage_categories_items/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(docId) && isValidDocumentStorageCategory(incoming());
+      allow update: if isSignedIn() && isValidId(docId) && isValidDocumentStorageCategory(incoming())
+        && incoming().id == resource.data.id
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['groupName', 'note', 'documentTypes', '_order']);
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /document_cabinet_items/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(docId) && isValidDocumentCabinet(incoming());
+      allow update: if isSignedIn() && isValidId(docId) && isValidDocumentCabinet(incoming())
+        && incoming().id == resource.data.id
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['documentGroup', 'documentType', 'storageType', 'location', 'effectiveDate', 'expiryDate', 'isValid', 'files', 'updatedAt', '_order']);
       allow delete: if isSignedIn() && isValidId(docId);
     }
   }

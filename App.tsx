@@ -21,6 +21,8 @@ import { VehiclesList } from './components/VehiclesList';
 import { CategoryDriversList } from './components/CategoryDriversList';
 import { CategoryVehicleTypesList } from './components/CategoryVehicleTypesList';
 import { CategoryBankAccountsList } from './components/CategoryBankAccountsList';
+import { DocumentCabinetList } from './components/DocumentCabinetList';
+import { DocumentStorageCategoriesList } from './components/DocumentStorageCategoriesList';
 import { TaxCategoryList } from './components/TaxCategoryList';
 import { OmnichannelConfig } from './components/OmnichannelConfig';
 import { MarketplaceManagement } from './components/MarketplaceManagement';
@@ -78,7 +80,7 @@ import { OrderProvider } from './context/OrderContext';
 
 const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
-  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'category_material_groups' | 'category_warehouses' | 'category_units' | 'category_lots' | 'spare_parts' | 'vehicles' | 'category_drivers' | 'category_vehicle_types' | 'category_bank_accounts' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
+  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'category_material_groups' | 'category_warehouses' | 'category_units' | 'category_lots' | 'spare_parts' | 'vehicles' | 'category_drivers' | 'category_vehicle_types' | 'category_bank_accounts' | 'document_cabinet' | 'document_storage_categories' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
     PotentialCustomerItem
@@ -411,6 +413,15 @@ const App: React.FC = () => {
             onSelectDrivers={() => setCurrentView('category_drivers')}
             onSelectVehicleTypes={() => setCurrentView('category_vehicle_types')}
             onSelectBankAccounts={() => setCurrentView('category_bank_accounts')}
+            onSelectDocumentCabinet={() => setCurrentView('document_cabinet')}
+            onSelectDocumentStorageCategories={() => setCurrentView('document_storage_categories')}
+            onSelectDepartments={() => setCurrentView('department_list')}
+            onSelectPositions={() => setCurrentView('position_list')}
+            onSelectSalaryGrades={() => setCurrentView('salary_grade_list')}
+            onSelectContractTypes={() => setCurrentView('contract_type_list')}
+            onSelectSalaryRuleGroups={() => setCurrentView('salary_rule_group')}
+            onSelectSalaryStructures={() => setCurrentView('salary_structure')}
+            onSelectInsuranceTaxParams={() => setCurrentView('insurance_tax_params')}
             onSelectTaxCategories={() => setCurrentView('tax_categories')}
             onSelectOmnichannel={() => setCurrentView('omnichannel')}
           />
@@ -438,6 +449,10 @@ const App: React.FC = () => {
           <CategoryVehicleTypesList />
         ) : currentView === 'category_bank_accounts' ? (
           <CategoryBankAccountsList />
+        ) : currentView === 'document_cabinet' ? (
+          <DocumentCabinetList />
+        ) : currentView === 'document_storage_categories' ? (
+          <DocumentStorageCategoriesList />
         ) : currentView === 'tax_categories' ? (
           <TaxCategoryList />
         ) : currentView === 'omnichannel' ? (

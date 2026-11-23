@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, List, ChevronDown, Bell, User, Users, Store, Wrench, Tag, LogOut, Phone, X, Camera, Pencil, Check, Lock } from 'lucide-react';
+import { Search, List, ChevronDown, Bell, User, Users, Store, Wrench, Tag, LogOut, Phone, X, Camera, Pencil, Check, Lock, FileText } from 'lucide-react';
 import { signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -10,6 +10,10 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categories', onNavigate }) => {
+  const documentViews = ['document_cabinet', 'document_storage_categories'];
+  const isDocumentsActive = documentViews.includes(currentView);
+  const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
+
   const crmViews = [
     'potential_customers',
     'proactive_reminders',
@@ -219,6 +223,41 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
             <span className="text-sm font-medium">Xét duyệt Đăng ký sàn</span>
+          </div>
+          {/* Hồ sơ & Tài liệu Modules */}
+          <div>
+            <div 
+              onClick={() => setIsDocumentsOpen(!isDocumentsOpen)}
+              className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isDocumentsActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center">
+                <FileText className="w-5 h-5 mr-3" />
+                <span className="text-sm font-medium">Hồ sơ &amp; Tài liệu</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDocumentsOpen ? 'rotate-180' : ''}`} />
+            </div>
+            {isDocumentsOpen && (
+              <div className="mt-1 space-y-1">
+                <div 
+                  onClick={() => onNavigate?.('document_cabinet')}
+                  className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_cabinet' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {currentView === 'document_cabinet' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
+                  )}
+                  <span className="text-sm font-medium">Tủ lưu trữ</span>
+                </div>
+                <div 
+                  onClick={() => onNavigate?.('document_storage_categories')}
+                  className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_storage_categories' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {currentView === 'document_storage_categories' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
+                  )}
+                  <span className="text-sm font-medium">Phân loại lưu trữ</span>
+                </div>
+              </div>
+            )}
           </div>
           {/* CRM Modules */}
           <div>
@@ -526,7 +565,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
             {currentView === 'tax_categories' && (
               <h1 className="text-xl font-bold text-gray-800 mr-8">Danh mục thuế</h1>
             )}
-            {['category_customers', 'category_suppliers', 'category_insurance', 'category_material_groups', 'category_warehouses', 'category_units', 'category_lots', 'vehicles', 'category_drivers', 'category_vehicle_types', 'category_bank_accounts', 'tax_categories', 'employee_list', 'labor_list', 'department_list', 'position_list', 'salary_grade_list', 'contract_type_list', 'salary_rule_group', 'salary_structure', 'insurance_tax_params', 'payroll_period', 'payroll_table'].includes(currentView) ? (
+            {currentView === 'document_cabinet' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Tủ lưu trữ</h1>
+            )}
+            {currentView === 'document_storage_categories' && (
+              <h1 className="text-xl font-bold text-gray-800 mr-8">Phân loại lưu trữ</h1>
+            )}
+            {['category_customers', 'category_suppliers', 'category_insurance', 'category_material_groups', 'category_warehouses', 'category_units', 'category_lots', 'vehicles', 'category_drivers', 'category_vehicle_types', 'category_bank_accounts', 'tax_categories', 'document_cabinet', 'document_storage_categories', 'employee_list', 'labor_list', 'department_list', 'position_list', 'salary_grade_list', 'contract_type_list', 'salary_rule_group', 'salary_structure', 'insurance_tax_params', 'payroll_period', 'payroll_table'].includes(currentView) ? (
               <div className="flex-1 flex justify-end gap-3 mr-6 items-center">
                 <button className="bg-[#1A4B9F] text-white px-4 py-1.5 rounded-[4px] text-sm font-medium flex items-center gap-2">
                   <Tag className="w-4 h-4 fill-white" />

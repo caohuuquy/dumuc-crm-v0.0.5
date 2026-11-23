@@ -14,6 +14,15 @@ interface CategoryListProps {
   onSelectDrivers?: () => void;
   onSelectVehicleTypes?: () => void;
   onSelectBankAccounts?: () => void;
+  onSelectDocumentCabinet?: () => void;
+  onSelectDocumentStorageCategories?: () => void;
+  onSelectDepartments?: () => void;
+  onSelectPositions?: () => void;
+  onSelectSalaryGrades?: () => void;
+  onSelectContractTypes?: () => void;
+  onSelectSalaryRuleGroups?: () => void;
+  onSelectSalaryStructures?: () => void;
+  onSelectInsuranceTaxParams?: () => void;
   onSelectTaxCategories: () => void;
   onSelectOmnichannel: () => void;
 }
@@ -32,6 +41,15 @@ export const CategoryList: React.FC<CategoryListProps> = ({
   onSelectDrivers,
   onSelectVehicleTypes,
   onSelectBankAccounts,
+  onSelectDocumentCabinet,
+  onSelectDocumentStorageCategories,
+  onSelectDepartments,
+  onSelectPositions,
+  onSelectSalaryGrades,
+  onSelectContractTypes,
+  onSelectSalaryRuleGroups,
+  onSelectSalaryStructures,
+  onSelectInsuranceTaxParams,
   onSelectTaxCategories,
   onSelectOmnichannel,
 }) => {
@@ -41,7 +59,7 @@ export const CategoryList: React.FC<CategoryListProps> = ({
       items: [
         { name: 'Khách hàng', onClick: onSelectCategoryCustomers },
         { name: 'Nhà cung cấp', onClick: onSelectCategorySuppliers },
-        { name: 'Nhân sự', onClick: onSelectEmployees },
+        { name: 'Danh sách Nhân sự', onClick: onSelectEmployees },
         { name: 'Đơn vị bảo hiểm', onClick: onSelectCategoryInsurance },
       ],
     },
@@ -70,10 +88,23 @@ export const CategoryList: React.FC<CategoryListProps> = ({
       ],
     },
     {
+      title: 'Hồ sơ & Tài liệu',
+      items: [
+        { name: 'Tủ lưu trữ', onClick: onSelectDocumentCabinet },
+        { name: 'Phân loại lưu trữ', onClick: onSelectDocumentStorageCategories },
+      ],
+    },
+    {
       title: 'HRM',
       items: [
-        { name: 'Nhân sự', onClick: onSelectEmployees },
-        { name: 'Phòng ban bộ phận' },
+        { name: 'Danh sách Nhân sự', onClick: onSelectEmployees },
+        { name: 'Phòng ban / Bộ phận', onClick: onSelectDepartments },
+        { name: 'Chức vụ / Vị trí', onClick: onSelectPositions },
+        { name: 'Thang bảng Lương', onClick: onSelectSalaryGrades },
+        { name: 'Loại hợp đồng', onClick: onSelectContractTypes },
+        { name: 'Nhóm quy tắc Lương', onClick: onSelectSalaryRuleGroups },
+        { name: 'Cấu trúc Lương', onClick: onSelectSalaryStructures },
+        { name: 'Tham số BHXH & Thuế', onClick: onSelectInsuranceTaxParams },
       ],
     },
     {
@@ -101,7 +132,7 @@ export const CategoryList: React.FC<CategoryListProps> = ({
 
   return (
     <div className="min-h-full bg-[#F4F7FA] p-5 sm:p-6 overflow-x-auto">
-      <div className="grid grid-cols-7 gap-4 items-stretch min-w-[1120px]">
+      <div className="grid grid-cols-8 gap-4 items-stretch min-w-[1280px]">
         {categories.map((category, index) => (
           <section
             key={index}
