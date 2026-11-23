@@ -105,6 +105,108 @@
         }
       },
       "required": ["id", "bankCode", "bankName", "accountNumber", "accountHolder", "isReceiptAccount", "isPaymentAccount", "isDefault"]
+    },
+    "DocumentStorageCategory": {
+      "title": "DocumentStorageCategory",
+      "description": "Document storage classification group with nested document type definitions",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique document storage category identifier"
+        },
+        "groupName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the document storage group"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Optional note for the document storage group"
+        },
+        "documentTypes": {
+          "type": "array",
+          "description": "Bounded list of document types belonging to the group (max 100 items)"
+        },
+        "_order": {
+          "type": "number",
+          "description": "Display order index"
+        }
+      },
+      "required": ["id", "groupName", "note", "documentTypes"]
+    },
+    "DocumentCabinet": {
+      "title": "DocumentCabinet",
+      "description": "Stored document cabinet record with classification, validity dates, and attached file links",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique document cabinet record identifier"
+        },
+        "documentGroup": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Document group name"
+        },
+        "documentType": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Document type name"
+        },
+        "storageType": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Storage medium type (Bản Cứng / Bản Mềm / Bản Cứng/ bản Mềm)"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Physical cabinet or shelf location"
+        },
+        "effectiveDate": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Effective date string (DD/MM/YYYY)"
+        },
+        "expiryDate": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Expiry date string (DD/MM/YYYY)"
+        },
+        "isValid": {
+          "type": "boolean",
+          "description": "Whether the document is still valid"
+        },
+        "files": {
+          "type": "array",
+          "description": "Bounded list of attached file descriptors and links (max 50 items)"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Formatted creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Formatted last updated timestamp"
+        },
+        "_order": {
+          "type": "number",
+          "description": "Display order index"
+        }
+      },
+      "required": ["id", "documentGroup", "documentType", "storageType", "location", "effectiveDate", "expiryDate", "isValid", "files", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -267,6 +369,14 @@
     "/category_bank_accounts_items/{docId}": {
       "schema": "CategoryBankAccount",
       "description": "Bank accounts catalog collection"
+    },
+    "/document_storage_categories_items/{docId}": {
+      "schema": "DocumentStorageCategory",
+      "description": "Document storage classification groups collection"
+    },
+    "/document_cabinet_items/{docId}": {
+      "schema": "DocumentCabinet",
+      "description": "Document storage cabinet records collection"
     }
   }
 }
