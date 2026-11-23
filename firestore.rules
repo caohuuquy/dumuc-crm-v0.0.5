@@ -23,6 +23,30 @@ service cloud.firestore {
       return data is map && data.keys().size() >= 1 && data.keys().size() <= 200;
     }
 
+    function isValidCategoryUnit(data) {
+      return data is map
+        && data.keys().hasAll(['id', 'name'])
+        && data.keys().hasOnly(['id', 'name', '_order'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && (!('_order' in data) || data._order is number);
+    }
+
+    function isValidCategoryBankAccount(data) {
+      return data is map
+        && data.keys().hasAll(['id', 'bankCode', 'bankName', 'accountNumber', 'accountHolder', 'isReceiptAccount', 'isPaymentAccount', 'isDefault'])
+        && data.keys().hasOnly(['id', 'bankCode', 'bankName', 'accountNumber', 'accountHolder', 'isReceiptAccount', 'isPaymentAccount', 'isDefault', '_order'])
+        && data.id is string && data.id.size() >= 1 && data.id.size() <= 128
+        && data.bankCode is string && data.bankCode.size() >= 1 && data.bankCode.size() <= 50
+        && data.bankName is string && data.bankName.size() <= 250
+        && data.accountNumber is string && data.accountNumber.size() >= 1 && data.accountNumber.size() <= 64
+        && data.accountHolder is string && data.accountHolder.size() <= 200
+        && data.isReceiptAccount is bool
+        && data.isPaymentAccount is bool
+        && data.isDefault is bool
+        && (!('_order' in data) || data._order is number);
+    }
+
     match /test/{docId} {
       allow get: if isSignedIn() && isValidId(docId);
       allow list: if isSignedIn();
@@ -293,6 +317,26 @@ service cloud.firestore {
       allow get: if isSignedIn() && isValidId(docId);
       allow list: if isSignedIn();
       allow create, update: if isSignedIn() && isValidId(docId) && isValidPayload(incoming());
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /category_units_items/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(docId) && isValidCategoryUnit(incoming());
+      allow update: if isSignedIn() && isValidId(docId) && isValidCategoryUnit(incoming())
+        && incoming().id == resource.data.id
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['name', '_order']);
+      allow delete: if isSignedIn() && isValidId(docId);
+    }
+
+    match /category_bank_accounts_items/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(docId) && isValidCategoryBankAccount(incoming());
+      allow update: if isSignedIn() && isValidId(docId) && isValidCategoryBankAccount(incoming())
+        && incoming().id == resource.data.id
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['bankCode', 'bankName', 'accountNumber', 'accountHolder', 'isReceiptAccount', 'isPaymentAccount', 'isDefault', '_order']);
       allow delete: if isSignedIn() && isValidId(docId);
     }
   }

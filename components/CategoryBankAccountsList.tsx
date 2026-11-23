@@ -14,6 +14,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 
 export interface CategoryBankAccountRecord {
   id: string;
@@ -96,7 +97,7 @@ export const INITIAL_CATEGORY_BANK_ACCOUNTS: CategoryBankAccountRecord[] = [
 ];
 
 export const CategoryBankAccountsList: React.FC = () => {
-  const [items, setItems] = useState<CategoryBankAccountRecord[]>(() => {
+  const loadInitialBankAccounts = (): CategoryBankAccountRecord[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -109,15 +110,20 @@ export const CategoryBankAccountsList: React.FC = () => {
       // Ignore storage read errors
     }
     return INITIAL_CATEGORY_BANK_ACCOUNTS;
-  });
+  };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Ignore storage write errors
+  const [items, setItems] = useFirestoreCollection<CategoryBankAccountRecord>(
+    'category_bank_accounts_items',
+    loadInitialBankAccounts,
+    'id',
+    (syncedItems) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(syncedItems));
+      } catch {
+        // Ignore storage write errors
+      }
     }
-  }, [items]);
+  );
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -281,13 +287,13 @@ export const CategoryBankAccountsList: React.FC = () => {
       const imported: CategoryBankAccountRecord[] = [];
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(',').map((c) => c.replace(/^"|"$/g, '').trim());
-        if (cols[0] || cols[2]) {
+        if (cols[0] && cols[2]) {
           imported.push({
             id: `bank-acc-imp-${Date.now()}-${i}`,
-            bankCode: cols[0] || '',
-            bankName: cols[1] || '',
-            accountNumber: cols[2] || '',
-            accountHolder: cols[3] || '',
+            bankCode: cols[0].slice(0, 50),
+            bankName: (cols[1] || '').slice(0, 250),
+            accountNumber: cols[2].slice(0, 64),
+            accountHolder: (cols[3] || '').slice(0, 200),
             isReceiptAccount: cols[4]?.toLowerCase() === 'có' || cols[4] === 'true' || cols[4] === '1',
             isPaymentAccount: cols[5]?.toLowerCase() === 'có' || cols[5] === 'true' || cols[5] === '1',
             isDefault: cols[6]?.toLowerCase() === 'có' || cols[6] === 'true' || cols[6] === '1',
@@ -340,9 +346,10 @@ export const CategoryBankAccountsList: React.FC = () => {
 
   const handleSaveModal = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedBankCode = formBankCode.trim();
-    const trimmedBankName = formBankName.trim();
-    const trimmedAccountNumber = formAccountNumber.trim();
+    const trimmedBankCode = formBankCode.trim().slice(0, 50);
+    const trimmedBankName = formBankName.trim().slice(0, 250);
+    const trimmedAccountNumber = formAccountNumber.trim().slice(0, 64);
+    const trimmedAccountHolder = formAccountHolder.trim().slice(0, 200);
 
     let hasError = false;
 
@@ -379,7 +386,7 @@ export const CategoryBankAccountsList: React.FC = () => {
               bankCode: trimmedBankCode,
               bankName: trimmedBankName,
               accountNumber: trimmedAccountNumber,
-              accountHolder: formAccountHolder.trim(),
+              accountHolder: trimmedAccountHolder,
               isReceiptAccount: formIsReceipt,
               isPaymentAccount: formIsPayment,
               isDefault: formIsDefault,
@@ -394,7 +401,7 @@ export const CategoryBankAccountsList: React.FC = () => {
         bankCode: trimmedBankCode,
         bankName: trimmedBankName,
         accountNumber: trimmedAccountNumber,
-        accountHolder: formAccountHolder.trim(),
+        accountHolder: trimmedAccountHolder,
         isReceiptAccount: formIsReceipt,
         isPaymentAccount: formIsPayment,
         isDefault: formIsDefault,
