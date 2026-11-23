@@ -15,6 +15,7 @@ import {
   KeyRound,
   AlertCircle,
 } from 'lucide-react';
+import { useFirestoreCollection } from '../firebase';
 
 export interface CategoryUnitRecord {
   id: string;
@@ -120,7 +121,7 @@ export const INITIAL_CATEGORY_UNITS: CategoryUnitRecord[] = INITIAL_UNIT_NAMES.m
 );
 
 export const CategoryUnitsList: React.FC = () => {
-  const [items, setItems] = useState<CategoryUnitRecord[]>(() => {
+  const loadInitialUnits = (): CategoryUnitRecord[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -133,15 +134,20 @@ export const CategoryUnitsList: React.FC = () => {
       // Ignore storage read errors
     }
     return INITIAL_CATEGORY_UNITS;
-  });
+  };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Ignore storage write errors
+  const [items, setItems] = useFirestoreCollection<CategoryUnitRecord>(
+    'category_units_items',
+    loadInitialUnits,
+    'id',
+    (syncedItems) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(syncedItems));
+      } catch {
+        // Ignore storage write errors
+      }
     }
-  }, [items]);
+  );
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -274,7 +280,7 @@ export const CategoryUnitsList: React.FC = () => {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = newUnitName.trim().replace(/\s+/g, ' ');
+    const trimmed = newUnitName.trim().replace(/\s+/g, ' ').slice(0, 200);
     if (!trimmed) {
       setAddError('Vui lòng nhập Đơn vị tính.');
       return;
