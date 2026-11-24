@@ -1360,18 +1360,6 @@ export const CategoryCustomersList: React.FC<CategoryCustomersListProps> = ({
               <label className="inline-flex items-center gap-1.5 text-[12.5px] text-gray-700 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  checked={addForm.isCompany}
-                  onChange={(e) =>
-                    setAddForm({ ...addForm, isCompany: e.target.checked })
-                  }
-                  className="w-3.5 h-3.5 rounded border-gray-300 accent-[#1677FF] cursor-pointer"
-                />
-                <span>Là công ty</span>
-              </label>
-
-              <label className="inline-flex items-center gap-1.5 text-[12.5px] text-gray-700 cursor-pointer select-none">
-                <input
-                  type="checkbox"
                   checked={addForm.isSupplier}
                   onChange={(e) =>
                     setAddForm({ ...addForm, isSupplier: e.target.checked })
@@ -1462,6 +1450,30 @@ export const CategoryCustomersList: React.FC<CategoryCustomersListProps> = ({
                   {addFormError && (
                     <p className="mt-1 text-[11.5px] text-red-500">{addFormError}</p>
                   )}
+                </div>
+
+                <div className="flex items-center gap-4 flex-nowrap pt-0.5">
+                  <label className="inline-flex items-center gap-1.5 text-[12.5px] text-gray-700 cursor-pointer select-none whitespace-nowrap shrink-0">
+                    <input
+                      type="radio"
+                      name="categoryCustomerType"
+                      checked={!addForm.isCompany}
+                      onChange={() => setAddForm({ ...addForm, isCompany: false })}
+                      className="w-3.5 h-3.5 accent-[#1677FF] cursor-pointer shrink-0"
+                    />
+                    <span>Khách hàng cá nhân</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-1.5 text-[12.5px] text-gray-700 cursor-pointer select-none whitespace-nowrap shrink-0">
+                    <input
+                      type="radio"
+                      name="categoryCustomerType"
+                      checked={addForm.isCompany}
+                      onChange={() => setAddForm({ ...addForm, isCompany: true })}
+                      className="w-3.5 h-3.5 accent-[#1677FF] cursor-pointer shrink-0"
+                    />
+                    <span>Khách hàng doanh nghiệp</span>
+                  </label>
                 </div>
               </div>
 
