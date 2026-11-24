@@ -424,6 +424,11 @@ const App: React.FC = () => {
             onSelectInsuranceTaxParams={() => setCurrentView('insurance_tax_params')}
             onSelectTaxCategories={() => setCurrentView('tax_categories')}
             onSelectOmnichannel={() => setCurrentView('omnichannel')}
+            onSelectOnlineOrdering={() => setCurrentView('online_ordering')}
+            onSelectPurchaseOrders={() => setCurrentView('purchase_orders')}
+            onSelectMarketplace={() => setCurrentView('marketplace')}
+            onSelectRegistrationApproval={() => setCurrentView('registration_approval')}
+            onSelectEvents={() => setCurrentView('events')}
           />
         ) : currentView === 'category_customers' ? (
           <CategoryCustomersList />

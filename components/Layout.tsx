@@ -156,74 +156,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
             </svg>
             <span className="text-sm font-medium">Bán hàng thương mại</span>
           </div>
-          <div 
-            onClick={() => onNavigate?.('categories')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <List className="w-5 h-5 mr-3" />
-            <span className="text-sm font-medium">Danh mục</span>
-          </div>
-          <div 
-            onClick={() => onNavigate?.('marketplace')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'marketplace' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {currentView === 'marketplace' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <Store className="w-5 h-5 mr-3" />
-            <span className="text-sm font-medium">Quản lý sàn</span>
-          </div>
-          <div 
-            onClick={() => onNavigate?.('online_ordering')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'online_ordering' || currentView === 'supplier_homepage' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {(currentView === 'online_ordering' || currentView === 'supplier_homepage') && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span className="text-sm font-medium">Đặt hàng online</span>
-          </div>
-          <div 
-            onClick={() => onNavigate?.('purchase_orders')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'purchase_orders' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {currentView === 'purchase_orders' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span className="text-sm font-medium">Đơn đặt hàng</span>
-          </div>
-          <div 
-            onClick={() => onNavigate?.('events')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'events' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {currentView === 'events' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-sm font-medium">Sự kiện</span>
-          </div>
-          <div 
-            onClick={() => onNavigate?.('registration_approval')}
-            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'registration_approval' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-          >
-            {currentView === 'registration_approval' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-            )}
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <span className="text-sm font-medium">Xét duyệt Đăng ký sàn</span>
-          </div>
           {/* Hồ sơ & Tài liệu Modules */}
           <div>
             <div 
@@ -470,6 +402,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
                 </div>
               </div>
             )}
+          </div>
+          <div 
+            onClick={() => onNavigate?.('categories')}
+            className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
+            )}
+            <List className="w-5 h-5 mr-3" />
+            <span className="text-sm font-medium">Danh mục</span>
           </div>
         </nav>
 
