@@ -4,11 +4,9 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
   User,
 } from 'firebase/auth';
-import { LogOut, Mail, Lock, LogIn, UserPlus, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, LogIn, AlertCircle, ShieldCheck } from 'lucide-react';
 import { auth } from '../firebase';
 
 interface AuthGateProps {
@@ -18,7 +16,6 @@ interface AuthGateProps {
 export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,16 +59,12 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
 
     setLoading(true);
     try {
-      if (isRegisterMode) {
-        await createUserWithEmailAndPassword(auth, trimmedEmail, password);
-      } else {
-        await signInWithEmailAndPassword(auth, trimmedEmail, password);
-      }
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
     } catch (err: any) {
       const code = err?.code || '';
       if (code === 'auth/operation-not-allowed') {
         setErrorMsg(
-          'Phương thức Email/Mật khẩu chưa được bật trên Firebase Console (Authentication -> Sign-in method -> Email/Password). Bạn có thể bật trong Firebase Console hoặc đăng nhập ngay bằng Google.'
+          'Phương thức Email/Mật khẩu chưa được bật trên Firebase Console (Authentication -> Sign-in method -> Email/Password).'
         );
       } else if (
         code === 'auth/invalid-credential' ||
@@ -79,25 +72,13 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
         code === 'auth/wrong-password'
       ) {
         setErrorMsg('Email hoặc mật khẩu không chính xác.');
-      } else if (code === 'auth/email-already-in-use') {
-        setErrorMsg('Email này đã được đăng ký. Vui lòng chuyển sang chế độ Đăng nhập.');
-      } else if (code === 'auth/weak-password') {
-        setErrorMsg('Mật khẩu cần có ít nhất 6 ký tự.');
       } else if (code === 'auth/invalid-email') {
         setErrorMsg('Định dạng email không hợp lệ.');
       } else {
-        setErrorMsg(err?.message || 'Xác thực thất bại. Vui lòng kiểm tra lại thông tin.');
+        setErrorMsg(err?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error('Logout error:', err);
     }
   };
 
@@ -160,7 +141,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
             <div className="relative flex items-center justify-center">
               <div className="border-t border-slate-200 w-full" />
               <span className="bg-white px-3 text-[11px] uppercase tracking-wider text-slate-400 font-medium whitespace-nowrap">
-                Hoặc dùng Email & Mật khẩu
+                Hoặc dùng Email &amp; Mật khẩu
               </span>
               <div className="border-t border-slate-200 w-full" />
             </div>
@@ -206,17 +187,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-lg shadow-sm transition disabled:opacity-60 cursor-pointer"
               >
-                {isRegisterMode ? (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    <span>{loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'}</span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-4 h-4" />
-                    <span>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
-                  </>
-                )}
+                <LogIn className="w-4 h-4" />
+                <span>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
               </button>
             </form>
           </div>
