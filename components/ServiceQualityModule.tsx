@@ -360,6 +360,9 @@ export interface PotentialCustomerItem {
   carModel?: string;
   originalRoCode?: string;
   originalRoDates?: string;
+  vehicleReceiveDate?: string;
+  promisedDeliveryDate?: string;
+  actualDeliveryDate?: string;
   originalRoRevenue?: string;
   createdBy?: string;
   selectedQuoteItemsMap?: Record<string, string[]>;
@@ -2233,21 +2236,53 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     setSelectedRows([]);
   };
 
+  const parseDateDDMMYYYY = (dateStr?: string): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.trim().split('/');
+    if (parts.length !== 3) return null;
+    const [d, m, y] = parts.map(Number);
+    if (!d || !m || !y) return null;
+    const dt = new Date(y, m - 1, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const getRoDateInfo = (row: PotentialCustomerItem) => {
+    const parts = (row.originalRoDates || '').split(' - ').map((s) => s.trim());
+    const receiveDate = row.vehicleReceiveDate || parts[0] || '';
+    const promisedDate = row.promisedDeliveryDate || parts[1] || '';
+    const actualDate = row.actualDeliveryDate || promisedDate || '';
+    let daysAfterDelivery: number | null = null;
+    const parsedActual = parseDateDDMMYYYY(actualDate);
+    if (parsedActual) {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const diffMs = todayStart.getTime() - parsedActual.getTime();
+      daysAfterDelivery = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    }
+    return {
+      receiveDate: receiveDate || '-',
+      promisedDate: promisedDate || '-',
+      actualDate: actualDate || '-',
+      daysAfterDeliveryLabel: daysAfterDelivery !== null ? `${daysAfterDelivery} ngày` : '-',
+    };
+  };
+
   const handleExportExcel = () => {
     const headers = isCustomerSegmentsMode
       ? ['STT', 'Trạng thái', 'Tên phân khúc khách hàng', 'Mục đích', 'Tổng tiêu chí lọc', 'Phạm vị lọc RO', 'Người tạo', 'Ngày tạo']
       : hideRegistrationSummary
-      ? ['STT', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Trạng thái', 'Khách hàng', 'Số điện thoại', 'Email', 'Biển số xe', 'Hiệu xe', 'Dòng xe', 'RO gốc', 'Ngày nhận - Ngày giao của RO gốc', 'Doanh thu RO gốc', 'Người tạo', 'Ngày tạo']
+      ? ['STT', 'RO', 'Ngày nhận xe', 'Ngày hẹn giao', 'Ngày bàn giao thực tế', 'Số ngày sau ngày bàn giao', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Trạng thái', 'Khách hàng', 'Số điện thoại', 'Email', 'Biển số xe', 'Hiệu xe', 'Dòng xe', 'Doanh thu RO', 'Người tạo', 'Ngày tạo']
       : ['STT', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Họ và tên', 'Số điện thoại', 'Email', 'Nhu cầu', 'Ngày tạo', 'Nguồn', 'Mã người dùng (Kênh)', 'Mã chiến dịch', 'Tên chiến dịch', 'Ngày hẹn', 'Khung giờ hẹn', 'Trạng thái'];
     const csvContent = [
       headers.join(','),
-      ...filteredData.map((row, index) => 
-        isCustomerSegmentsMode
+      ...filteredData.map((row, index) => {
+        const roDateInfo = getRoDateInfo(row);
+        return isCustomerSegmentsMode
           ? [index + 1, `"${row.status}"`, `"${row.segmentName || row.name || ''}"`, `"${row.segmentPurpose || ''}"`, `"${row.totalFilterCriteria ?? ''}"`, `"${row.roFilterScope || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
           : hideRegistrationSummary
-          ? [index + 1, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.status}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.licensePlate || ''}"`, `"${row.carBrand || ''}"`, `"${row.carModel || ''}"`, `"${row.originalRoCode || ''}"`, `"${row.originalRoDates || ''}"`, `"${row.originalRoRevenue || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
-          : [index + 1, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.demands.join(', ')}"`, row.registrationDate, `"${row.source}"`, `"${row.channelUserCode}"`, row.code, `"${row.name}"`, row.appointmentDate, `"${row.appointmentTimeSlot}"`, `"${row.status}"`].join(',')
-      )
+          ? [index + 1, `"${row.originalRoCode || ''}"`, `"${roDateInfo.receiveDate}"`, `"${roDateInfo.promisedDate}"`, `"${roDateInfo.actualDate}"`, `"${roDateInfo.daysAfterDeliveryLabel}"`, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.status}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.licensePlate || ''}"`, `"${row.carBrand || ''}"`, `"${row.carModel || ''}"`, `"${row.originalRoRevenue || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
+          : [index + 1, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.demands.join(', ')}"`, row.registrationDate, `"${row.source}"`, `"${row.channelUserCode}"`, row.code, `"${row.name}"`, row.appointmentDate, `"${row.appointmentTimeSlot}"`, `"${row.status}"`].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2578,6 +2613,15 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                   <th className="px-4 py-3 border-b border-gray-200 text-center">Trùng Khách hàng</th>
                 )}
                 <th className="px-4 py-3 border-b border-gray-200 text-center">Hành động</th>
+                {hideRegistrationSummary && !isCustomerSegmentsMode && (
+                  <>
+                    <th className="px-4 py-3 border-b border-gray-200">RO</th>
+                    <th className="px-4 py-3 border-b border-gray-200">Ngày nhận xe</th>
+                    <th className="px-4 py-3 border-b border-gray-200">Ngày hẹn giao</th>
+                    <th className="px-4 py-3 border-b border-gray-200">Ngày bàn giao thực tế</th>
+                    <th className="px-4 py-3 border-b border-gray-200 text-center">Số ngày sau ngày bàn giao</th>
+                  </>
+                )}
                 {!isCustomerSegmentsMode && (
                   <>
                     <th className="px-4 py-3 border-b border-gray-200">Trạng thái cuộc gọi</th>
@@ -2606,9 +2650,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                         <th className="px-4 py-3 border-b border-gray-200">Biển số xe</th>
                         <th className="px-4 py-3 border-b border-gray-200">Hiệu xe</th>
                         <th className="px-4 py-3 border-b border-gray-200">Dòng xe</th>
-                        <th className="px-4 py-3 border-b border-gray-200">RO gốc</th>
-                        <th className="px-4 py-3 border-b border-gray-200">Ngày nhận - Ngày giao của RO gốc</th>
-                        <th className="px-4 py-3 border-b border-gray-200 text-right">Doanh thu RO gốc</th>
+                        <th className="px-4 py-3 border-b border-gray-200 text-right">Doanh thu RO</th>
                         <th className="px-4 py-3 border-b border-gray-200">Người tạo</th>
                         <th className="px-4 py-3 border-b border-gray-200">Ngày tạo</th>
                       </>
@@ -2632,6 +2674,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
             <tbody className="divide-y divide-gray-100">
               {filteredData.map((row, index) => {
                 const dupInfo = getDuplicateInfo(row);
+                const roDateInfo = getRoDateInfo(row);
                 return (
                 <tr
                   key={row.id}
@@ -2785,6 +2828,24 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                       </button>
                     </div>
                   </td>
+                  {hideRegistrationSummary && !isCustomerSegmentsMode && (
+                    <>
+                      <td
+                        className="px-4 py-3 font-medium text-[#1A73E8] hover:underline cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRoDetailRow(row);
+                        }}
+                        title="Nhấn để xem chi tiết RO"
+                      >
+                        {row.originalRoCode || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{roDateInfo.receiveDate}</td>
+                      <td className="px-4 py-3 text-gray-700">{roDateInfo.promisedDate}</td>
+                      <td className="px-4 py-3 text-gray-700">{roDateInfo.actualDate}</td>
+                      <td className="px-4 py-3 text-center text-gray-700">{roDateInfo.daysAfterDeliveryLabel}</td>
+                    </>
+                  )}
                   {!isCustomerSegmentsMode && (
                     <>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -2873,17 +2934,6 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                         <td className="px-4 py-3 font-medium text-gray-800">{row.licensePlate || '-'}</td>
                         <td className="px-4 py-3 text-gray-800">{row.carBrand || '-'}</td>
                         <td className="px-4 py-3 text-gray-800">{row.carModel || '-'}</td>
-                        <td
-                          className="px-4 py-3 font-medium text-[#1A73E8] hover:underline cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRoDetailRow(row);
-                          }}
-                          title="Nhấn để xem chi tiết RO gốc"
-                        >
-                          {row.originalRoCode || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{row.originalRoDates || '-'}</td>
                         <td className="px-4 py-3 text-right font-semibold text-gray-800">{row.originalRoRevenue || '-'}</td>
                         <td className="px-4 py-3 text-gray-800">{row.createdBy || '-'}</td>
                         <td className="px-4 py-3 text-gray-800">{row.registrationDate}</td>
