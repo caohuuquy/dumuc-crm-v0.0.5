@@ -58,6 +58,12 @@ import {
   ServiceQualityStatus,
   ServiceQualityCallResult,
 } from './components/ServiceQualityModule';
+import {
+  FeedbackModule,
+  FeedbackItem,
+  FeedbackStatus,
+  FeedbackCallResult,
+} from './components/FeedbackModule';
 import { CustomersModule } from './components/CustomersModule';
 import {
   CustomerBookingsModule,
@@ -90,7 +96,7 @@ import { OrderProvider } from './context/OrderContext';
 
 const App: React.FC = () => {
   const [productType, setProductType] = useState<ProductType>(ProductType.SPARE_PART);
-  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'category_material_groups' | 'category_warehouses' | 'category_units' | 'category_lots' | 'spare_parts' | 'vehicles' | 'category_drivers' | 'category_vehicle_types' | 'category_bank_accounts' | 'document_cabinet' | 'document_storage_categories' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
+  const [currentView, setCurrentView] = useState<'categories' | 'category_customers' | 'category_suppliers' | 'category_insurance' | 'category_material_groups' | 'category_warehouses' | 'category_units' | 'category_lots' | 'spare_parts' | 'vehicles' | 'category_drivers' | 'category_vehicle_types' | 'category_bank_accounts' | 'document_cabinet' | 'document_storage_categories' | 'tax_categories' | 'omnichannel' | 'online_ordering' | 'commercial_sales' | 'purchase_orders' | 'supplier_homepage' | 'marketplace' | 'repair_service' | 'events' | 'potential_customers' | 'proactive_reminders' | 'customer_segments' | 'service_quality' | 'feedback' | 'customer_bookings' | 'customers' | 'discount_management' | 'registration_approval' | 'employee_list' | 'labor_list' | 'department_list' | 'position_list' | 'salary_grade_list' | 'contract_type_list' | 'salary_rule_group' | 'salary_structure' | 'insurance_tax_params' | 'payroll_period' | 'payroll_table'>('categories');
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [potentialCustomers, setPotentialCustomers] = useFirestoreCollection<
     PotentialCustomerItem
@@ -563,6 +569,249 @@ const App: React.FC = () => {
   const [serviceQualityBookingCounts, setServiceQualityBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'service_quality_booking_counts', {});
   const [serviceQualityDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
 
+  // 5 extra records with duplicate RO codes for "Phản ánh" (completely independent)
+  const duplicateRoFeedbackRecords: FeedbackItem[] = [
+    {
+      id: 'fb-dup-ro-1',
+      code: 'RO-2405-0102',
+      name: 'Phản ánh - RO-2405-0102 (Đợt 2)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '09:00 - 10:00',
+      status: 'Mới',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Nguyễn Văn Tuấn',
+      notes: 'Phiếu phản ánh trùng RO-2405-0102 (Lần gọi bổ sung 1).',
+    },
+    {
+      id: 'fb-dup-ro-2',
+      code: 'RO-2405-0102',
+      name: 'Phản ánh - RO-2405-0102 (Đợt 3)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '10:00 - 11:00',
+      status: 'Đang thực hiện',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Đã gọi',
+      callResult: 'Gọi lần 2',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Trần Thị Mai',
+      notes: 'Phiếu phản ánh trùng RO-2405-0102 (Lần gọi bổ sung 2).',
+    },
+    {
+      id: 'fb-dup-ro-3',
+      code: 'RO-2406-0148',
+      name: 'Phản ánh - RO-2406-0148 (Đợt 2)',
+      channelUserCode: 'RO-2406-0148',
+      fullName: 'Đỗ Minh Quân',
+      garageName: 'Quân Auto Service',
+      phone: '0918 765 432',
+      email: 'quan.do@quanauto.vn',
+      demands: ['Rửa xe', 'Bảo dưỡng định kỳ'],
+      taxCode: '0315556677',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '14:00 - 15:00',
+      status: 'Mới',
+      address: '89 Lê Văn Việt, TP. Thủ Đức, HCM',
+      link: '',
+      startDate: '08/07/2024',
+      endDate: '09/07/2024',
+      isLocked: false,
+      source: 'Zalo OA',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '30H-665.43',
+      carBrand: 'Ford',
+      carModel: 'Ranger',
+      originalRoCode: 'RO-2406-0148',
+      serviceAdvisor: 'Trần Thị Mai',
+      originalRoDates: '08/07/2024 - 09/07/2024',
+      vehicleReceiveDate: '08/07/2024',
+      promisedDeliveryDate: '09/07/2024',
+      actualDeliveryDate: '09/07/2024',
+      originalRoRevenue: '8.200.000 đ',
+      createdBy: 'Trần Thị Mai',
+      notes: 'Phiếu phản ánh trùng RO-2406-0148 (Lần gọi bổ sung 1).',
+    },
+    {
+      id: 'fb-dup-ro-4',
+      code: 'RO-2406-0148',
+      name: 'Phản ánh - RO-2406-0148 (Đợt 3)',
+      channelUserCode: 'RO-2406-0148',
+      fullName: 'Đỗ Minh Quân',
+      garageName: 'Quân Auto Service',
+      phone: '0918 765 432',
+      email: 'quan.do@quanauto.vn',
+      demands: ['Rửa xe', 'Bảo dưỡng định kỳ'],
+      taxCode: '0315556677',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '15:00 - 16:00',
+      status: 'Hoàn thành',
+      address: '89 Lê Văn Việt, TP. Thủ Đức, HCM',
+      link: '',
+      startDate: '08/07/2024',
+      endDate: '09/07/2024',
+      isLocked: false,
+      source: 'Zalo OA',
+      callStatus: 'Đã gọi',
+      callResult: 'Gọi lần 3',
+      licensePlate: '30H-665.43',
+      carBrand: 'Ford',
+      carModel: 'Ranger',
+      originalRoCode: 'RO-2406-0148',
+      serviceAdvisor: 'Trần Thị Mai',
+      originalRoDates: '08/07/2024 - 09/07/2024',
+      vehicleReceiveDate: '08/07/2024',
+      promisedDeliveryDate: '09/07/2024',
+      actualDeliveryDate: '09/07/2024',
+      originalRoRevenue: '8.200.000 đ',
+      createdBy: 'Lê Xuân Nguyên',
+      notes: 'Phiếu phản ánh trùng RO-2406-0148 (Lần gọi bổ sung 2).',
+    },
+    {
+      id: 'fb-dup-ro-5',
+      code: 'RO-2405-0102',
+      name: 'Phản ánh - RO-2405-0102 (Đợt 4)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '16:00 - 17:00',
+      status: 'Mới',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Chủ xưởng',
+      notes: 'Phiếu phản ánh trùng RO-2405-0102 (Lần gọi bổ sung 3).',
+    },
+  ];
+
+  // Isolated & independent states for "Phản ánh" (feedback)
+  const [feedbackReviews, setFeedbackReviews] = useFirestoreRecord<
+    FeedbackItem[]
+  >('crm_state_maps', 'feedback_reviews_list', () => {
+    const cloned: FeedbackItem[] = JSON.parse(JSON.stringify(MOCK_POTENTIAL_CUSTOMERS));
+    const feedbackStatuses: FeedbackStatus[] = [
+      'Mới',
+      'Hoàn thành',
+      'Đang thực hiện',
+      'Dừng',
+      'Hoàn thành',
+      'Dừng',
+      'Mới',
+      'Hoàn thành',
+      'Đang thực hiện',
+      'Mới',
+    ];
+    const feedbackCallResults: FeedbackCallResult[] = [
+      'Gọi lần 1',
+      'Gọi lần 2',
+      'Gọi lần 3',
+      'Từ chối',
+      'Không nghe máy',
+      'Từ chối',
+      'Gọi lần 1',
+      'Gọi lần 2',
+      'Không nghe máy',
+      'Gọi lần 1',
+    ];
+    const baseItems = cloned.map((item, idx) => ({
+      ...item,
+      id: `fb-${item.id}`,
+      status: feedbackStatuses[idx % feedbackStatuses.length],
+      callResult: feedbackCallResults[idx % feedbackCallResults.length],
+    }));
+    return [...duplicateRoFeedbackRecords, ...baseItems];
+  });
+  const [feedbackGuestHistory, setFeedbackGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'feedback_guest_history', {});
+  const [feedbackGuestTasks, setFeedbackGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'feedback_guest_tasks', {});
+  const [feedbackGuestActivityHistory, setFeedbackGuestActivityHistory] = useFirestoreRecord<
+    Record<string, ActivityItem[]>
+  >('crm_state_maps', 'feedback_guest_activity_history', {});
+  const [feedbackCustomerBookings, setFeedbackCustomerBookings] = useFirestoreRecord<CustomerBookingRecord[]>(
+    'crm_state_maps',
+    'feedback_customer_bookings_list',
+    () => JSON.parse(JSON.stringify(INITIAL_CUSTOMER_BOOKINGS))
+  );
+  const [feedbackBookingInternalNotes, setFeedbackBookingInternalNotes] = useFirestoreRecord<
+    Record<string, BookingNoteItem[]>
+  >('crm_state_maps', 'feedback_booking_internal_notes', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_INTERNAL_NOTES)));
+  const [feedbackBookingTasks, setFeedbackBookingTasks] = useFirestoreRecord<
+    Record<string, BookingTaskItem[]>
+  >('crm_state_maps', 'feedback_booking_tasks', () => JSON.parse(JSON.stringify(INITIAL_BOOKING_TASKS)));
+  const [feedbackBookingActivities, setFeedbackBookingActivities] = useFirestoreRecord<
+    Record<string, BookingActivityItem[]>
+  >('crm_state_maps', 'feedback_booking_activities', {});
+  const [feedbackBookingCounts, setFeedbackBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'feedback_booking_counts', {});
+  const [feedbackDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
+
   // Shared Salary Structures State between Cấu trúc Lương and Hồ sơ hợp đồng
   const [salaryStructures, setSalaryStructures] = useFirestoreCollection('salary_structures', INITIAL_STRUCTURES, 'id');
 
@@ -629,6 +878,22 @@ const App: React.FC = () => {
       const newRecord: CustomerBookingRecord = {
         ...bookingData,
         id: bookingData.id || `cb-sq-${Date.now()}`,
+        bookingCode: `LH-241027-${nextNum}`,
+      };
+      return [newRecord, ...prev];
+    });
+  };
+
+  const handleCreateFeedbackBooking = (
+    bookingData: Omit<CustomerBookingRecord, 'id' | 'bookingCode'> & {
+      id?: string;
+    }
+  ) => {
+    setFeedbackCustomerBookings((prev) => {
+      const nextNum = String(prev.length + 1).padStart(2, '0');
+      const newRecord: CustomerBookingRecord = {
+        ...bookingData,
+        id: bookingData.id || `cb-fb-${Date.now()}`,
         bookingCode: `LH-241027-${nextNum}`,
       };
       return [newRecord, ...prev];
@@ -851,6 +1116,31 @@ const App: React.FC = () => {
             setBookingTasks={setServiceQualityBookingTasks}
             bookingActivities={serviceQualityBookingActivities}
             setBookingActivities={setServiceQualityBookingActivities}
+          />
+        ) : currentView === 'feedback' ? (
+          <FeedbackModule
+            key="feedback"
+            hideRegistrationSummary={true}
+            onCreateCustomerBooking={handleCreateFeedbackBooking}
+            bookingCounts={feedbackBookingCounts}
+            setBookingCounts={setFeedbackBookingCounts}
+            customerBookings={feedbackCustomerBookings}
+            setCustomerBookings={setFeedbackCustomerBookings}
+            discounts={feedbackDiscounts}
+            events={feedbackReviews}
+            setEvents={setFeedbackReviews}
+            guestHistory={feedbackGuestHistory}
+            setGuestHistory={setFeedbackGuestHistory}
+            guestTasks={feedbackGuestTasks}
+            setGuestTasks={setFeedbackGuestTasks}
+            guestActivityHistory={feedbackGuestActivityHistory}
+            setGuestActivityHistory={setFeedbackGuestActivityHistory}
+            bookingInternalNotes={feedbackBookingInternalNotes}
+            setBookingInternalNotes={setFeedbackBookingInternalNotes}
+            bookingTasks={feedbackBookingTasks}
+            setBookingTasks={setFeedbackBookingTasks}
+            bookingActivities={feedbackBookingActivities}
+            setBookingActivities={setFeedbackBookingActivities}
           />
         ) : currentView === 'customer_bookings' ? (
           <CustomerBookingsModule
