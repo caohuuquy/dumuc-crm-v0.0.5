@@ -22,7 +22,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
     'customer_bookings',
     'customers',
     'discount_management',
-    'service_quality'
+    'service_quality',
+    'feedback'
   ];
   const isCrmActive = crmViews.includes(currentView);
   const [isCrmOpen, setIsCrmOpen] = useState(false);
@@ -314,12 +315,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
                 </div>
                 <div 
                   onClick={() => onNavigate?.('service_quality')}
-                  className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                  className={`flex items-center pl-11 pr-1.5 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
                 >
                   {currentView === 'service_quality' && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
                   )}
-                  <span className="text-sm font-medium">Đánh giá chất lượng dịch vụ</span>
+                  <span className="text-[13px] font-medium whitespace-nowrap tracking-tight">Đánh giá chất lượng dịch vụ</span>
+                </div>
+                <div 
+                  onClick={() => onNavigate?.('feedback')}
+                  className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'feedback' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {currentView === 'feedback' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
+                  )}
+                  <span className="text-sm font-medium">Phản ánh</span>
                 </div>
               </div>
             )}
@@ -756,12 +766,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
                           </div>
                           <div
                             onClick={() => handleHeaderMenuNavigate('service_quality')}
-                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                            className={`flex items-center pl-11 pr-2 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
                           >
                             {currentView === 'service_quality' && (
                               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
                             )}
-                            <span className="text-sm font-medium">Đánh giá chất lượng dịch vụ</span>
+                            <span className="text-sm font-medium whitespace-nowrap tracking-tight">Đánh giá chất lượng dịch vụ</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('feedback')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'feedback' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'feedback' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Phản ánh</span>
                           </div>
                         </div>
                       )}

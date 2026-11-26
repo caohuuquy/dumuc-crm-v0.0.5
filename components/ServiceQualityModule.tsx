@@ -13,6 +13,20 @@ import {
   INITIAL_BOOKING_TASKS,
 } from './CustomerBookingsModule';
 import { ServiceQualityRoScannerModal } from './ServiceQualityRoScannerModal';
+import { doc, setDoc } from 'firebase/firestore';
+import {
+  db,
+  sanitizeForFirestore,
+  toValidDocId,
+  handleFirestoreError,
+  OperationType,
+} from '../firebase';
+import {
+  ServiceQualityCallSurveyModal,
+  ServiceQualitySurveyData,
+  SERVICE_QUALITY_SURVEY_QUESTIONS,
+  CSKH_FEELING_QUESTION_ID,
+} from './ServiceQualityCallSurveyModal';
 
 export type ServiceQualityStatus = 'Mới' | 'Đang thực hiện' | 'Hoàn thành' | 'Dừng';
 export type ServiceQualityCallResult = 'Từ chối' | 'Gọi lần 1' | 'Gọi lần 2' | 'Gọi lần 3' | 'Không nghe máy';
@@ -372,6 +386,7 @@ export interface PotentialCustomerItem {
   segmentPurpose?: string;
   totalFilterCriteria?: number | string;
   roFilterScope?: string;
+  qualitySurvey?: ServiceQualitySurveyData;
 }
 
 export type ServiceQualityItem = PotentialCustomerItem;
@@ -1944,7 +1959,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     if (target && target.status !== newStatus) {
       addActivity(id, 'note', 'Cập nhật cột Trạng thái', `Thay đổi từ "${target.status}" sang "${newStatus}"`);
     }
-    setEvents(events.map(evt => evt.id === id ? { ...evt, status: newStatus } : evt));
+    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, status: newStatus } : evt));
   };
 
   const handleCallStatusChange = (id: string, newStatus: PotentialCustomerItem['callStatus']) => {
@@ -1952,7 +1967,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     if (target && target.callStatus !== newStatus) {
       addActivity(id, 'note', 'Cập nhật cột Trạng thái cuộc gọi', `Thay đổi từ "${target.callStatus}" sang "${newStatus}"`);
     }
-    setEvents(events.map(evt => evt.id === id ? { ...evt, callStatus: newStatus } : evt));
+    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, callStatus: newStatus } : evt));
   };
 
   const handleCallResultChange = (id: string, newResult: PotentialCustomerItem['callResult']) => {
@@ -1960,7 +1975,121 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     if (target && target.callResult !== newResult) {
       addActivity(id, 'note', 'Cập nhật cột Kết quả cuộc gọi', `Thay đổi từ "${target.callResult}" sang "${newResult}"`);
     }
-    setEvents(events.map(evt => evt.id === id ? { ...evt, callResult: newResult } : evt));
+    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, callResult: newResult } : evt));
+  };
+
+  const handleSaveQualitySurvey = async (
+    id: string,
+    survey: ServiceQualitySurveyData,
+    logActivity = false,
+    fieldsUpdate?: {
+      callStatus: 'Chưa gọi' | 'Đã gọi';
+      callResult: ServiceQualityCallResult;
+      status: ServiceQualityStatus;
+    }
+  ): Promise<void> => {
+    const existingRecord =
+      events.find((evt) => evt.id === id) ||
+      (selectedGuestRecord && selectedGuestRecord.id === id ? selectedGuestRecord : null);
+
+    const updatedRecord: PotentialCustomerItem | null = existingRecord
+      ? {
+          ...existingRecord,
+          ...(fieldsUpdate
+            ? {
+                callStatus: fieldsUpdate.callStatus,
+                callResult: fieldsUpdate.callResult,
+                status: fieldsUpdate.status,
+              }
+            : {}),
+          qualitySurvey: survey,
+        }
+      : null;
+
+    const safeDocId = toValidDocId(id, 0);
+    const firestorePayload = sanitizeForFirestore(
+      updatedRecord
+        ? updatedRecord
+        : {
+            id,
+            ...(fieldsUpdate || {}),
+            qualitySurvey: survey,
+          }
+    );
+
+    try {
+      await setDoc(doc(db, 'service_quality_reviews', safeDocId), firestorePayload, {
+        merge: true,
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `service_quality_reviews/${safeDocId}`);
+    }
+
+    setEvents((prev) =>
+      prev.map((evt) =>
+        evt.id === id
+          ? {
+              ...evt,
+              ...(fieldsUpdate
+                ? {
+                    callStatus: fieldsUpdate.callStatus,
+                    callResult: fieldsUpdate.callResult,
+                    status: fieldsUpdate.status,
+                  }
+                : {}),
+              qualitySurvey: survey,
+            }
+          : evt
+      )
+    );
+    if (updatedRecord) {
+      setSelectedGuestRecord(updatedRecord);
+    }
+
+    if (logActivity) {
+      const summaryLines: string[] = [];
+      if (fieldsUpdate && existingRecord) {
+        if (existingRecord.callStatus !== fieldsUpdate.callStatus) {
+          summaryLines.push(
+            `• Trạng thái cuộc gọi: ${existingRecord.callStatus} → ${fieldsUpdate.callStatus}`
+          );
+        }
+        const prevCallResult = normalizeServiceQualityCallResult(existingRecord.callResult);
+        if (prevCallResult !== fieldsUpdate.callResult) {
+          summaryLines.push(
+            `• Kết quả cuộc gọi: ${prevCallResult} → ${fieldsUpdate.callResult}`
+          );
+        }
+        const prevStatus = normalizeServiceQualityStatus(existingRecord.status);
+        if (prevStatus !== fieldsUpdate.status) {
+          summaryLines.push(`• Trạng thái: ${prevStatus} → ${fieldsUpdate.status}`);
+        }
+      }
+      SERVICE_QUALITY_SURVEY_QUESTIONS.forEach((q) => {
+        const ans = survey.answers[q.id];
+        if (ans && (ans.selected.length > 0 || ans.note.trim())) {
+          const parts: string[] = [];
+          if (ans.selected.length > 0) parts.push(ans.selected.join(', '));
+          if (ans.note.trim()) parts.push(`Ghi chú: ${ans.note.trim()}`);
+          summaryLines.push(`• ${q.category}: ${parts.join(' | ')}`);
+        }
+      });
+      const feeling = survey.answers[CSKH_FEELING_QUESTION_ID];
+      if (feeling && (feeling.selected.length > 0 || feeling.note.trim())) {
+        const parts: string[] = [];
+        if (feeling.selected.length > 0) parts.push(feeling.selected.join(', '));
+        if (feeling.note.trim()) parts.push(`Ghi chú: ${feeling.note.trim()}`);
+        summaryLines.push(`• CSKH cảm nhận về Khách hàng: ${parts.join(' | ')}`);
+      }
+      addActivity(
+        id,
+        'note',
+        'Lưu ghi nhận khảo sát chất lượng dịch vụ',
+        summaryLines.length > 0
+          ? summaryLines.join('\n')
+          : 'Đã cập nhật phiếu đánh giá chất lượng dịch vụ.'
+      );
+    }
   };
 
   const handleCreateCustomerBooking = (record: PotentialCustomerItem) => {
@@ -2727,7 +2856,11 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                   key={row.id}
                   className="hover:bg-blue-50/50 transition-colors cursor-pointer"
                   onClick={() => {
-                    if (hideRegistrationSummary) {
+                    if (hideRegistrationSummary && !isCustomerSegmentsMode) {
+                      setSelectedGuestRecord(row);
+                      setActiveTab('tasks');
+                      setGuestProfileModalOpen(true);
+                    } else if (hideRegistrationSummary) {
                       setEditingReminderRecord(row);
                       setQuoteSearch('');
                       setQuoteVehicleFilter('Tất cả xe');
@@ -3647,868 +3780,49 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
         </div>
       )}
 
-      {/* Guest Profile Modal (Thông tin Khách hàng tiềm năng) */}
+      {/* Full-Screen 3-Zone Service Quality Call Survey Modal */}
       {guestProfileModalOpen && selectedGuestRecord && (() => {
         const currentGuest = events.find(e => e.id === selectedGuestRecord.id) || selectedGuestRecord;
-        const guestDupInfo = getDuplicateInfo(currentGuest);
+        const roDateInfo = getRoDateInfo(currentGuest);
         return (
-          <div className="fixed inset-0 bg-white z-50 flex flex-col w-screen h-screen overflow-hidden">
-            {/* Top Bar */}
-            <div className="px-6 py-3.5 border-b border-gray-200 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-200">
-                  <User className="w-4 h-4" />
-                </div>
-                <h2 className="text-lg font-bold text-gray-800">Thông tin Khách hàng tiềm năng</h2>
-              </div>
-              <button 
-                onClick={() => setGuestProfileModalOpen(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Đóng"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Main 2-Column Body */}
-            <div className="flex-1 flex min-h-0 overflow-hidden">
-              {/* Left Column: Customer Info & General Info */}
-              <div className="w-[54%] border-r border-gray-200 p-5 flex flex-col justify-between overflow-hidden bg-white">
-                {(() => {
-                  const guestQuotationEntries = (() => {
-                    if (!hideRegistrationSummary) return [];
-                    const synthId = `q-row-${currentGuest.id}`;
-                    const parsedRev =
-                      parseInt(
-                        (currentGuest.originalRoRevenue || '750000').replace(/[^\d]/g, ''),
-                        10
-                      ) || 750000;
-                    const item1Price = Math.round(parsedRev * 0.6);
-                    const item2Price = parsedRev - item1Price;
-                    const synthesizedQuote: QuotationRecord = {
-                      id: synthId,
-                      quoteCode: currentGuest.code.startsWith('BG')
-                        ? currentGuest.code
-                        : `BG-${currentGuest.originalRoCode || currentGuest.code}`,
-                      quoteDate: '2026-11-09',
-                      quoteDateTimeDisplay: `${currentGuest.registrationDate || '09/11/2026'} 14:30`,
-                      licensePlate: currentGuest.licensePlate || '51H11111',
-                      customerName: currentGuest.fullName,
-                      phone: currentGuest.phone,
-                      email: currentGuest.email,
-                      carBrand: currentGuest.carBrand || 'Toyota',
-                      carModel: currentGuest.carModel || 'Camry',
-                      originalRoCode: currentGuest.originalRoCode || '2611-000003',
-                      originalRoDates:
-                        currentGuest.originalRoDates || '09/11/2026 - 09/11/2026',
-                      originalRoRevenue: currentGuest.originalRoRevenue || '750.000 đ',
-                      approvalStatus: 'Chờ khách duyệt',
-                      items: [
-                        {
-                          id: `${synthId}-item-1`,
-                          itemCode: 'BDĐK001',
-                          itemName: 'Bảo dưỡng định kỳ & thay dầu động cơ tổng hợp',
-                          unit: 'Gói',
-                          quantity: 1,
-                          unitPrice: item1Price,
-                          totalPrice: item1Price,
-                        },
-                        {
-                          id: `${synthId}-item-2`,
-                          itemCode: 'PHANH002',
-                          itemName: 'Kiểm tra & vệ sinh bố thắng, cân chỉnh thước lái',
-                          unit: 'Lần',
-                          quantity: 1,
-                          unitPrice: item2Price,
-                          totalPrice: item2Price,
-                        },
-                      ],
-                    };
-
-                    const allCandidateQuotes = [
-                      ...MOCK_QUOTATIONS_FOR_REMINDERS,
-                      synthesizedQuote,
-                    ];
-
-                    if (
-                      currentGuest.selectedQuoteItemsMap &&
-                      Object.keys(currentGuest.selectedQuoteItemsMap).some(
-                        (k) => (currentGuest.selectedQuoteItemsMap?.[k] || []).length > 0
-                      )
-                    ) {
-                      return allCandidateQuotes
-                        .filter(
-                          (q) =>
-                            (currentGuest.selectedQuoteItemsMap?.[q.id] || []).length > 0
-                        )
-                        .map((q) => {
-                          const checkedIds =
-                            currentGuest.selectedQuoteItemsMap?.[q.id] || [];
-                          return {
-                            quote: q,
-                            checkedItems: q.items.filter((i) =>
-                              checkedIds.includes(i.id)
-                            ),
-                          };
-                        });
-                    }
-
-                    const matchedQuote = MOCK_QUOTATIONS_FOR_REMINDERS.find(
-                      (q) =>
-                        q.quoteCode === currentGuest.code ||
-                        (currentGuest.originalRoCode &&
-                          q.originalRoCode === currentGuest.originalRoCode) ||
-                        (currentGuest.licensePlate &&
-                          q.licensePlate === currentGuest.licensePlate)
-                    );
-
-                    if (matchedQuote) {
-                      return [
-                        {
-                          quote: matchedQuote,
-                          checkedItems: matchedQuote.items,
-                        },
-                      ];
-                    }
-
-                    return [
-                      {
-                        quote: synthesizedQuote,
-                        checkedItems: synthesizedQuote.items,
-                      },
-                    ];
-                  })();
-
-                  const allCheckedLineItems = guestQuotationEntries.flatMap((entry) =>
-                    entry.checkedItems.map((item) => ({
-                      ...item,
-                      quoteCode: entry.quote.quoteCode,
-                    }))
-                  );
-                  const totalPossibleItemsCount = guestQuotationEntries.reduce(
-                    (sum, entry) => sum + entry.quote.items.length,
-                    0
-                  );
-                  const totalCheckedAmount = allCheckedLineItems.reduce(
-                    (sum, item) => sum + item.totalPrice,
-                    0
-                  );
-
-                  return (
-                    <div className="space-y-4 overflow-y-auto pr-1">
-                      {/* Top Identity & Status */}
-                      <div className="space-y-3 pb-4 border-b border-gray-100">
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900 mb-0.5">{currentGuest.fullName}</h3>
-                          <p className="text-xs text-gray-500">
-                            Ngày tạo: <span className="font-medium text-gray-700">{currentGuest.registrationDate}</span>
-                          </p>
-                        </div>
-
-                        {/* Quick Action Buttons + Status on the same single line */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {!hideRegistrationSummary && (
-                            <button
-                              type="button"
-                              onClick={() => setCallScriptModalGuest(currentGuest)}
-                              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition-colors border border-emerald-200 cursor-pointer"
-                            >
-                              <BookOpen className="w-4 h-4" />
-                              Xem kịch bản gọi
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleCreateCustomerBooking(currentGuest)}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-semibold transition-colors border border-indigo-200"
-                          >
-                            <CalendarPlus className="w-4 h-4" />
-                            Tạo Lịch hẹn Khách đặt
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedZaloRecord(currentGuest);
-                              setZaloContent(getZaloDefaultContent(currentGuest));
-                              setZaloAttachments([]);
-                              setZaloModalOpen(true);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0068FF] rounded-lg text-xs font-semibold transition-colors border border-blue-200"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            Gửi Zalo
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => openEmailModalForRecord(currentGuest)}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold transition-colors border border-gray-200"
-                          >
-                            <Mail className="w-4 h-4" />
-                            Gửi Email
-                          </button>
-                          <select
-                            value={hideRegistrationSummary ? normalizeServiceQualityStatus(currentGuest.status) : currentGuest.status}
-                            onChange={(e) => handleStatusChange(currentGuest.id, e.target.value as PotentialCustomerStatus)}
-                            className={`px-3 py-2 text-xs font-semibold rounded-lg border outline-none cursor-pointer ${
-                              hideRegistrationSummary
-                                ? normalizeServiceQualityStatus(currentGuest.status) === 'Hoàn thành'
-                                  ? 'bg-green-100 text-green-700 border-green-200'
-                                  : normalizeServiceQualityStatus(currentGuest.status) === 'Mới'
-                                  ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                  : normalizeServiceQualityStatus(currentGuest.status) === 'Đang thực hiện'
-                                  ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                  : 'bg-red-100 text-red-700 border-red-200'
-                                : currentGuest.status === 'Xe đã đến'
-                                ? 'bg-green-100 text-green-700 border-green-200'
-                                : currentGuest.status === 'Đã xác nhận'
-                                ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                : currentGuest.status === 'Chờ xác nhận'
-                                ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                : currentGuest.status === 'Bỏ hẹn'
-                                ? 'bg-orange-100 text-orange-700 border-orange-200'
-                                : currentGuest.status === 'Chờ xóa'
-                                ? 'bg-gray-200 text-gray-700 border-gray-300'
-                                : 'bg-red-100 text-red-700 border-red-200'
-                            }`}
-                          >
-                            {hideRegistrationSummary ? (
-                              <>
-                                <option value="Mới">Mới</option>
-                                <option value="Đang thực hiện">Đang thực hiện</option>
-                                <option value="Hoàn thành">Hoàn thành</option>
-                                <option value="Dừng">Dừng</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="Chờ xác nhận">Chờ xác nhận</option>
-                                <option value="Đã xác nhận">Đã xác nhận</option>
-                                <option value="Đã hủy">Đã hủy</option>
-                                <option value="Chờ xóa">Chờ xóa</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                      </div>
-
-                      {hideRegistrationSummary ? (
-                        <>
-                          {/* THÔNG TIN CHUNG - Phù hợp với dữ liệu trong viewlist Lịch nhắc chủ động */}
-                          <div>
-                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">
-                              THÔNG TIN CHUNG
-                            </h4>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              {/* Khách hàng */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Khách hàng
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.fullName}
-                                </div>
-                              </div>
-
-                              {/* Số điện thoại */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Số điện thoại
-                                </div>
-                                <div className="font-semibold text-gray-800 flex items-center gap-1.5 whitespace-nowrap">
-                                  <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                                  <span>{currentGuest.phone}</span>
-                                </div>
-                              </div>
-
-                              {/* Email */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Email
-                                </div>
-                                <div
-                                  className="font-semibold text-gray-800 flex items-center gap-1.5 truncate"
-                                  title={currentGuest.email}
-                                >
-                                  <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                                  <span className="truncate">{currentGuest.email}</span>
-                                </div>
-                              </div>
-
-                              {/* Trạng thái cuộc gọi */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Trạng thái cuộc gọi
-                                </div>
-                                <select
-                                  value={currentGuest.callStatus}
-                                  onChange={(e) =>
-                                    handleCallStatusChange(
-                                      currentGuest.id,
-                                      e.target.value as any
-                                    )
-                                  }
-                                  className="w-full border border-gray-300 rounded px-2 py-0.5 text-xs font-semibold text-gray-800 bg-white outline-none focus:border-[#1A73E8] cursor-pointer"
-                                >
-                                  <option value="Chưa gọi">Chưa gọi</option>
-                                  <option value="Đã gọi">Đã gọi</option>
-                                </select>
-                              </div>
-
-                              {/* Kết quả cuộc gọi */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Kết quả cuộc gọi
-                                </div>
-                                <select
-                                  value={normalizeServiceQualityCallResult(currentGuest.callResult)}
-                                  onChange={(e) =>
-                                    handleCallResultChange(
-                                      currentGuest.id,
-                                      e.target.value as ServiceQualityCallResult
-                                    )
-                                  }
-                                  className="w-full border border-gray-300 rounded px-2 py-0.5 text-xs font-semibold text-gray-800 bg-white outline-none focus:border-[#1A73E8] cursor-pointer"
-                                >
-                                  <option value="Từ chối">Từ chối</option>
-                                  <option value="Gọi lần 1">Gọi lần 1</option>
-                                  <option value="Gọi lần 2">Gọi lần 2</option>
-                                  <option value="Gọi lần 3">Gọi lần 3</option>
-                                  <option value="Không nghe máy">Không nghe máy</option>
-                                </select>
-                              </div>
-
-                              {/* Trạng thái */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Trạng thái
-                                </div>
-                                <select
-                                  value={normalizeServiceQualityStatus(currentGuest.status)}
-                                  onChange={(e) =>
-                                    handleStatusChange(
-                                      currentGuest.id,
-                                      e.target.value as ServiceQualityStatus
-                                    )
-                                  }
-                                  className="w-full border border-gray-300 rounded px-2 py-0.5 text-xs font-semibold text-gray-800 bg-white outline-none focus:border-[#1A73E8] cursor-pointer"
-                                >
-                                  <option value="Mới">Mới</option>
-                                  <option value="Đang thực hiện">Đang thực hiện</option>
-                                  <option value="Hoàn thành">Hoàn thành</option>
-                                  <option value="Dừng">Dừng</option>
-                                </select>
-                              </div>
-
-                              {/* Biển số xe */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Biển số xe
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.licensePlate || '-'}
-                                </div>
-                              </div>
-
-                              {/* Hiệu xe */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Hiệu xe
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.carBrand || '-'}
-                                </div>
-                              </div>
-
-                              {/* Dòng xe */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Dòng xe
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.carModel || '-'}
-                                </div>
-                              </div>
-
-                              {/* RO gốc */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  RO gốc
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedRoDetailRow(currentGuest)}
-                                  className="font-semibold text-[#1A73E8] hover:underline truncate cursor-pointer"
-                                >
-                                  {currentGuest.originalRoCode || '-'}
-                                </button>
-                              </div>
-
-                              {/* Ngày nhận - Ngày giao của RO gốc */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Ngày nhận - Ngày giao RO gốc
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.originalRoDates || '-'}
-                                </div>
-                              </div>
-
-                              {/* Doanh thu RO gốc */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Doanh thu RO gốc
-                                </div>
-                                <div className="font-bold text-gray-900 truncate">
-                                  {currentGuest.originalRoRevenue || '-'}
-                                </div>
-                              </div>
-
-                              {/* Người tạo */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Người tạo
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.createdBy || '-'}
-                                </div>
-                              </div>
-
-                              {/* Ngày tạo */}
-                              <div className="p-2 rounded-lg bg-gray-50 border border-gray-100 col-span-2">
-                                <div className="text-[11px] text-gray-500 mb-0.5">
-                                  Ngày tạo
-                                </div>
-                                <div className="font-semibold text-gray-800 truncate">
-                                  {currentGuest.registrationDate}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Danh mục chi tiết phần tích chọn "Hạng mục vật tư, phụ tùng & dịch vụ" (chỉ hiển thị trong phạm vi cột 1) */}
-                          <div className="pt-3 border-t border-gray-100">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-1 h-4 rounded-full bg-[#1A73E8]" />
-                                <span className="text-xs font-bold text-slate-800">
-                                  Hạng mục vật tư, phụ tùng &amp; dịch vụ
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
-                                  {allCheckedLineItems.length}
-                                </span>
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                Đã chọn: {allCheckedLineItems.length}/{totalPossibleItemsCount} (
-                                <span className="font-semibold text-slate-700 underline">
-                                  {totalCheckedAmount.toLocaleString('vi-VN')} đ
-                                </span>
-                                )
-                              </div>
-                            </div>
-
-                            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                              <table className="w-full text-left border-collapse text-xs">
-                                <thead>
-                                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500">
-                                    <th className="py-2 px-2.5 w-8 text-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={allCheckedLineItems.length > 0}
-                                        readOnly
-                                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                      />
-                                    </th>
-                                    <th className="py-2 px-2">Mã VT</th>
-                                    <th className="py-2 px-2">Tên hàng / Dịch vụ</th>
-                                    <th className="py-2 px-2 text-center">ĐVT</th>
-                                    <th className="py-2 px-2 text-center">SL</th>
-                                    <th className="py-2 px-2 text-right">Đơn giá</th>
-                                    <th className="py-2 px-2.5 text-right">Thành tiền</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                  {allCheckedLineItems.map((item) => (
-                                    <tr key={`${item.quoteCode}-${item.id}`} className="hover:bg-blue-50/20">
-                                      <td className="py-2 px-2.5 text-center">
-                                        <input
-                                          type="checkbox"
-                                          checked={true}
-                                          readOnly
-                                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                      </td>
-                                      <td className="py-2 px-2">
-                                        <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-[#1A73E8] font-bold text-[11px]">
-                                          {item.itemCode}
-                                        </span>
-                                      </td>
-                                      <td className="py-2 px-2 font-medium text-slate-800">
-                                        {item.itemName}
-                                      </td>
-                                      <td className="py-2 px-2 text-center text-slate-500">
-                                        {item.unit}
-                                      </td>
-                                      <td className="py-2 px-2 text-center font-bold text-slate-800">
-                                        {item.quantity}
-                                      </td>
-                                      <td className="py-2 px-2 text-right text-slate-600 whitespace-nowrap underline decoration-slate-400">
-                                        {item.unitPrice.toLocaleString('vi-VN')} đ
-                                      </td>
-                                      <td className="py-2 px-2.5 text-right font-bold text-slate-900 whitespace-nowrap underline decoration-slate-700">
-                                        {item.totalPrice.toLocaleString('vi-VN')} đ
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-2 mt-1.5 text-xs">
-                              <span className="text-slate-600">
-                                Tổng giá trị phiếu:{' '}
-                                <strong className="text-slate-900 font-bold underline">
-                                  {totalCheckedAmount.toLocaleString('vi-VN')} đ
-                                </strong>
-                              </span>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        /* THÔNG TIN CHUNG (Matched to current Viewlist columns in Khách hàng quan tâm) */
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">THÔNG TIN CHUNG</h4>
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
-                            <div className={`p-2.5 rounded-lg border ${guestDupInfo.isPhoneDuplicate ? 'bg-red-50/60 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
-                              <div className="flex items-center justify-between gap-1.5 mb-1 whitespace-nowrap">
-                                <span className="text-xs text-gray-500 shrink-0">Số điện thoại</span>
-                                {guestDupInfo.isPhoneDuplicate && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setDuplicateCheckFilter('phone');
-                                      setDuplicateCheckRecord(currentGuest);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                                    title="Nhấn để xem thông tin chi tiết của Khách hàng đang trùng"
-                                  >
-                                    <ShieldAlert className="w-3 h-3 shrink-0 text-red-600" />
-                                    <span className="whitespace-nowrap">
-                                      Trùng: {guestDupInfo.matchedCustomers.filter(m => m.phoneMatch).map(m => m.customer.customerName).join(', ')}
-                                    </span>
-                                  </button>
-                                )}
-                              </div>
-                              <div className="font-semibold text-gray-800 flex items-center gap-2 whitespace-nowrap">
-                                <Phone className={`w-3.5 h-3.5 shrink-0 ${guestDupInfo.isPhoneDuplicate ? 'text-red-500' : 'text-gray-400'}`} />
-                                <span className={`whitespace-nowrap ${guestDupInfo.isPhoneDuplicate ? 'text-red-700' : ''}`}>{currentGuest.phone}</span>
-                              </div>
-                            </div>
-
-                            <div className={`p-2.5 rounded-lg border ${guestDupInfo.isEmailDuplicate ? 'bg-red-50/60 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
-                              <div className="flex items-center justify-between gap-1.5 mb-1 whitespace-nowrap">
-                                <span className="text-xs text-gray-500 shrink-0">Email</span>
-                                {guestDupInfo.isEmailDuplicate && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setDuplicateCheckFilter('email');
-                                      setDuplicateCheckRecord(currentGuest);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                                    title="Nhấn để xem danh sách chi tiết các records trùng Email"
-                                  >
-                                    <ShieldAlert className="w-3 h-3 shrink-0 text-red-600" />
-                                    <span className="whitespace-nowrap">
-                                      Trùng: {guestDupInfo.matchedCustomers.filter(m => m.emailMatch).length} records
-                                    </span>
-                                  </button>
-                                )}
-                              </div>
-                              <div className="font-semibold text-gray-800 flex items-center gap-2 whitespace-nowrap" title={currentGuest.email}>
-                                <Mail className={`w-3.5 h-3.5 shrink-0 ${guestDupInfo.isEmailDuplicate ? 'text-red-500' : 'text-gray-400'}`} />
-                                <span className={`whitespace-nowrap ${guestDupInfo.isEmailDuplicate ? 'text-red-700' : ''}`}>{currentGuest.email}</span>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-1">Trạng thái cuộc gọi</div>
-                              <select 
-                                value={currentGuest.callStatus} 
-                                onChange={(e) => handleCallStatusChange(currentGuest.id, e.target.value as any)}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 bg-white outline-none focus:border-[#1A73E8]"
-                              >
-                                <option value="Chưa gọi">Chưa gọi</option>
-                                <option value="Đã gọi">Đã gọi</option>
-                              </select>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-1">Kết quả cuộc gọi</div>
-                              <select 
-                                value={normalizeServiceQualityCallResult(currentGuest.callResult)} 
-                                onChange={(e) => handleCallResultChange(currentGuest.id, e.target.value as ServiceQualityCallResult)}
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 bg-white outline-none focus:border-[#1A73E8]"
-                              >
-                                <option value="Từ chối">Từ chối</option>
-                                <option value="Gọi lần 1">Gọi lần 1</option>
-                                <option value="Gọi lần 2">Gọi lần 2</option>
-                                <option value="Gọi lần 3">Gọi lần 3</option>
-                                <option value="Không nghe máy">Không nghe máy</option>
-                              </select>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Nguồn</div>
-                              <div className="flex items-center gap-2 font-semibold text-gray-800">
-                                {renderSourceIcon(currentGuest.source)}
-                                <span>{currentGuest.source}</span>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Mã người dùng (Kênh)</div>
-                              <div className="font-mono font-semibold text-gray-800">{currentGuest.channelUserCode}</div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Mã chiến dịch</div>
-                              <div className="font-semibold text-[#1A73E8]">{currentGuest.code}</div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Tên chiến dịch</div>
-                              <div className="font-semibold text-gray-800 truncate" title={currentGuest.name}>{currentGuest.name}</div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Ngày hẹn</div>
-                              <div className="font-semibold text-gray-800 flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                <span>{currentGuest.appointmentDate}</span>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-0.5">Khung giờ hẹn</div>
-                              <div className="font-semibold text-gray-800">{currentGuest.appointmentTimeSlot}</div>
-                            </div>
-
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100">
-                              <div className="text-xs text-gray-500 mb-1">Nhu cầu</div>
-                              <div className="flex flex-wrap gap-1">
-                                {currentGuest.demands.length === 0 ? (
-                                  <span className="text-xs text-gray-400">Chưa chọn nhu cầu</span>
-                                ) : (
-                                  currentGuest.demands.map((d) => (
-                                    <span
-                                      key={d}
-                                      className="px-2 py-0.5 bg-blue-50 text-[#1A73E8] border border-blue-200 rounded text-xs font-medium"
-                                    >
-                                      {d}
-                                    </span>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Right Column: Tabs (Lịch sử, Ghi chú nội bộ, Lời nhắc & Công việc) */}
-              <div className="flex-1 flex flex-col min-w-0 bg-gray-50/40 overflow-hidden">
-                <div className="px-6 pt-4 border-b border-gray-200 bg-white shrink-0">
-                  <div className="flex gap-6">
-                    <button 
-                      className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity_history' ? 'border-[#1A73E8] text-[#1A73E8]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                      onClick={() => setActiveTab('activity_history')}
-                    >
-                      Lịch sử
-                    </button>
-                    <button 
-                      className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history' ? 'border-[#1A73E8] text-[#1A73E8]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                      onClick={() => setActiveTab('history')}
-                    >
-                      Ghi chú nội bộ
-                    </button>
-                    <button 
-                      className={`pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'tasks' ? 'border-[#1A73E8] text-[#1A73E8]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                      onClick={() => setActiveTab('tasks')}
-                    >
-                      Lời nhắc & Công việc
-                      <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {guestTasks[currentGuest.id]?.filter(t => !t.completed).length || 0}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6">
-                  {activeTab === 'activity_history' && (
-                    <div>
-                      {(!guestActivityHistory[currentGuest.id] || guestActivityHistory[currentGuest.id].length === 0) ? (
-                        <div className="text-sm text-gray-500 py-8 text-center">Chưa có dữ liệu lịch sử hoạt động</div>
-                      ) : (
-                        <div className="space-y-4">
-                          {guestActivityHistory[currentGuest.id].map(item => (
-                            <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold text-gray-800">{item.action}</span>
-                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{item.author}</span>
-                                </div>
-                                <span className="text-xs text-gray-500">{item.timestamp}</span>
-                              </div>
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'history' && (
-                    <div>
-                      <div className="mb-6">
-                        <textarea 
-                          value={noteContent}
-                          onChange={(e) => setNoteContent(e.target.value)}
-                          placeholder="Thêm ghi chú..."
-                          rows={3}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8] resize-y mb-3"
-                        />
-                        <div className="flex justify-end">
-                          <button 
-                            onClick={handleSaveNote}
-                            disabled={!noteContent.trim()}
-                            className="px-4 py-2 bg-[#1A73E8] hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors"
-                          >
-                            Lưu ghi chú
-                          </button>
-                        </div>
-                      </div>
-
-                      <h3 className="text-sm font-bold text-gray-800 mb-4">Lịch sử</h3>
-                      {(!guestHistory[currentGuest.id] || guestHistory[currentGuest.id].length === 0) ? (
-                        <div className="text-sm text-gray-500 py-4 text-center">Chưa có lịch sử trao đổi</div>
-                      ) : (
-                        <div className="space-y-4">
-                          {guestHistory[currentGuest.id].map(item => (
-                            <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold text-gray-800">Ghi chú</span>
-                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{item.author}</span>
-                                </div>
-                                <span className="text-xs text-gray-500">{item.timestamp}</span>
-                              </div>
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'tasks' && (
-                    <div>
-                      <div className="flex gap-2 mb-6">
-                        <input 
-                          type="text"
-                          value={taskContent}
-                          onChange={(e) => setTaskContent(e.target.value)}
-                          placeholder="Thêm lời nhắc mới..."
-                          className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8]"
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                        />
-                        <button 
-                          onClick={handleAddTask}
-                          disabled={!taskContent.trim()}
-                          className="px-4 py-2 bg-[#1A73E8] hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Thêm
-                        </button>
-                      </div>
-
-                      {(!guestTasks[currentGuest.id] || guestTasks[currentGuest.id].length === 0) ? (
-                        <div className="text-sm text-gray-500 py-4 text-center">Chưa có lời nhắc & công việc</div>
-                      ) : (
-                        <div className="space-y-3">
-                          {guestTasks[currentGuest.id].map(task => (
-                            <div key={task.id} className={`flex items-start gap-3 p-3 rounded-lg border ${task.completed ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-200 shadow-xs'}`}>
-                              <input 
-                                type="checkbox" 
-                                checked={task.completed}
-                                onChange={() => handleToggleTask(task.id)}
-                                className="mt-1 w-4 h-4 text-[#1A73E8] border-gray-300 rounded focus:ring-[#1A73E8]"
-                              />
-                              <div className="flex-1">
-                                {editingTaskId === task.id ? (
-                                  <div className="flex flex-col gap-2">
-                                    <input 
-                                      type="text"
-                                      value={editTaskContent}
-                                      onChange={(e) => setEditTaskContent(e.target.value)}
-                                      className="w-full px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1A73E8]/20 focus:border-[#1A73E8]"
-                                      autoFocus
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveEditTask();
-                                        if (e.key === 'Escape') handleCancelEditTask();
-                                      }}
-                                    />
-                                    <div className="flex items-center gap-2">
-                                      <button 
-                                        onClick={handleSaveEditTask}
-                                        disabled={!editTaskContent.trim()}
-                                        className="text-xs px-3 py-1 bg-[#1A73E8] text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-                                      >
-                                        Lưu
-                                      </button>
-                                      <button 
-                                        onClick={handleCancelEditTask}
-                                        className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                                      >
-                                        Hủy
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex items-start justify-between gap-2">
-                                      <p className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                                        {task.content}
-                                      </p>
-                                      {!task.completed && (
-                                        <button 
-                                          onClick={() => handleStartEditTask(task)}
-                                          className="text-gray-400 hover:text-[#1A73E8] transition-colors"
-                                          title="Chỉnh sửa lời nhắc"
-                                        >
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                                          </svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{task.author}</span>
-                                      <span className="text-xs text-gray-400">{task.timestamp}</span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ServiceQualityCallSurveyModal
+            currentGuest={currentGuest}
+            roDateInfo={roDateInfo}
+            normalizedCallResult={normalizeServiceQualityCallResult(currentGuest.callResult)}
+            normalizedStatus={normalizeServiceQualityStatus(currentGuest.status)}
+            onClose={() => setGuestProfileModalOpen(false)}
+            onCallStatusChange={(id, val) => handleCallStatusChange(id, val)}
+            onCallResultChange={(id, val) => handleCallResultChange(id, val)}
+            onStatusChange={(id, val) => handleStatusChange(id, val)}
+            onSaveSurvey={handleSaveQualitySurvey}
+            onOpenRoDetail={(record) => setSelectedRoDetailRow(record)}
+            onCreateBooking={(record) => handleCreateCustomerBooking(record)}
+            onOpenZalo={(record) => {
+              setSelectedZaloRecord(record);
+              setZaloContent(getZaloDefaultContent(record));
+              setZaloAttachments([]);
+              setZaloModalOpen(true);
+            }}
+            onOpenEmail={(record) => openEmailModalForRecord(record)}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            activityHistory={guestActivityHistory[currentGuest.id] || []}
+            notesHistory={guestHistory[currentGuest.id] || []}
+            noteContent={noteContent}
+            setNoteContent={setNoteContent}
+            onSaveNote={handleSaveNote}
+            tasks={guestTasks[currentGuest.id] || []}
+            taskContent={taskContent}
+            setTaskContent={setTaskContent}
+            onAddTask={handleAddTask}
+            onToggleTask={handleToggleTask}
+            editingTaskId={editingTaskId}
+            editTaskContent={editTaskContent}
+            setEditTaskContent={setEditTaskContent}
+            onStartEditTask={handleStartEditTask}
+            onSaveEditTask={handleSaveEditTask}
+            onCancelEditTask={handleCancelEditTask}
+          />
         );
       })()}
 
