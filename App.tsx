@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
-import { useFirestoreCollection, useFirestoreRecord } from './firebase';
+import React, { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  useFirestoreCollection,
+  useFirestoreRecord,
+  auth,
+  db,
+  firestoreSetDocument,
+  handleFirestoreError,
+  OperationType,
+} from './firebase';
 import { COLORS } from './constants';
 import { Header } from './components/Header';
 import { ProductTypeSelector } from './components/ProductTypeSelector';
@@ -265,6 +275,190 @@ const App: React.FC = () => {
   const [segmentBookingCounts, setSegmentBookingCounts] = useFirestoreRecord<Record<string, number>>('crm_state_maps', 'segment_booking_counts', {});
   const [segmentDiscounts] = useState<DiscountRecord[]>(() => JSON.parse(JSON.stringify(INITIAL_DISCOUNTS)));
 
+  // 5 extra records with duplicate RO codes for "Đánh giá chất lượng dịch vụ"
+  const duplicateRoServiceQualityRecords: ServiceQualityItem[] = [
+    {
+      id: 'sq-dup-ro-1',
+      code: 'RO-2405-0102',
+      name: 'Đánh giá CLDV - RO-2405-0102 (Đợt 2)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '09:00 - 10:00',
+      status: 'Mới',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Nguyễn Văn Tuấn',
+      notes: 'Phiếu đánh giá chất lượng dịch vụ trùng RO-2405-0102 (Lần gọi bổ sung 1).',
+    },
+    {
+      id: 'sq-dup-ro-2',
+      code: 'RO-2405-0102',
+      name: 'Đánh giá CLDV - RO-2405-0102 (Đợt 3)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '10:00 - 11:00',
+      status: 'Đang thực hiện',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Đã gọi',
+      callResult: 'Gọi lần 2',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Trần Thị Mai',
+      notes: 'Phiếu đánh giá chất lượng dịch vụ trùng RO-2405-0102 (Lần gọi bổ sung 2).',
+    },
+    {
+      id: 'sq-dup-ro-3',
+      code: 'RO-2406-0148',
+      name: 'Đánh giá CLDV - RO-2406-0148 (Đợt 2)',
+      channelUserCode: 'RO-2406-0148',
+      fullName: 'Đỗ Minh Quân',
+      garageName: 'Quân Auto Service',
+      phone: '0918 765 432',
+      email: 'quan.do@quanauto.vn',
+      demands: ['Rửa xe', 'Bảo dưỡng định kỳ'],
+      taxCode: '0315556677',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '14:00 - 15:00',
+      status: 'Mới',
+      address: '89 Lê Văn Việt, TP. Thủ Đức, HCM',
+      link: '',
+      startDate: '08/07/2024',
+      endDate: '09/07/2024',
+      isLocked: false,
+      source: 'Zalo OA',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '30H-665.43',
+      carBrand: 'Ford',
+      carModel: 'Ranger',
+      originalRoCode: 'RO-2406-0148',
+      serviceAdvisor: 'Trần Thị Mai',
+      originalRoDates: '08/07/2024 - 09/07/2024',
+      vehicleReceiveDate: '08/07/2024',
+      promisedDeliveryDate: '09/07/2024',
+      actualDeliveryDate: '09/07/2024',
+      originalRoRevenue: '8.200.000 đ',
+      createdBy: 'Trần Thị Mai',
+      notes: 'Phiếu đánh giá chất lượng dịch vụ trùng RO-2406-0148 (Lần gọi bổ sung 1).',
+    },
+    {
+      id: 'sq-dup-ro-4',
+      code: 'RO-2406-0148',
+      name: 'Đánh giá CLDV - RO-2406-0148 (Đợt 3)',
+      channelUserCode: 'RO-2406-0148',
+      fullName: 'Đỗ Minh Quân',
+      garageName: 'Quân Auto Service',
+      phone: '0918 765 432',
+      email: 'quan.do@quanauto.vn',
+      demands: ['Rửa xe', 'Bảo dưỡng định kỳ'],
+      taxCode: '0315556677',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '15:00 - 16:00',
+      status: 'Hoàn thành',
+      address: '89 Lê Văn Việt, TP. Thủ Đức, HCM',
+      link: '',
+      startDate: '08/07/2024',
+      endDate: '09/07/2024',
+      isLocked: false,
+      source: 'Zalo OA',
+      callStatus: 'Đã gọi',
+      callResult: 'Gọi lần 3',
+      licensePlate: '30H-665.43',
+      carBrand: 'Ford',
+      carModel: 'Ranger',
+      originalRoCode: 'RO-2406-0148',
+      serviceAdvisor: 'Trần Thị Mai',
+      originalRoDates: '08/07/2024 - 09/07/2024',
+      vehicleReceiveDate: '08/07/2024',
+      promisedDeliveryDate: '09/07/2024',
+      actualDeliveryDate: '09/07/2024',
+      originalRoRevenue: '8.200.000 đ',
+      createdBy: 'Lê Xuân Nguyên',
+      notes: 'Phiếu đánh giá chất lượng dịch vụ trùng RO-2406-0148 (Lần gọi bổ sung 2).',
+    },
+    {
+      id: 'sq-dup-ro-5',
+      code: 'RO-2405-0102',
+      name: 'Đánh giá CLDV - RO-2405-0102 (Đợt 4)',
+      channelUserCode: 'RO-2405-0102',
+      fullName: 'Phạm Hoàng Nam',
+      garageName: 'Nam Sài Gòn Auto',
+      phone: '0901 234 567',
+      email: 'nam.pham@namsaigonauto.vn',
+      demands: ['Bảo dưỡng định kỳ'],
+      taxCode: '0314567890',
+      registrationDate: '25/11/2026',
+      appointmentDate: '25/11/2026',
+      appointmentTimeSlot: '16:00 - 17:00',
+      status: 'Mới',
+      address: '215 Nguyễn Văn Linh, Quận 7, TP. Hồ Chí Minh',
+      link: '',
+      startDate: '02/06/2024',
+      endDate: '03/06/2024',
+      isLocked: false,
+      source: 'Website',
+      callStatus: 'Chưa gọi',
+      callResult: 'Gọi lần 1',
+      licensePlate: '51K-889.21',
+      carBrand: 'Mazda',
+      carModel: 'CX-5',
+      originalRoCode: 'RO-2405-0102',
+      serviceAdvisor: 'Nguyễn Văn Tuấn',
+      originalRoDates: '02/06/2024 - 03/06/2024',
+      vehicleReceiveDate: '02/06/2024',
+      promisedDeliveryDate: '03/06/2024',
+      actualDeliveryDate: '03/06/2024',
+      originalRoRevenue: '4.850.000 đ',
+      createdBy: 'Chủ xưởng',
+      notes: 'Phiếu đánh giá chất lượng dịch vụ trùng RO-2405-0102 (Lần gọi bổ sung 3).',
+    },
+  ];
+
   // Isolated & independent states for "Đánh giá chất lượng dịch vụ" (service_quality)
   const [serviceQualityReviews, setServiceQualityReviews] = useFirestoreCollection<
     ServiceQualityItem
@@ -294,13 +488,59 @@ const App: React.FC = () => {
       'Không nghe máy',
       'Gọi lần 1',
     ];
-    return cloned.map((item, idx) => ({
+    const baseItems = cloned.map((item, idx) => ({
       ...item,
       id: `sq-${item.id}`,
       status: serviceQualityStatuses[idx % serviceQualityStatuses.length],
       callResult: serviceQualityCallResults[idx % serviceQualityCallResults.length],
     }));
+    return [...duplicateRoServiceQualityRecords, ...baseItems];
   }, 'id');
+
+  // One-time idempotent seed of the 5 duplicate-RO records into Firestore if not yet seeded
+  useEffect(() => {
+    let cancelled = false;
+    const ensureDuplicateRoSeed = async () => {
+      if (!auth.currentUser) return;
+      try {
+        const markerRef = doc(db, 'crm_state_maps', 'sq_dup_ro_seed_v1');
+        const markerSnap = await getDoc(markerRef);
+        if (cancelled || markerSnap.exists()) return;
+
+        await Promise.all(
+          duplicateRoServiceQualityRecords.map((item, idx) =>
+            firestoreSetDocument('service_quality_reviews', item.id, {
+              ...item,
+              _order: -(duplicateRoServiceQualityRecords.length - idx),
+            })
+          )
+        );
+        await firestoreSetDocument('crm_state_maps', 'sq_dup_ro_seed_v1', {
+          payload: { seeded: true, count: duplicateRoServiceQualityRecords.length },
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        try {
+          handleFirestoreError(err, OperationType.WRITE, 'service_quality_reviews');
+        } catch {
+          // Error logged by handleFirestoreError
+        }
+      }
+    };
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        ensureDuplicateRoSeed();
+      }
+    });
+    if (auth.currentUser) {
+      ensureDuplicateRoSeed();
+    }
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
   const [serviceQualityGuestHistory, setServiceQualityGuestHistory] = useFirestoreRecord<Record<string, HistoryItem[]>>('crm_state_maps', 'service_quality_guest_history', {});
   const [serviceQualityGuestTasks, setServiceQualityGuestTasks] = useFirestoreRecord<Record<string, TaskItem[]>>('crm_state_maps', 'service_quality_guest_tasks', {});
   const [serviceQualityGuestActivityHistory, setServiceQualityGuestActivityHistory] = useFirestoreRecord<

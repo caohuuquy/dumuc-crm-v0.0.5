@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, List, ChevronDown, Bell, User, Users, Store, Wrench, Tag, LogOut, Phone, X, Camera, Pencil, Check, Lock, FileText, Menu } from 'lucide-react';
 import { signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -90,6 +91,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
   const signatureFileInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const headerMenuRef = useRef<HTMLDivElement>(null);
+  const headerMenuPanelRef = useRef<HTMLDivElement>(null);
+  const [headerMenuPos, setHeaderMenuPos] = useState<{ top: number; right: number }>({ top: 72, right: 24 });
+
+  const updateHeaderMenuPosition = () => {
+    if (headerMenuRef.current) {
+      const rect = headerMenuRef.current.getBoundingClientRect();
+      setHeaderMenuPos({
+        top: rect.bottom + 8,
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    }
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -110,13 +123,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
-      if (headerMenuRef.current && !headerMenuRef.current.contains(event.target as Node)) {
+      if (
+        headerMenuRef.current &&
+        !headerMenuRef.current.contains(event.target as Node) &&
+        (!headerMenuPanelRef.current || !headerMenuPanelRef.current.contains(event.target as Node))
+      ) {
         setIsHeaderMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isHeaderMenuOpen) return;
+    updateHeaderMenuPosition();
+    window.addEventListener('resize', updateHeaderMenuPosition);
+    return () => window.removeEventListener('resize', updateHeaderMenuPosition);
+  }, [isHeaderMenuOpen]);
 
   const handleHeaderMenuNavigate = (view: string) => {
     setIsHeaderMenuOpen(false);
@@ -570,6 +594,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
                 type="button"
                 onClick={() => {
                   setIsUserMenuOpen(false);
+                  updateHeaderMenuPosition();
                   setIsHeaderMenuOpen((prev) => !prev);
                 }}
                 title="Menu"
@@ -582,288 +607,294 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView = 'categor
               >
                 <Menu className="w-6 h-6" strokeWidth={2.25} />
               </button>
-              {isHeaderMenuOpen && (
-                <div className="absolute right-0 mt-2 w-72 max-h-[80vh] overflow-y-auto bg-white rounded-md shadow-lg border border-gray-200 p-2 z-50 space-y-1">
+              {isHeaderMenuOpen &&
+                createPortal(
                   <div
-                    onClick={() => handleHeaderMenuNavigate('repair_service')}
-                    className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'repair_service' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                    ref={headerMenuPanelRef}
+                    style={{ top: `${headerMenuPos.top}px`, right: `${headerMenuPos.right}px` }}
+                    className="fixed w-72 max-h-[80vh] overflow-y-auto bg-[#0F294A] text-slate-100 rounded-xl shadow-[0_24px_60px_rgba(15,23,42,0.55)] border-2 border-[#3B82F6] p-2.5 z-[9999] space-y-1"
                   >
-                    {currentView === 'repair_service' && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                    )}
-                    <Wrench className="w-5 h-5 mr-3" />
-                    <span className="text-sm font-medium">Dịch vụ sửa chữa</span>
-                  </div>
-                  <div
-                    onClick={() => handleHeaderMenuNavigate('commercial_sales')}
-                    className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'commercial_sales' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    {currentView === 'commercial_sales' && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                    )}
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-sm font-medium">Bán hàng thương mại</span>
-                  </div>
-                  {/* Hồ sơ & Tài liệu */}
-                  <div>
                     <div
-                      onClick={() => setIsHeaderDocsOpen((prev) => !prev)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isDocumentsActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+                      onClick={() => handleHeaderMenuNavigate('repair_service')}
+                      className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'repair_service' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
                     >
-                      <div className="flex items-center">
-                        <FileText className="w-5 h-5 mr-3" />
-                        <span className="text-sm font-medium">Hồ sơ &amp; Tài liệu</span>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderDocsOpen ? 'rotate-180' : ''}`} />
+                      {currentView === 'repair_service' && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                      )}
+                      <Wrench className="w-5 h-5 mr-3" />
+                      <span className="text-sm font-medium">Dịch vụ sửa chữa</span>
                     </div>
-                    {isHeaderDocsOpen && (
-                      <div className="mt-1 space-y-1">
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('document_cabinet')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_cabinet' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'document_cabinet' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Tủ lưu trữ</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('document_storage_categories')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_storage_categories' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'document_storage_categories' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Phân loại lưu trữ</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* CRM */}
-                  <div>
                     <div
-                      onClick={() => setIsHeaderCrmOpen((prev) => !prev)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isCrmActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+                      onClick={() => handleHeaderMenuNavigate('commercial_sales')}
+                      className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'commercial_sales' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
                     >
-                      <div className="flex items-center">
-                        <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <span className="text-sm font-medium">CRM</span>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderCrmOpen ? 'rotate-180' : ''}`} />
+                      {currentView === 'commercial_sales' && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                      )}
+                      <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium">Bán hàng thương mại</span>
                     </div>
-                    {isHeaderCrmOpen && (
-                      <div className="mt-1 space-y-1">
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('potential_customers')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'potential_customers' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'potential_customers' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Khách hàng quan tâm</span>
+                    {/* Hồ sơ & Tài liệu */}
+                    <div>
+                      <div
+                        onClick={() => setIsHeaderDocsOpen((prev) => !prev)}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isDocumentsActive ? 'bg-[#1B3B66] text-amber-300 font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
+                      >
+                        <div className="flex items-center">
+                          <FileText className="w-5 h-5 mr-3" />
+                          <span className="text-sm font-medium">Hồ sơ &amp; Tài liệu</span>
                         </div>
-                        <div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderDocsOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                      {isHeaderDocsOpen && (
+                        <div className="mt-1 space-y-1">
                           <div
-                            onClick={() => setIsHeaderReturnInviteOpen((prev) => !prev)}
-                            className={`flex items-center justify-between pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${isReturnInviteActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+                            onClick={() => handleHeaderMenuNavigate('document_cabinet')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_cabinet' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
                           >
-                            <span className="text-sm font-medium">Mời Khách quay lại</span>
-                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderReturnInviteOpen ? 'rotate-180' : ''}`} />
+                            {currentView === 'document_cabinet' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Tủ lưu trữ</span>
                           </div>
-                          {isHeaderReturnInviteOpen && (
-                            <div className="mt-1 space-y-1">
-                              <div
-                                onClick={() => handleHeaderMenuNavigate('proactive_reminders')}
-                                className={`flex items-center pl-16 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'proactive_reminders' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                              >
-                                {currentView === 'proactive_reminders' && (
-                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                                )}
-                                <span className="text-sm font-medium">Lịch nhắc chủ động</span>
-                              </div>
-                              <div
-                                onClick={() => handleHeaderMenuNavigate('customer_segments')}
-                                className={`flex items-center pl-16 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customer_segments' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                              >
-                                {currentView === 'customer_segments' && (
-                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                                )}
-                                <span className="text-sm font-medium">Phân khúc Khách hàng</span>
-                              </div>
-                            </div>
-                          )}
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('document_storage_categories')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'document_storage_categories' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'document_storage_categories' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Phân loại lưu trữ</span>
+                          </div>
                         </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('customer_bookings')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customer_bookings' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'customer_bookings' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Lịch hẹn Khách đặt</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('customers')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customers' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'customers' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Khách hàng</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('discount_management')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'discount_management' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'discount_management' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Quản lý chiết khấu</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('service_quality')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'service_quality' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Đánh giá chất lượng dịch vụ</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* HRM */}
-                  <div>
-                    <div
-                      onClick={() => setIsHeaderHrmOpen((prev) => !prev)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isHrmActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                      <div className="flex items-center">
-                        <Users className="w-5 h-5 mr-3" />
-                        <span className="text-sm font-medium">HRM</span>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderHrmOpen ? 'rotate-180' : ''}`} />
+                      )}
                     </div>
-                    {isHeaderHrmOpen && (
-                      <div className="mt-1 space-y-1">
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('employee_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'employee_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'employee_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Danh sách Nhân sự</span>
+                    {/* CRM */}
+                    <div>
+                      <div
+                        onClick={() => setIsHeaderCrmOpen((prev) => !prev)}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isCrmActive ? 'bg-[#1B3B66] text-amber-300 font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
+                      >
+                        <div className="flex items-center">
+                          <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <span className="text-sm font-medium">CRM</span>
                         </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('labor_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'labor_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'labor_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Hồ sơ Hợp đồng</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('department_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'department_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'department_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Phòng ban / Bộ phận</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('position_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'position_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'position_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Chức vụ / Vị trí</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('salary_grade_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_grade_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'salary_grade_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Thang bảng Lương</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('contract_type_list')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'contract_type_list' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'contract_type_list' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Loại hợp đồng</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('salary_rule_group')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_rule_group' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'salary_rule_group' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Nhóm quy tắc Lương</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('salary_structure')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_structure' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'salary_structure' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Cấu trúc Lương</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('insurance_tax_params')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'insurance_tax_params' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'insurance_tax_params' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Tham số BHXH &amp; Thuế</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('payroll_period')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'payroll_period' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'payroll_period' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Kỳ tính Lương</span>
-                        </div>
-                        <div
-                          onClick={() => handleHeaderMenuNavigate('payroll_table')}
-                          className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'payroll_table' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                          {currentView === 'payroll_table' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                          )}
-                          <span className="text-sm font-medium">Bảng lương</span>
-                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderCrmOpen ? 'rotate-180' : ''}`} />
                       </div>
-                    )}
-                  </div>
-                  <div
-                    onClick={() => handleHeaderMenuNavigate('categories')}
-                    className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#EBF5FF] text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-md"></div>
-                    )}
-                    <List className="w-5 h-5 mr-3" />
-                    <span className="text-sm font-medium">Danh mục</span>
-                  </div>
-                </div>
-              )}
+                      {isHeaderCrmOpen && (
+                        <div className="mt-1 space-y-1">
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('potential_customers')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'potential_customers' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'potential_customers' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Khách hàng quan tâm</span>
+                          </div>
+                          <div>
+                            <div
+                              onClick={() => setIsHeaderReturnInviteOpen((prev) => !prev)}
+                              className={`flex items-center justify-between pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${isReturnInviteActive ? 'bg-[#1B3B66] text-amber-300 font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                            >
+                              <span className="text-sm font-medium">Mời Khách quay lại</span>
+                              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderReturnInviteOpen ? 'rotate-180' : ''}`} />
+                            </div>
+                            {isHeaderReturnInviteOpen && (
+                              <div className="mt-1 space-y-1">
+                                <div
+                                  onClick={() => handleHeaderMenuNavigate('proactive_reminders')}
+                                  className={`flex items-center pl-16 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'proactive_reminders' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                                >
+                                  {currentView === 'proactive_reminders' && (
+                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                                  )}
+                                  <span className="text-sm font-medium">Lịch nhắc chủ động</span>
+                                </div>
+                                <div
+                                  onClick={() => handleHeaderMenuNavigate('customer_segments')}
+                                  className={`flex items-center pl-16 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customer_segments' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                                >
+                                  {currentView === 'customer_segments' && (
+                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                                  )}
+                                  <span className="text-sm font-medium">Phân khúc Khách hàng</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('customer_bookings')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customer_bookings' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'customer_bookings' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Lịch hẹn Khách đặt</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('customers')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'customers' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'customers' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Khách hàng</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('discount_management')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'discount_management' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'discount_management' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Quản lý chiết khấu</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('service_quality')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'service_quality' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'service_quality' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Đánh giá chất lượng dịch vụ</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* HRM */}
+                    <div>
+                      <div
+                        onClick={() => setIsHeaderHrmOpen((prev) => !prev)}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${isHrmActive ? 'bg-[#1B3B66] text-amber-300 font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
+                      >
+                        <div className="flex items-center">
+                          <Users className="w-5 h-5 mr-3" />
+                          <span className="text-sm font-medium">HRM</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHeaderHrmOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                      {isHeaderHrmOpen && (
+                        <div className="mt-1 space-y-1">
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('employee_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'employee_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'employee_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Danh sách Nhân sự</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('labor_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'labor_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'labor_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Hồ sơ Hợp đồng</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('department_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'department_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'department_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Phòng ban / Bộ phận</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('position_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'position_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'position_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Chức vụ / Vị trí</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('salary_grade_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_grade_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'salary_grade_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Thang bảng Lương</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('contract_type_list')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'contract_type_list' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'contract_type_list' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Loại hợp đồng</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('salary_rule_group')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_rule_group' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'salary_rule_group' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Nhóm quy tắc Lương</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('salary_structure')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'salary_structure' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'salary_structure' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Cấu trúc Lương</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('insurance_tax_params')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'insurance_tax_params' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'insurance_tax_params' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Tham số BHXH &amp; Thuế</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('payroll_period')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'payroll_period' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'payroll_period' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Kỳ tính Lương</span>
+                          </div>
+                          <div
+                            onClick={() => handleHeaderMenuNavigate('payroll_table')}
+                            className={`flex items-center pl-11 pr-3 py-2 rounded-md relative cursor-pointer transition-colors ${currentView === 'payroll_table' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-200 hover:bg-[#1E3A5F] hover:text-white'}`}
+                          >
+                            {currentView === 'payroll_table' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                            )}
+                            <span className="text-sm font-medium">Bảng lương</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      onClick={() => handleHeaderMenuNavigate('categories')}
+                      className={`flex items-center px-3 py-2.5 rounded-md relative cursor-pointer transition-colors ${currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel' ? 'bg-[#2563EB] text-white font-semibold' : 'text-slate-100 hover:bg-[#1E3A5F] hover:text-white'}`}
+                    >
+                      {(currentView === 'categories' || currentView === 'category_customers' || currentView === 'category_suppliers' || currentView === 'category_insurance' || currentView === 'category_material_groups' || currentView === 'category_warehouses' || currentView === 'category_units' || currentView === 'category_lots' || currentView === 'spare_parts' || currentView === 'vehicles' || currentView === 'category_drivers' || currentView === 'category_vehicle_types' || currentView === 'category_bank_accounts' || currentView === 'tax_categories' || currentView === 'omnichannel') && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400 rounded-r-md"></div>
+                      )}
+                      <List className="w-5 h-5 mr-3" />
+                      <span className="text-sm font-medium">Danh mục</span>
+                    </div>
+                  </div>,
+                  document.body
+                )}
             </div>
             <div className="relative" ref={userMenuRef}>
               <div

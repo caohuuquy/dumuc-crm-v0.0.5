@@ -12,6 +12,7 @@ import {
   INITIAL_BOOKING_INTERNAL_NOTES,
   INITIAL_BOOKING_TASKS,
 } from './CustomerBookingsModule';
+import { ServiceQualityRoScannerModal } from './ServiceQualityRoScannerModal';
 
 export type ServiceQualityStatus = 'Mới' | 'Đang thực hiện' | 'Hoàn thành' | 'Dừng';
 export type ServiceQualityCallResult = 'Từ chối' | 'Gọi lần 1' | 'Gọi lần 2' | 'Gọi lần 3' | 'Không nghe máy';
@@ -359,6 +360,7 @@ export interface PotentialCustomerItem {
   carBrand?: string;
   carModel?: string;
   originalRoCode?: string;
+  serviceAdvisor?: string;
   originalRoDates?: string;
   vehicleReceiveDate?: string;
   promisedDeliveryDate?: string;
@@ -1431,6 +1433,9 @@ export const ServiceQualityModule: React.FC<ServiceQualityModuleProps> = ({
   const [callScriptModalGuest, setCallScriptModalGuest] = useState<PotentialCustomerItem | null>(null);
   const [showBookingNewScript, setShowBookingNewScript] = useState(false);
   const [showBookingExistingScript, setShowBookingExistingScript] = useState(false);
+  const [isAddRoScannerOpen, setIsAddRoScannerOpen] = useState(false);
+  const [createResultToast, setCreateResultToast] = useState<{ count: number; roCodes: string[] } | null>(null);
+  const [exactRoFilter, setExactRoFilter] = useState<string>('');
 
   const getCampaignTelesalesDetails = (guest: PotentialCustomerItem) => {
     const matchedDiscount = discounts.find(
@@ -2146,6 +2151,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
   };
 
   const handleClearFilter = () => {
+    setExactRoFilter('');
     setFilterSearch('');
     setFilterCode('');
     setFilterStatus('Tất cả');
@@ -2172,6 +2178,49 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     });
   };
 
+  const handleFilterExactRo = (roCode?: string) => {
+    const trimmed = (roCode || '').trim();
+    if (!trimmed) return;
+    if (exactRoFilter.trim().toUpperCase() === trimmed.toUpperCase()) {
+      handleClearFilter();
+      return;
+    }
+    setExactRoFilter(trimmed);
+    setFilterSearch(trimmed);
+    setFilterCode('');
+    setFilterStatus('Tất cả');
+    setFilterCallStatus('Tất cả');
+    setFilterCallResult('Tất cả');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setFilterSource('Tất cả');
+    setFilterCarBrand('Tất cả');
+    setFilterCarModel('Tất cả');
+    setFilterCreatedBy('Tất cả');
+    setAppliedFilters({
+      search: trimmed,
+      code: '',
+      status: 'Tất cả',
+      callStatus: 'Tất cả',
+      callResult: 'Tất cả',
+      dateFrom: '',
+      dateTo: '',
+      source: 'Tất cả',
+      carBrand: 'Tất cả',
+      carModel: 'Tất cả',
+      createdBy: 'Tất cả',
+    });
+  };
+
+  // Count how many evaluation records share each RO code
+  const roCodeCounts = events.reduce<Record<string, number>>((acc, item) => {
+    const key = (item.originalRoCode || '').trim().toUpperCase();
+    if (key) {
+      acc[key] = (acc[key] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
   // Unique events for the dropdown
   const uniqueEvents = Array.from(new Map<string, PotentialCustomerItem>(events.map(item => [item.code, item])).values());
   const filteredDropdownEvents = uniqueEvents.filter(item => 
@@ -2189,6 +2238,9 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
   const uniqueCreators = Array.from(new Set(events.map(item => item.createdBy).filter(Boolean))) as string[];
 
   const filteredData = events.filter((item) => {
+    if (exactRoFilter) {
+      return (item.originalRoCode || '').trim().toUpperCase() === exactRoFilter.trim().toUpperCase();
+    }
     if (appliedFilters.search) {
       const searchLower = appliedFilters.search.toLowerCase();
       const matchName = item.fullName.toLowerCase().includes(searchLower);
@@ -2271,7 +2323,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
     const headers = isCustomerSegmentsMode
       ? ['STT', 'Trạng thái', 'Tên phân khúc khách hàng', 'Mục đích', 'Tổng tiêu chí lọc', 'Phạm vị lọc RO', 'Người tạo', 'Ngày tạo']
       : hideRegistrationSummary
-      ? ['STT', 'RO', 'Ngày nhận xe', 'Ngày hẹn giao', 'Ngày bàn giao thực tế', 'Số ngày sau ngày bàn giao', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Trạng thái', 'Khách hàng', 'Số điện thoại', 'Email', 'Biển số xe', 'Hiệu xe', 'Dòng xe', 'Doanh thu RO', 'Người tạo', 'Ngày tạo']
+      ? ['STT', 'RO', 'Cố vấn dịch vụ', 'Ngày nhận xe', 'Ngày hẹn giao', 'Ngày bàn giao thực tế', 'Số ngày sau ngày bàn giao', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Trạng thái', 'Khách hàng', 'Số điện thoại', 'Email', 'Biển số xe', 'Hiệu xe', 'Dòng xe', 'Doanh thu RO', 'Người tạo', 'Ngày tạo']
       : ['STT', 'Trạng thái cuộc gọi', 'Kết quả cuộc gọi', 'Họ và tên', 'Số điện thoại', 'Email', 'Nhu cầu', 'Ngày tạo', 'Nguồn', 'Mã người dùng (Kênh)', 'Mã chiến dịch', 'Tên chiến dịch', 'Ngày hẹn', 'Khung giờ hẹn', 'Trạng thái'];
     const csvContent = [
       headers.join(','),
@@ -2280,7 +2332,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
         return isCustomerSegmentsMode
           ? [index + 1, `"${row.status}"`, `"${row.segmentName || row.name || ''}"`, `"${row.segmentPurpose || ''}"`, `"${row.totalFilterCriteria ?? ''}"`, `"${row.roFilterScope || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
           : hideRegistrationSummary
-          ? [index + 1, `"${row.originalRoCode || ''}"`, `"${roDateInfo.receiveDate}"`, `"${roDateInfo.promisedDate}"`, `"${roDateInfo.actualDate}"`, `"${roDateInfo.daysAfterDeliveryLabel}"`, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.status}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.licensePlate || ''}"`, `"${row.carBrand || ''}"`, `"${row.carModel || ''}"`, `"${row.originalRoRevenue || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
+          ? [index + 1, `"${row.originalRoCode || ''}"`, `"${row.serviceAdvisor || row.createdBy || ''}"`, `"${roDateInfo.receiveDate}"`, `"${roDateInfo.promisedDate}"`, `"${roDateInfo.actualDate}"`, `"${roDateInfo.daysAfterDeliveryLabel}"`, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.status}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.licensePlate || ''}"`, `"${row.carBrand || ''}"`, `"${row.carModel || ''}"`, `"${row.originalRoRevenue || ''}"`, `"${row.createdBy || ''}"`, row.registrationDate].join(',')
           : [index + 1, `"${row.callStatus}"`, `"${row.callResult}"`, `"${row.fullName}"`, row.phone, row.email, `"${row.demands.join(', ')}"`, row.registrationDate, `"${row.source}"`, `"${row.channelUserCode}"`, row.code, `"${row.name}"`, row.appointmentDate, `"${row.appointmentTimeSlot}"`, `"${row.status}"`].join(',');
       })
     ].join('\n');
@@ -2331,14 +2383,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
               setSegmentDetailRows([]);
               setIsSegmentModalOpen(true);
             } else if (hideRegistrationSummary) {
-              setEditingReminderRecord(null);
-              setQuoteSearch('');
-              setQuoteVehicleFilter('Tất cả xe');
-              setQuoteDateFrom('');
-              setQuoteDateTo('');
-              setQuoteApprovalStatus('Tất cả');
-              setSelectedQuoteItems({});
-              setIsQuotationPickerOpen(true);
+              setIsAddRoScannerOpen(true);
             }
           }}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -2381,6 +2426,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
               placeholder={hideRegistrationSummary ? "Tìm Khách hàng, SĐT, Email, Biển số, RO gốc..." : "Tìm kiếm Họ tên, SĐT, Email..."} 
               value={filterSearch}
               onChange={(e) => {
+                if (exactRoFilter) setExactRoFilter('');
                 setFilterSearch(e.target.value);
                 setAppliedFilters(prev => ({ ...prev, search: e.target.value }));
               }}
@@ -2616,6 +2662,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                 {hideRegistrationSummary && !isCustomerSegmentsMode && (
                   <>
                     <th className="px-4 py-3 border-b border-gray-200">RO</th>
+                    <th className="px-4 py-3 border-b border-gray-200">Cố vấn dịch vụ</th>
                     <th className="px-4 py-3 border-b border-gray-200">Ngày nhận xe</th>
                     <th className="px-4 py-3 border-b border-gray-200">Ngày hẹn giao</th>
                     <th className="px-4 py-3 border-b border-gray-200">Ngày bàn giao thực tế</th>
@@ -2810,6 +2857,37 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                           <User className="w-4 h-4" />
                         </button>
                       )}
+                      {hideRegistrationSummary && !isCustomerSegmentsMode && (() => {
+                        const roKey = (row.originalRoCode || '').trim().toUpperCase();
+                        const duplicateCount = roKey ? (roCodeCounts[roKey] || 0) : 0;
+                        const isDuplicateRo = duplicateCount > 1;
+                        const isExactRoFiltered = Boolean(roKey && exactRoFilter.trim().toUpperCase() === roKey);
+                        return (
+                          <button
+                            type="button"
+                            className={`relative flex items-center justify-center p-1.5 rounded-md transition-colors cursor-pointer ${
+                              isDuplicateRo
+                                ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                                : 'text-gray-400 hover:bg-gray-100'
+                            } ${isExactRoFiltered ? 'ring-2 ring-[#1A73E8]' : ''}`}
+                            title={
+                              isDuplicateRo
+                                ? `RO trùng đánh giá (${duplicateCount} phiếu) — Nhấn để lọc chính xác RO ${row.originalRoCode}`
+                                : row.originalRoCode
+                                ? `RO trùng đánh giá — Nhấn để lọc chính xác RO ${row.originalRoCode}`
+                                : 'RO trùng đánh giá'
+                            }
+                            onClick={() => handleFilterExactRo(row.originalRoCode)}
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                            {isDuplicateRo && (
+                              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                {duplicateCount}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })()}
                       <button 
                         className={`relative flex items-center justify-center p-1.5 rounded-md transition-colors ${(guestTasks[row.id]?.filter(t => !t.completed).length || 0) > 0 ? 'text-orange-500 hover:bg-orange-100' : 'text-gray-400 hover:bg-gray-100'}`} 
                         title="Lời nhắc chưa hoàn thành"
@@ -2840,6 +2918,7 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
                       >
                         {row.originalRoCode || '-'}
                       </td>
+                      <td className="px-4 py-3 text-gray-800">{row.serviceAdvisor || row.createdBy || '-'}</td>
                       <td className="px-4 py-3 text-gray-700">{roDateInfo.receiveDate}</td>
                       <td className="px-4 py-3 text-gray-700">{roDateInfo.promisedDate}</td>
                       <td className="px-4 py-3 text-gray-700">{roDateInfo.actualDate}</td>
@@ -10308,6 +10387,49 @@ Garage ${branchName} đón tiếp ${salutation} rồi ạ!
           </div>
         );
       })()}
+
+      {/* Full-screen Add Service Quality Evaluation from RO List */}
+      <ServiceQualityRoScannerModal
+        isOpen={isAddRoScannerOpen}
+        onClose={() => setIsAddRoScannerOpen(false)}
+        existingRoCodes={events.map((e) => e.originalRoCode || '').filter(Boolean)}
+        onConfirmCreate={(newRecords) => {
+          setEvents((prev) => [...newRecords, ...prev]);
+          setCreateResultToast({
+            count: newRecords.length,
+            roCodes: newRecords.map((r) => r.originalRoCode || r.code),
+          });
+          setTimeout(() => {
+            setCreateResultToast(null);
+          }, 6000);
+        }}
+      />
+
+      {/* Result Notification Toast */}
+      {createResultToast && (
+        <div className="fixed bottom-5 right-5 z-[160] max-w-md bg-emerald-700 text-white rounded-lg shadow-xl border border-emerald-600 px-4 py-3 flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-200 shrink-0 mt-0.5" />
+          <div className="text-xs leading-relaxed">
+            <div className="font-semibold text-sm">
+              Đã tạo thành công {createResultToast.count} phiếu đánh giá chất lượng dịch vụ
+            </div>
+            <div className="text-emerald-100 mt-0.5">
+              Danh sách RO: {createResultToast.roCodes.slice(0, 4).join(', ')}
+              {createResultToast.roCodes.length > 4
+                ? ` và ${createResultToast.roCodes.length - 4} RO khác`
+                : ''}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreateResultToast(null)}
+            className="text-emerald-200 hover:text-white p-0.5 cursor-pointer shrink-0"
+            aria-label="Đóng thông báo"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
